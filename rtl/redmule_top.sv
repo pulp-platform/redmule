@@ -438,7 +438,7 @@ redmule_scheduler    #(
   .Height             ( Height              ),
   .Width              ( Width               ),
   .NumPipeRegs        ( NumPipeRegs         )
-) i_fsm               (                     
+) i_scheduler         (                     
   .clk_i              ( clk_i               ),
   .rst_ni             ( rst_ni              ),
   .test_mode_i        ( test_mode_i         ),
