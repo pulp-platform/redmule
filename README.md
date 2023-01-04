@@ -13,11 +13,6 @@ RedMulE (**Red**uced-Precision Matrix **Mul**tiplication **E**ngine) is an open-
 
 To support GEMM-Ops with both FP8 and FP16 formats, RedMulE features input and output cast modules that allow for casting input matrices from FP8 to FP16 and the computed output matrix from FP16 to FP8. This allows for operating on larger internal precision guaranteeing enough accuracy during intermediate accumulations, for example during matrix multiplications. 
 
-## Table of Contents
-[Hardware Architecture](## Hardware Architecture)
-[RedMulE Golden Model](## RedMulE Golden Model)
-[RedMulE Testbench](## RedMulE Testbench)
-
 ## Hardware Architecture
 RedMulE is fully parametric and based on a 2-Dimensional array (*Engine*) of Computing Elements (CE) that operate in lock-step. The overall architecture is shown in the figure below.
 
