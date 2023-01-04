@@ -1,0 +1,54 @@
+# Copyright (C) 2022-2023 ETH Zurich and University of Bologna
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author: Yvan Tortorella (yvan.tortorella@unibo.it)
+#
+# List of the IP dependencies
+
+common_cells:
+  commit: master
+tech_cells_generic:
+  commit : 82de105
+scm:
+  commit : afd3240
+zero-riscy:
+  commit: tags/pulpissimo-v1.0
+cluster_interconnect:
+  server: git@github.com
+  group: pulp-platform
+  commit: v1.1.1
+  domain: [cluster, pulp]
+hwpe-ctrl:
+  commit: v1.5
+  group: pulp-platform
+  domain: [soc, cluster, pulp]
+hwpe-stream:
+  commit: v1.6.1
+  group: pulp-platform
+  domain: [soc, cluster, pulp]
+hci:
+  server: git@github.com
+  group:  pulp-platform
+  commit: bender-fix
+  domain: [cluster, pulp]
+fpnew:
+  server: git@github.com
+  group:  yvantor
+  commit: stallable
+  domain: [cluster, soc]
+redmule:
+  server: git@iis-git.ee.ethz.ch
+  group:  ytortorella
+  commit: gemmops-rebase
+  domain: [cluster]

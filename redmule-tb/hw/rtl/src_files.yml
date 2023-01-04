@@ -1,0 +1,14 @@
+tb:
+  flags: [
+    skip_verilator,
+  ]
+  files: [
+    redmule_tb.sv
+  ]
+
+tb_veri:
+  files: [
+    redmule_sim.sv,
+    tb_dummy_memory.sv
+  ]
+
