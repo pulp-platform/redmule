@@ -72,7 +72,7 @@ the generated matrices.
 ## RedMulE Testbench
 The `redmule-tb` is a complete testing environment for RedMulE. It features a RedMulE instance, an Ibex core as a controller and programmer, and dummy memories to simulate software stack, data-memory and instruction memory, as shown in the picture below.
 
-![](doc/redmule_tb.png)
+![](doc/redmule_testbench.png)
 
 The r`redmule-tb` is based on the [hwpe-tb](https://github.com/pulp-platform/hwpe-tb).
 
