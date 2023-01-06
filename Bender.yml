@@ -28,17 +28,17 @@ dependencies:
   fpnew:       { git: "https://github.com/yvantor/cvfpu.git"            , rev: "stallable" }
 
 sources:
-  - rtl/redmule_pkg.sv
-  - rtl/redmule_ctrl.sv
-  - rtl/redmule_scheduler.sv
-  - rtl/redmule_castin.sv
-  - rtl/redmule_castout.sv
-  - rtl/redmule_streamer.sv
-  - rtl/redmule_x_buffer.sv
-  - rtl/redmule_w_buffer.sv
-  - rtl/redmule_z_buffer.sv
-  - rtl/redmule_ce.sv
-  - rtl/redmule_row.sv
-  - rtl/redmule_engine.sv
-  - rtl/redmule_top.sv
-  - rtl/redmule_wrap.sv
+  - hw/rtl/redmule_pkg.sv
+  - hw/rtl/redmule_ctrl.sv
+  - hw/rtl/redmule_scheduler.sv
+  - hw/rtl/redmule_castin.sv
+  - hw/rtl/redmule_castout.sv
+  - hw/rtl/redmule_streamer.sv
+  - hw/rtl/redmule_x_buffer.sv
+  - hw/rtl/redmule_w_buffer.sv
+  - hw/rtl/redmule_z_buffer.sv
+  - hw/rtl/redmule_ce.sv
+  - hw/rtl/redmule_row.sv
+  - hw/rtl/redmule_engine.sv
+  - hw/rtl/redmule_top.sv
+  - hw/rtl/redmule_wrap.sv

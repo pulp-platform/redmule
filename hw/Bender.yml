@@ -31,20 +31,20 @@ dependencies:
 sources:
   files:
   # RedMulE
-    - ../../rtl/redmule_pkg.sv
-    - ../../rtl/redmule_ctrl.sv
-    - ../../rtl/redmule_scheduler.sv
-    - ../../rtl/redmule_castin.sv
-    - ../../rtl/redmule_castout.sv
-    - ../../rtl/redmule_streamer.sv
-    - ../../rtl/redmule_x_buffer.sv
-    - ../../rtl/redmule_w_buffer.sv
-    - ../../rtl/redmule_z_buffer.sv
-    - ../../rtl/redmule_ce.sv
-    - ../../rtl/redmule_row.sv
-    - ../../rtl/redmule_engine.sv
-    - ../../rtl/redmule_top.sv
-    - ../../rtl/redmule_wrap.sv
+    - rtl/redmule_pkg.sv
+    - rtl/redmule_ctrl.sv
+    - rtl/redmule_scheduler.sv
+    - rtl/redmule_castin.sv
+    - rtl/redmule_castout.sv
+    - rtl/redmule_streamer.sv
+    - rtl/redmule_x_buffer.sv
+    - rtl/redmule_w_buffer.sv
+    - rtl/redmule_z_buffer.sv
+    - rtl/redmule_ce.sv
+    - rtl/redmule_row.sv
+    - rtl/redmule_engine.sv
+    - rtl/redmule_top.sv
+    - rtl/redmule_wrap.sv
   # Testbench
-    - rtl/tb_dummy_memory.sv
-    - rtl/redmule_tb.sv
+    - tb/tb_dummy_memory.sv
+    - tb/redmule_tb.sv

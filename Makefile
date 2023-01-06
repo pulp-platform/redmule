@@ -26,8 +26,8 @@ TEST_SRCS      ?= sw/redmule.c
 WAVES          ?= $(HW)/wave.do
 
 ifeq ($(ipstools),1) # IPstools-based flow
-INI_PATH  = $(mkfile_path)/hw/sim/modelsim.ini
-WORK_PATH = $(mkfile_path)/hw/sim/work
+INI_PATH  = $(mkfile_path)/hw/tb/modelsim.ini
+WORK_PATH = $(mkfile_path)/hw/tb/work
 else # Bender-based flow
 INI_PATH  = $(HW)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
@@ -121,17 +121,17 @@ update-ips:
 	cd hw; ./update-ips
 
 build-hw:
-	cd hw/sim; make clean lib build opt
+	cd hw/tb; make clean lib build opt
 
 clean-hw:
 	rm -rf $(HW)/ips
 	rm -rf $(HW)/ipstools
 	rm -rf $(HW)/ipstools_cfg.pyc
-	rm -rf $(HW)/sim/modelsim*
-	rm -rf $(HW)/sim/work
-	rm -rf $(HW)/sim/vcompile/ips
-	rm -rf $(HW)/sim/vcompile/rtl
-	rm -rf $(HW)/sim/vcompile/tb
+	rm -rf $(HW)/tb/modelsim*
+	rm -rf $(HW)/tb/work
+	rm -rf $(HW)/tb/vcompile/ips
+	rm -rf $(HW)/tb/vcompile/rtl
+	rm -rf $(HW)/tb/vcompile/tb
 	rm -rf $(HW)/.cached_ipdb.json
 endif
 
@@ -155,7 +155,7 @@ N      ?= 16
 K      ?= 16
 
 golden: clean-golden
-	$(MAKE) -C ../redmule-golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
+	$(MAKE) -C redmule-golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
 
 clean-golden:
-	$(MAKE) -C ../redmule-golden-model clean
+	$(MAKE) -C redmule-golden-model clean
