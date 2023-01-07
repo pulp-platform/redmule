@@ -147,7 +147,9 @@ make golden OP=minmax SW=$(pwd) M=96 N=64 K=64 fp_fmt=FP8
 By removing the `SW=$(pwd)`, the same golden model is generated under `sw/inc`.
 
 ## License and Citation
-RedMulE is an open-source project licensed under the SolderPad Hardware License v0.51.
+RedMulE is an open-source project and, wherever not explicitly stated, all hardware sources
+are licensed under the SolderPad Hardware License Version 0.51, and all software sources
+are licensed under the Apache License Version 2.0.
 If you want to use RedMulE for academic purposes, please cite it as:
 
 ```
