@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Author: Yvan Tortorella (yvan.tortorella@unibo.it)
 #
@@ -155,7 +156,7 @@ N      ?= 16
 K      ?= 16
 
 golden: clean-golden
-	$(MAKE) -C redmule-golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
+	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
 
 clean-golden:
-	$(MAKE) -C redmule-golden-model clean
+	$(MAKE) -C golden-model clean

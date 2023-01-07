@@ -1,31 +1,22 @@
 #!/usr/bin/perl -w
+#
+# Copyright (C) 2018-2019 ETH Zurich and University of Bologna
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
+#
+
 use strict;
-
-# v0.5 - <atraber@student.ethz.ch> - Mo Feb 16 21:26 CET 2015
-# - Moved from 128 bit s19 file to 8 bit s19 file. This finally cleans up our
-#   problems with misaligned addresses
-# v0.4 - <kgf@iis.ee.ethz.ch> - Tue Jan 20 15:33:59 CET 2015
-# - Addeed a function swap_endian that will (at the very last moment)
-#   swap the endiannes of the 32bit values that are being printed out.
-#   Hopefully it will work. Swap made with split/reverse and join.  
-# v0.3 - <kgf@iis.ee.ethz.ch> - Wed Jun  4 19:19:45 CEST 2014
-# - the previous version assumed all the s19 data was located in 
-#   close proximity. First the address was aligned, then the addresses
-#   were incremented by 8 until the last address was reached. This 
-#   can take very long, if there are gaps in the memory map. 
-#   The new version now goes through the addresses, and aligns them 
-#   if necessary for each address. Admittedly a much smarter approach than 
-#   before. 
-# v0.2 - <kgf@iis.ee.ethz.ch> - Fri May  9 12:38:18 CEST 2014
-# - make sure that we align to 64 bit boundries
-# - complete re-write, it will first fill a hash of address data pairs,
-#   then sort this hash and start from the lowest address and work the way
-#   up to the highest address. 
-# v0.1 - <kgf@ee.ethz.ch> - Thu Sep 19 10:34:30 CEST 2013
-# - parses the s19 file and outputs the stimuli file
-#   at the moment it will generate all memory locations 1000xxxx and 
-#   4000xxxx
-
 
 # values for hex conversion
 my %h2v= ( '0'=>0, '1'=>1, '2'=>2, '3'=>3, 
