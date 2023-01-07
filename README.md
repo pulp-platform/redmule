@@ -24,11 +24,7 @@ RedMulE's dependencies are handled through [bender](https://github.com/pulp-plat
 
 ## RedMulE Golden Model
 
-The RedMulE Golden Model is intended to generate Floating-Point (FP) input and resulting matrices
-for all the General Matrix-Matrix Operations (GEMM-Ops) supported by RedMulE.
-
-The repository contains two main folders for FP16 and FP8 golden model generation. Each folder
-contains a `script` folder to generate the model for all the supported GEMM-Ops, i. e. :
+The RedMulE Golden Model is intended to generate Floating-Point (FP) input and resulting matrices for all the General Matrix-Matrix Operations (GEMM-Ops) supported by RedMulE. The folder contains two subfolders for FP16 and FP8 golden model generation. Each folder contains a `script` folder to generate the model for all the supported GEMM-Ops, i. e. :
 * addmax: Z = max((X + W), Y)
 * addmin: Z = min((X + W), Y)
 * gemm  : Z = (X x W) + Y
@@ -38,7 +34,7 @@ contains a `script` folder to generate the model for all the supported GEMM-Ops,
 * mulmin: Z = min((X x W), Y)
 
 ### Generating Models
-The golden model make use of Python3.6 virtual environment, Numpy and Pytorch. These modules have
+The golden model makes use of Python3.6 virtual environment, Numpy and Pytorch. These modules have
 to be installed if they are not already present. To simplify this procedure, the `golden-model` folder
 contains a `setup-py.sh` that can be sourced to install all these modules, and to export the
 required environment variables. Thus, the first step is to move into the `golden-model` folder and run:
