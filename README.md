@@ -30,8 +30,6 @@ If you want to use RedMulE for academic purposes, please cite it as:
 }
 ```
 
-See you, space cowboy!
-
 ## Hardware Architecture
 RedMulE is fully parametric and based on a 2-Dimensional array (*Engine*) of Computing Elements (CE) that operate in lock-step. The overall architecture is shown in the figure below.
 
@@ -151,3 +149,5 @@ By default, the Makefile generates FP16 matrices for a GEMM operation, with M=12
 make golden OP=minmax SW=$(pwd) M=96 N=64 K=64 fp_fmt=FP8
 ```
 By removing the `SW=$(pwd)`, the same golden model is generated under `sw/inc`.
+
+See you, space cowboy!
