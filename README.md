@@ -11,7 +11,26 @@ RedMulE (**Red**uced-Precision Matrix **Mul**tiplication **E**ngine) is an open-
 | Minimum Spanning Tree     |   max    |   min   | *Z = min[max(X, W), Y]* |
 | Maximum Capacity Tree     |   min    |   max   | *Z = max[min(X, W), Y]* |
 
-To support GEMM-Ops with both FP8 and FP16 formats, RedMulE features input and output cast modules that allow for casting input matrices from FP8 to FP16 and the computed output matrix from FP16 to FP8. This allows for operating on larger internal precision guaranteeing enough accuracy during intermediate accumulations, for example during matrix multiplications. 
+To support GEMM-Ops with both FP8 and FP16 formats, RedMulE features input and output cast modules that allow for casting input matrices from FP8 to FP16 and the computed output matrix from FP16 to FP8. This allows for operating on larger internal precision guaranteeing enough accuracy during intermediate accumulations, for example during matrix multiplications.
+
+## License and Citation
+RedMulE is an open-source project and, wherever not explicitly stated, all hardware sources
+are licensed under the SolderPad Hardware License Version 0.51, and all software sources
+are licensed under the Apache License Version 2.0.
+If you want to use RedMulE for academic purposes, please cite it as:
+
+```
+@INPROCEEDINGS{9774759,
+  author={Tortorella, Yvan and Bertaccini, Luca and Rossi, Davide and Benini, Luca and Conti, Francesco},
+  booktitle={2022 Design, Automation & Test in Europe Conference & Exhibition (DATE)}, 
+  title={RedMulE: A Compact FP16 Matrix-Multiplication Accelerator for Adaptive Deep Learning on RISC-V-Based Ultra-Low-Power SoCs}, 
+  year={2022},
+  pages={1099-1102},
+  doi={10.23919/DATE54114.2022.9774759}
+}
+```
+
+See you, space cowboy!
 
 ## Hardware Architecture
 RedMulE is fully parametric and based on a 2-Dimensional array (*Engine*) of Computing Elements (CE) that operate in lock-step. The overall architecture is shown in the figure below.
@@ -132,22 +151,3 @@ By default, the Makefile generates FP16 matrices for a GEMM operation, with M=12
 make golden OP=minmax SW=$(pwd) M=96 N=64 K=64 fp_fmt=FP8
 ```
 By removing the `SW=$(pwd)`, the same golden model is generated under `sw/inc`.
-
-## License and Citation
-RedMulE is an open-source project and, wherever not explicitly stated, all hardware sources
-are licensed under the SolderPad Hardware License Version 0.51, and all software sources
-are licensed under the Apache License Version 2.0.
-If you want to use RedMulE for academic purposes, please cite it as:
-
-```
-@INPROCEEDINGS{9774759,
-  author={Tortorella, Yvan and Bertaccini, Luca and Rossi, Davide and Benini, Luca and Conti, Francesco},
-  booktitle={2022 Design, Automation & Test in Europe Conference & Exhibition (DATE)}, 
-  title={RedMulE: A Compact FP16 Matrix-Multiplication Accelerator for Adaptive Deep Learning on RISC-V-Based Ultra-Low-Power SoCs}, 
-  year={2022},
-  pages={1099-1102},
-  doi={10.23919/DATE54114.2022.9774759}
-}
-```
-
-See you, space cowboy!
