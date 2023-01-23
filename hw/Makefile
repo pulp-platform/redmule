@@ -47,6 +47,7 @@ build:
 	vsim -c -do 'source compile.tcl; quit'
 
 lib:
+	@touch modelsim.ini
 	@mkdir -p work
 	@vlib work
 	@chmod +w modelsim.ini

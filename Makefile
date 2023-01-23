@@ -23,7 +23,7 @@ HW             := $(shell pwd)/hw
 SW             ?= $(shell pwd)/sw
 BUILD_DIR      ?= $(HW)/work
 BENDER_DIR     ?= $(HW)/bender
-TEST_SRCS      ?= sw/redmule.c
+TEST_SRCS      ?= $(SW)/redmule.c
 WAVES          ?= $(HW)/wave.do
 
 ifeq ($(ipstools),1) # IPstools-based flow
