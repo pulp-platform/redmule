@@ -17,6 +17,7 @@
 #
 # RedMulE Golden Model Makefile
 
+SHELL := /bin/bash
 CUR_DIR := $(shell pwd)
 PENV    := $(CUR_DIR)/venv
 SW      ?= 
@@ -36,7 +37,7 @@ check_penv:
 ifndef PENV
 	$(error PENV is undefined. Make sure to export        \
 	PENV=<absolute_path_your_pythonenv> before continue.)
-	python3.6 -m venv $(PENV)
+	python3 -m venv $(PENV)
 	source .venv/bin/activate
 	pip3 install numpy
 	pip3 install torch
@@ -53,7 +54,7 @@ addmax: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -65,7 +66,7 @@ addmin: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -77,7 +78,7 @@ gemm: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -89,7 +90,7 @@ maxmin: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)/inc                        \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -101,7 +102,7 @@ minmax: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -113,7 +114,7 @@ mulmax: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
@@ -125,7 +126,7 @@ mulmin: check_penv
 	cd $(PENV);                                \
 	source ./bin/activate;                     \
 	cd $(CUR_DIR)/$(fp_fmt);                   \
-	python3.6 ./scripts/$@.py                  \
+	python3 ./scripts/$@.py                  \
 	--m_size $(M) --n_size $(N) --k_size $(K)  \
 	--inc_dir $(SW)                            \
 	--txt_dir $(CUR_DIR)/$@/txt;               \
