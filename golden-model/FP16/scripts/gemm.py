@@ -280,15 +280,20 @@ f_d.close()
 f_c = open(''+inc_path+'/golden.h', "w")
 f_c.write(''+header+'')
 f_c.write('uint32_t golden ['+out_int+'] = {\n')
-for i in range(m_size):
-    j = 0
-    while j < k_size - 1:
-        c_bin_0 = bin(np.float16(Z[i][j]).view('H'))[2:].zfill(16)
-        c_bin_1 = bin(np.float16(Z[i][j+1]).view('H'))[2:].zfill(16)
-        c_hex_0 = hex(int(c_bin_0, 2))[2:]
-        c_hex_1 = hex(int(c_bin_1, 2))[2:]
-        c_hex   = c_hex_1+c_hex_0
-        f_c.write('0x'+c_hex+',\n')
-        j += 2
+
+ZFlattened = torch.flatten(Z)
+i = 0
+while i < ZFlattened.size(dim = -1) - 1:
+  c_bin_0 = bin(np.float16(ZFlattened[i]).view('H'))[2:].zfill(16)
+  c_bin_1 = bin(np.float16(ZFlattened[i+1]).view('H'))[2:].zfill(16)
+  c_hex_0 = hex(int(c_bin_0, 2))[2:]
+  c_hex_1 = hex(int(c_bin_1, 2))[2:]
+  c_hex   = c_hex_1+c_hex_0
+  f_c.write('0x'+c_hex+',\n')
+  i += 2
+if ZFlattened.size(dim = -1) % 2 != 0:
+  c_bin_0 = bin(np.float16(ZFlattened[i]).view('H'))[2:].zfill(16)
+  c_hex_0 = hex(int(c_bin_0, 2))[2:]
+  f_c.write('0x0000'+c_hex_0+',\n')
 f_c.write("};")
 f_c.close()
