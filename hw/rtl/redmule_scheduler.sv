@@ -659,6 +659,8 @@ always_comb begin
   if (store_lftovr_q) begin
     for (int i = 0; i < STRB; i++) begin
       strb [i] = ( i < NBYTES*reg_file_i.hwpe_params[LEFTOVERS][7:0] ) ? 1'b1 : 1'b0;
+
+
     end
   end else if (input_cast_src_fmt != FPFORMAT) begin // if (store_lftovr_q)
     for (int i = 0; i < STRB; i++) begin
@@ -963,7 +965,6 @@ clear_regs       = 1'b0;
 
     W_REQ: begin
       cntrl_streamer_o.w_stream_source_ctrl.req_start = 1'b1;
-      w_cols_lftovr_en = ( reg_file_i.hwpe_params[LEFTOVERS][7:0] < H*(PIPE_REGS + 1) ) ? 1'b1 : 1'b0;
       n_waits_d = n_waits_q + 1;
       w_cols_d  =  w_cols_q + 1;
       case (new_w_q)
@@ -1194,7 +1195,7 @@ clear_regs       = 1'b0;
       if (!shift_lock_q)
         shift_lock_en = 1'b1;
       
-      if (flgs_z_buffer_i.loaded || tot_y_loaded_q == W) begin
+      if (flgs_z_buffer_i.loaded || tot_y_loaded_q == W - 1) begin
         load_y_rst = (loading_y_q) ? 1'b1 : 1'b0;
         y_preloaded_rst = (y_preloaded_q) ? 1'b1 : 1'b0;
         y_cols_iter_d = y_cols_iter_q + 1;
@@ -1263,7 +1264,7 @@ clear_regs       = 1'b0;
           w_cols_lftovr_rst = 1'b1;
           store_lftovr_en = 1'b1;
           w_cols_d = 16'd1;
-        end else 
+        end else
           w_cols_d = w_cols_q + 1;
       end
 
