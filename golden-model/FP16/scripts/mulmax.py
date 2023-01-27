@@ -102,7 +102,7 @@ for i in range(n_size):
 f_w.close()
 
 f_y = open(''+txt_path+'/y_input.txt', "w")
-for i in range(n_size):
+for i in range(m_size):
     for j in range (k_size):
         y_bin = bin(np.float16(Y[i][j]).view('H'))[2:].zfill(16)
         y_hex = hex(int(y_bin, 2))[2:]
