@@ -48,7 +48,7 @@ logic rst_store  ,
 			rst_d_count;
 logic                          buffer_clock;
 logic [$clog2(D):0]            fill_shift , d_index, depth;
-logic [$clog2(W):0]            store_shift, w_index;
+logic [$clog2(W):0]            store_shift, w_index, y_width;
 logic [D-1:0][W-1:0][BITW-1:0] z_buffer_q;
 
 cluster_clock_gating i_z_buffer_clock_gating (
@@ -79,13 +79,15 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : z_buffer
       end
 	  end else if (ctrl_i.load && ctrl_i.y_valid) begin
 	    for (int d = 0; d < D; d++)
-	      z_buffer_q[D - d - 1][w_index] <= (d < depth) ? y_buffer_i[d*BITW+:BITW] : '0;
+	      z_buffer_q[D - d - 1][w_index] <= (d < depth && w_index < y_width) ? y_buffer_i[d*BITW+:BITW] : '0;
+
     end else
       z_buffer_q <= z_buffer_q;
   end
 end
 
 assign depth = (ctrl_i.cols_lftovr == '0) ? D : ctrl_i.cols_lftovr;
+assign y_width = (ctrl_i.rows_lftovr == '0) ? W : ctrl_i.rows_lftovr;
 
 // Counter to track when the output buffer is full
 always_ff @(posedge buffer_clock or negedge rst_ni) begin : buffer_fill_counter
@@ -130,7 +132,7 @@ end
 always_comb begin : store_shift_rst
   rst_store     = 1'b0;
   flags_o.empty = 1'b0;
-  if (store_shift == W ) begin
+  if (store_shift == W) begin
   	rst_store     = 1'b1;
   	flags_o.empty = 1'b1;
   end else begin
