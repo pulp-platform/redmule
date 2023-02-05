@@ -23,10 +23,10 @@ package:
     - "Yvan Tortorella <yvan.tortorella@unibo.it>"
 
 dependencies:
-  hwpe-stream: { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.6     }
-  hci:         { git: "https://github.com/pulp-platform/hci.git"        , rev: master      }
-  hwpe-ctrl:   { git: "https://github.com/pulp-platform/hwpe-ctrl.git"  , version: 1.6     }
-  fpnew:       { git: "https://github.com/yvantor/cvfpu.git"            , rev: "stallable" }
+  hwpe-stream: { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.6                                    }
+  hci:         { git: "https://github.com/pulp-platform/hci.git"        , rev: "b2e6f391aa6c10c03f45b693d80a0aaddecf169b" }
+  hwpe-ctrl:   { git: "https://github.com/pulp-platform/hwpe-ctrl.git"  , version: 1.6                                    }
+  fpnew:       { git: "https://github.com/yvantor/cvfpu.git"            , rev: "stallable"                                }
 
 sources:
   - hw/rtl/redmule_pkg.sv
