@@ -57,8 +57,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
     x_buffer_q  <= '0;
   end else begin
     if (clear_i) begin
-    	x_pad_q    <= '0;
-    	x_buffer_q <= '0;
+      x_pad_q    <= '0;
+      x_buffer_q <= '0;
     end else
     if (ctrl_i.load) begin
       for (int d = 0; d < D; d++) begin
@@ -81,9 +81,9 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
       for (int w = 0; w < W; w++) begin
         for (int h = 0; h < H; h++) begin
           for (int d = 0; d < D; d++)
-    	    x_pad_q[d][w][h] <= (d < HALF_D) ? x_pad_q[d+2][w][h] : '0;
+            x_pad_q[d][w][h] <= (d < HALF_D) ? x_pad_q[d+2][w][h] : '0;
           for (int dd = 0; dd < HALF_D; dd++)
-    	    x_buffer_q[dd][w][h] <= x_pad_q[dd][w][h];
+            x_buffer_q[dd][w][h] <= x_pad_q[dd][w][h];
         end
       end
     end
