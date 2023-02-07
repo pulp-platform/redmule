@@ -169,8 +169,8 @@ assign mux_tcdm[0].r_user  = virt_tcdm[0].r_user;
 // Here we instantiate the dynamic mux that turns the tcdm stream into
 // source [0], source[1] or source[2] depending on the scheduling
 hci_core_mux_dynamic #(
-	.NB_IN_CHAN         ( 4              ),
-	.UW                 ( UW             ),
+  .NB_IN_CHAN         ( 4              ),
+  .UW                 ( UW             ),
   .DW                 ( DW             )
 ) i_source_mux        (
   .clk_i              ( clk_i          ),
