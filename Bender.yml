@@ -25,7 +25,7 @@ package:
 dependencies:
   hwpe-stream: { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.6     }
   hci:         { git: "https://github.com/pulp-platform/hci.git"        , rev: bender-fix  }
-  hwpe-ctrl:   { git: "https://github.com/pulp-platform/hwpe-ctrl.git"  , version: 1.6     }
+  hwpe-ctrl:   { git: "https://github.com/pulp-platform/hwpe-ctrl.git"  , rev: snitch      }
   fpnew:       { git: "https://github.com/yvantor/cvfpu.git"            , rev: "stallable" }
 
 sources:

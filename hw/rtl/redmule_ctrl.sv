@@ -59,7 +59,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   // Control signals for the state machine
   output cntrl_scheduler_t        cntrl_scheduler_o ,
 	// Peripheral slave port
-	hwpe_ctrl_intf_periph.slave     periph
+	hwpe_ctrl_intf_reqrsp           cfg
 );
 
 	logic        clear;
@@ -84,20 +84,17 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   hwpe_ctrl_package::flags_slave_t  flgs_slave;
 
   // Control slave interface
-	hwpe_ctrl_slave  #(
-    .N_CORES        ( N_CORES      ),
-    .N_CONTEXT      ( N_CONTEXT    ),
-    .N_IO_REGS      ( REDMULE_REGS ),
-    .N_GENERIC_REGS ( 6            ),
-    .ID_WIDTH       ( ID_WIDTH     )
+	hwpe_ctrl_reqrsp_target #(
+    .N_IO_REGS      ( REDMULE_REGS_EVEN ),
+    .N_GENERIC_REGS ( 0                 )
   ) i_slave         (
-    .clk_i          ( clk_i        ),
-    .rst_ni         ( rst_ni       ),
-    .clear_o        ( clear        ),
-    .cfg            ( periph       ),
-    .ctrl_i         ( cntrl_slave  ),
-    .flags_o        ( flgs_slave   ),
-    .reg_file       ( reg_file     )
+    .clk_i          ( clk_i             ),
+    .rst_ni         ( rst_ni            ),
+    .clear_o        ( clear             ),
+    .cfg            ( cfg               ),
+    .ctrl_i         ( cntrl_slave       ),
+    .flags_o        ( flgs_slave        ),
+    .reg_file       ( reg_file          )
   );
   /*---------------------------------------------------------------------------------------------*/
   /*                                       Register island                                       */

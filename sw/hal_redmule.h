@@ -39,44 +39,22 @@
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the HWPE base in case several accesses are done, ending up with twice more code
 
-#define HWPE_WRITE(value, offset) *(int *)(REDMULE_ADDR_BASE + offset) = value
-#define HWPE_READ(offset) *(int *)(REDMULE_ADDR_BASE + offset)
-
-// static inline void hwpe_bytecode_set(unsigned int offs, unsigned int value) {
-//   HWPE_WRITE(value, HWPE_BYTECODE+offs);
-// }
-
-static inline void redmule_x_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
-}
-
-static inline void redmule_w_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_W_PTR);
-}
-
-static inline void redmule_y_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Y_PTR);
-}
-
-static inline void redmule_z_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
-}
+#define HWPE_WRITE(value, offset) *(volatile int *)(REDMULE_ADDR_BASE + offset) = value
+#define HWPE_READ(offset) *(volatile int *)(REDMULE_ADDR_BASE + offset)
+#define HWPE_PUSH_HI(value) HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_SNITCH_PUSH + 0x4)
+#define HWPE_PUSH_LO(value) HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_SNITCH_PUSH)
 
 static inline void hwpe_trigger_job() {
-  HWPE_WRITE(0, REDMULE_TRIGGER);
-}
-
-static inline int hwpe_acquire_job() {
-  return HWPE_READ(REDMULE_ACQUIRE);
+  HWPE_WRITE(0, REDMULE_SNITCH_TRIGGER);
 }
 
 static inline unsigned int hwpe_get_status() {
-  return HWPE_READ(REDMULE_STATUS);
+  return HWPE_READ(REDMULE_SNITCH_STATUS);
 }
 
 static inline void hwpe_soft_clear() {
   volatile int i;
-  HWPE_WRITE(0, REDMULE_SOFT_CLEAR);
+  HWPE_WRITE(0, REDMULE_SNITCH_SOFTCLR);
 }
 
 static inline void hwpe_cg_enable() {
@@ -87,7 +65,10 @@ static inline void hwpe_cg_disable() {
   return;
 }
 
-void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops){
+void redmule_cfg (
+  uint32_t xptr, uint32_t wptr, uint32_t yptr, uint32_t zptr,
+  uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops
+){
    uint32_t x_iters        = 0;
    uint32_t w_iters        = 0;
    uint32_t leftovers      = 0;
@@ -221,20 +202,24 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    tot_x_read    = x_rows_iter*x_cols_iter*w_cols_iter;
 
    // Writing the computations in configuration register
-   HWPE_WRITE(x_iters       , REDMULE_REG_OFFS + REDMULE_REG_X_ITER_PTR         );
-   HWPE_WRITE(w_iters       , REDMULE_REG_OFFS + REDMULE_REG_W_ITER_PTR         );
-   HWPE_WRITE(leftovers     , REDMULE_REG_OFFS + REDMULE_REG_LEFTOVERS_PTR      );
-   HWPE_WRITE(left_params   , REDMULE_REG_OFFS + REDMULE_REG_LEFT_PARAMS_PTR    );
-   HWPE_WRITE(x_d1_stride   , REDMULE_REG_OFFS + REDMULE_REG_X_D1_STRIDE_PTR    );
-   HWPE_WRITE(x_rows_offs   , REDMULE_REG_OFFS + REDMULE_REG_X_ROWS_OFFS_PTR    );
-   HWPE_WRITE(tot_x_read    , REDMULE_REG_OFFS + REDMULE_REG_TOT_X_READ_PTR     );
-   HWPE_WRITE(x_buffer_slots, REDMULE_REG_OFFS + REDMULE_REG_X_BUFFER_SLOTS_PTR );
-   HWPE_WRITE(w_tot_len     , REDMULE_REG_OFFS + REDMULE_REG_W_TOT_LEN_PTR      );
-   HWPE_WRITE(w_d0_stride   , REDMULE_REG_OFFS + REDMULE_REG_W_D0_STRIDE_PTR    );
-   HWPE_WRITE(yz_tot_len    , REDMULE_REG_OFFS + REDMULE_REG_YZ_TOT_LEN_PTR     );
-   HWPE_WRITE(yz_d0_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D0_STRIDE_PTR   );
-   HWPE_WRITE(yz_d2_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D2_STRIDE_PTR   );
-   HWPE_WRITE(op_selection  , REDMULE_REG_OFFS + REDMULE_REG_OP_SELECTION       );
+   HWPE_PUSH_LO(xptr);
+   HWPE_PUSH_HI(wptr);
+   HWPE_PUSH_LO(yptr);
+   HWPE_PUSH_HI(zptr);
+   HWPE_PUSH_LO(x_iters);
+   HWPE_PUSH_HI(w_iters);
+   HWPE_PUSH_LO(leftovers);
+   HWPE_PUSH_HI(left_params);
+   HWPE_PUSH_LO(x_d1_stride);
+   HWPE_PUSH_HI(x_rows_offs);
+   HWPE_PUSH_LO(tot_x_read);
+   HWPE_PUSH_HI(x_buffer_slots);
+   HWPE_PUSH_LO(w_tot_len);
+   HWPE_PUSH_HI(w_d0_stride);
+   HWPE_PUSH_LO(yz_tot_len);
+   HWPE_PUSH_HI(yz_d0_stride);
+   HWPE_PUSH_LO(yz_d2_stride);
+   HWPE_PUSH_HI(op_selection);
 }
 
 #endif /* __HAL_REDMULE_H__ */

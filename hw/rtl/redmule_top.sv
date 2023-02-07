@@ -45,8 +45,8 @@ localparam int unsigned  BITW        = fp_width(FpFormat) // Number of bits for 
  
   // TCDM master ports for the memory sID_WIDTHe
   hci_core_intf.master            tcdm       ,
-  // Periph slave port for the controller sID_WIDTHe
-  hwpe_ctrl_intf_periph.slave     periph
+  // Snitch REQRSP config port
+  hwpe_ctrl_intf_reqrsp.target    cfg
 );
 
 localparam int unsigned DATAW_ALIGN = DATAW;
@@ -113,22 +113,6 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo ( .clk( c
 // Z streaming interface + Z FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q    ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo ( .clk( clk_i ) );
-
-hwpe_ctrl_intf_periph   #( .ID_WIDTH   ( ID_WIDTH    ) ) periph_local ( .clk( clk_i ) );
-
-// Periph port binding from local
-always_comb begin
-  periph_local.req  = periph.req;
-  periph_local.add  = periph.add;
-  periph_local.wen  = periph.wen;
-  periph_local.be   = periph.be;
-  periph_local.data = periph.data;
-  periph_local.id   = periph.id;
-  periph.gnt        = periph_local.gnt;
-  periph.r_data     = periph_local.r_data;
-  periph.r_valid    = periph_local.r_valid;
-  periph.r_id       = periph_local.r_id;
-end
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -427,7 +411,7 @@ redmule_ctrl        #(
   .flush_o            ( engine_flush            ),
   .accumulate_o       ( accumulate              ),
   .cntrl_scheduler_o  ( cntrl_scheduler         ),
-  .periph             ( periph_local            )
+  .cfg                ( cfg                     )
 );
     
 

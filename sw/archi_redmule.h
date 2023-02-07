@@ -116,34 +116,13 @@
 #define REDMULE_BASE_ADD 0x00100000
 
 // Commands
-#define REDMULE_TRIGGER                0x00
-#define REDMULE_ACQUIRE                0x04
-#define REDMULE_FINISHED               0x08
-#define REDMULE_STATUS                 0x0C
-#define REDMULE_RUNNING_JOB            0x10
-#define REDMULE_SOFT_CLEAR             0x14
-
-// Registers
-#define REDMULE_REG_OFFS               0x40
-#define REDMULE_REG_X_PTR              0x00
-#define REDMULE_REG_W_PTR              0x04
-#define REDMULE_REG_Y_PTR              0x08
-#define REDMULE_REG_Z_PTR              0x0C
-#define REDMULE_REG_X_ITER_PTR         0x10
-#define REDMULE_REG_W_ITER_PTR         0x14
-#define REDMULE_REG_LEFTOVERS_PTR      0x18
-#define REDMULE_REG_LEFT_PARAMS_PTR    0x1C
-#define REDMULE_REG_X_D1_STRIDE_PTR    0x20
-#define REDMULE_REG_W_TOT_LEN_PTR      0x24
-#define REDMULE_REG_TOT_X_READ_PTR     0x28
-#define REDMULE_REG_W_D0_STRIDE_PTR    0x2C
-#define REDMULE_REG_YZ_TOT_LEN_PTR     0x30
-#define REDMULE_REG_YZ_D0_STRIDE_PTR   0x34
-#define REDMULE_REG_YZ_D2_STRIDE_PTR   0x38
-#define REDMULE_REG_X_ROWS_OFFS_PTR    0x3C
-#define REDMULE_REG_X_BUFFER_SLOTS_PTR 0x40
-#define REDMULE_REG_X_TOT_LEN_PTR      0x44
-#define REDMULE_REG_OP_SELECTION       0x48
+#define REDMULE_SNITCH_TRIGGER         0x00
+#define REDMULE_SNITCH_STATUS          0x08
+#define REDMULE_SNITCH_JOBID           0x10
+#define REDMULE_SNITCH_SOFTCLR         0x18
+#define REDMULE_SNITCH_PUSH            0x20
+#define REDMULE_SNITCH_PULL            0x28
+#define REDMULE_REG_OFFS               0
 
 // OPs definition
 #define MATMUL 0x0

@@ -55,21 +55,20 @@ localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for
   input  logic [      MP-1:0]       tcdm_r_valid  ,
   input  logic                      tcdm_r_opc    ,
   input  logic                      tcdm_r_user   ,
-  // periph slave port
-  input  logic                      periph_req    ,
-  output logic                      periph_gnt    ,
-  input  logic [        31:0]       periph_add    ,
-  input  logic                      periph_wen    ,
-  input  logic [         3:0]       periph_be     ,
-  input  logic [        31:0]       periph_data   ,
-  input  logic [ID_WIDTH-1:0]       periph_id     ,
-  output logic [        31:0]       periph_r_data ,
-  output logic                      periph_r_valid,
-  output logic [ID_WIDTH-1:0]       periph_r_id
+  // reqrsp target port
+  input  logic                      cfg_q_valid   ,
+  output logic                      cfg_q_ready   ,
+  input  logic [        31:0]       cfg_q_addr    ,
+  input  logic                      cfg_q_write   ,
+  input  logic [         7:0]       cfg_q_strb    ,
+  input  logic [        63:0]       cfg_q_data    ,
+  output logic [        63:0]       cfg_p_data    ,
+  output logic                      cfg_p_valid   ,
+  input  logic                      cfg_p_ready
 );
 
 hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
-hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
+hwpe_ctrl_intf_reqrsp #(.AW(32), .DW(64)) cfg (.clk(clk_i));
 
 // bindings
 generate
@@ -88,16 +87,15 @@ generate
 endgenerate
 
 always_comb begin
-  periph.req     = periph_req;
-  periph.add     = periph_add;
-  periph.wen     = periph_wen;
-  periph.be      = periph_be;
-  periph.data    = periph_data;
-  periph.id      = periph_id;
-  periph_gnt     = periph.gnt;
-  periph_r_data  = periph.r_data;
-  periph_r_valid = periph.r_valid;
-  periph_r_id    = periph.r_id;
+  cfg.q_valid = cfg_q_valid;
+  cfg_q_ready = cfg.q_ready;
+  cfg.q_addr  = cfg_q_addr;
+  cfg.q_data  = cfg_q_data;
+  cfg.q_strb  = cfg_q_strb;
+  cfg.q_write = cfg_q_write;
+  cfg_p_data  = cfg.p_data;
+  cfg_p_valid = cfg.p_valid;
+  cfg.p_ready = cfg_p_ready;
 end
 
 redmule_top #(
@@ -111,7 +109,7 @@ redmule_top #(
   .evt_o        ( evt_o        ),
   .busy_o       ( busy_o       ),
   .tcdm         ( tcdm         ),
-  .periph       ( periph       )
+  .cfg          ( cfg          )
 );
 
 endmodule: redmule_wrap

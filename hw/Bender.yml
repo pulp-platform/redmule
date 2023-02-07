@@ -25,8 +25,11 @@ dependencies:
   zeroriscy:   {git: "git@github.com:yvantor/ibex.git"              , rev: "bender"    }
   hwpe-stream: { git: "git@github.com:pulp-platform/hwpe-stream.git", version: 1.6     }
   hci:         { git: "git@github.com:pulp-platform/hci.git"        , rev: bender-fix  }
-  hwpe-ctrl:   { git: "git@github.com:pulp-platform/hwpe-ctrl.git"  , version: 1.6     }
+  hwpe-ctrl:   { git: "git@github.com:pulp-platform/hwpe-ctrl.git"  , rev: snitch      }
   fpnew:       { git: "git@github.com:yvantor/cvfpu.git"            , rev: "stallable" }
+
+workspace:
+  checkout_dir: ips
 
 sources:
   files:

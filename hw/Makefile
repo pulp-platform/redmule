@@ -32,10 +32,10 @@ clean-env:
 	rm -rf .cached_ipdb.json
 
 update:
-	bender update
+	bender/bender update
 
 scripts: update
-	bender script vsim               \
+	bender/bender script vsim               \
 	--vlog-arg="$(compile_flag)"     \
 	--vcom-arg="-pedanticerrors"     \
 	-t rtl -t test > ${compile_script}

@@ -74,16 +74,16 @@ module redmule_tb;
   logic                tcdm_r_opc;
   logic                tcdm_r_user;
    
-  logic          periph_req;
-  logic          periph_gnt;
-  logic [31:0]   periph_add;
-  logic          periph_wen;
-  logic [3:0]    periph_be;
-  logic [31:0]   periph_data;
-  logic [ID-1:0] periph_id;
-  logic [31:0]   periph_r_data;
-  logic          periph_r_valid;
-  logic [ID-1:0] periph_r_id;
+  // reqrsp target port
+  logic          cfg_q_valid;
+  logic          cfg_q_ready;
+  logic [ 31:0]  cfg_q_addr;
+  logic          cfg_q_write;
+  logic [  7:0]  cfg_q_strb;
+  logic [ 63:0]  cfg_q_data;
+  logic [ 63:0]  cfg_p_data;
+  logic          cfg_p_valid;
+  logic          cfg_p_ready;
 
   logic          instr_req;
   logic          instr_gnt;
@@ -130,13 +130,13 @@ module redmule_tb;
 
   // bindings
   always_comb
-  begin : bind_periph
-    periph_req  = data_req & data_addr[HWPE_ADDR_BASE_BIT];
-    periph_add  = data_addr;
-    periph_wen  = ~data_we;
-    periph_be   = data_be;
-    periph_data = data_wdata;
-    periph_id   = '0;
+  begin : bind_cfg
+    cfg_q_valid = data_req & data_addr[HWPE_ADDR_BASE_BIT];
+    cfg_q_addr  = data_addr & ~32'h7;
+    cfg_q_write = data_we;
+    cfg_q_strb  = data_addr[2] ? 8'hf0 : 8'h0f;
+    cfg_q_data  = {data_wdata, data_wdata};
+    cfg_p_ready = 1'b1;
   end
 
   always_comb
@@ -184,9 +184,9 @@ module redmule_tb;
     assign tcdm[MP].data = data_wdata;
     assign tcdm_r_opc   = 0;
     assign tcdm_r_user  = 0;
-    assign data_gnt    = periph_req ? periph_gnt : stack[0].req ? stack[0].gnt : tcdm[MP].req ? tcdm[MP].gnt : '1;
-    assign data_rdata  = periph_r_valid ? periph_r_data : stack[0].r_valid ? stack[0].r_data : tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
-    assign data_rvalid = periph_r_valid | stack[0].r_valid | tcdm[MP].r_valid | other_r_valid;
+    assign data_gnt    = cfg_q_valid ? cfg_q_ready : stack[0].req ? stack[0].gnt : tcdm[MP].req ? tcdm[MP].gnt : '1;
+    assign data_rdata  = cfg_p_valid ? cfg_p_data : stack[0].r_valid ? stack[0].r_data : tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
+    assign data_rvalid = cfg_p_valid | stack[0].r_valid | tcdm[MP].r_valid | other_r_valid;
   endgenerate
 
   redmule_wrap #(
@@ -210,16 +210,15 @@ module redmule_tb;
     .tcdm_r_valid      ( tcdm_r_valid   ),
     .tcdm_r_opc        ( tcdm_r_opc     ),
     .tcdm_r_user       ( tcdm_r_user    ),
-    .periph_req        ( periph_req     ),
-    .periph_gnt        ( periph_gnt     ),
-    .periph_add        ( periph_add     ),
-    .periph_wen        ( periph_wen     ),
-    .periph_be         ( periph_be      ),
-    .periph_data       ( periph_data    ),
-    .periph_id         ( periph_id      ),
-    .periph_r_data     ( periph_r_data  ),
-    .periph_r_valid    ( periph_r_valid ),
-    .periph_r_id       ( periph_r_id    )
+    .cfg_q_valid       ( cfg_q_valid    ),
+    .cfg_q_ready       ( cfg_q_ready    ),
+    .cfg_q_addr        ( cfg_q_addr     ),
+    .cfg_q_write       ( cfg_q_write    ),
+    .cfg_q_strb        ( cfg_q_strb     ),
+    .cfg_q_data        ( cfg_q_data     ),
+    .cfg_p_data        ( cfg_p_data     ),
+    .cfg_p_valid       ( cfg_p_valid    ),
+    .cfg_p_ready       ( cfg_p_ready    )
   );
 
   tb_dummy_memory  #(

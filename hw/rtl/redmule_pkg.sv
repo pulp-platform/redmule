@@ -43,6 +43,7 @@ package redmule_pkg;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
   parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned            REDMULE_REGS_EVEN = REDMULE_REGS + (REDMULE_REGS % 2 ? 1 : 0);
 
   // Register file index
   // Matrix addresses

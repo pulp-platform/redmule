@@ -203,22 +203,23 @@ int main() {
   hwpe_cg_enable();
 
   hwpe_soft_clear();
-
-  while( ( offload_id_tmp = hwpe_acquire_job() ) < 0);
   
   // job-dependent registers
-  redmule_x_add_set ((unsigned int) x);
-  redmule_w_add_set ((unsigned int) w);
-  redmule_y_add_set ((unsigned int) y);
-  redmule_z_add_set ((unsigned int) z);
   // _Bool is_gemm = 1;
-  redmule_cfg (m_size, n_size, k_size, gemm_ops);
+  redmule_cfg (
+    (unsigned int) x,
+    (unsigned int) w,
+    (unsigned int) y,
+    (unsigned int) z,
+    m_size, n_size, k_size, gemm_ops
+  );
 
   // Start RedMulE operation
   hwpe_trigger_job();
 
   // Wait for end of computation
-  asm volatile ("wfi" ::: "memory");
+  // asm volatile ("wfi" ::: "memory");
+  while(hwpe_get_status());
 
   // Disable RedMulE
   hwpe_cg_disable();
