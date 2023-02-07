@@ -36,33 +36,33 @@ localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
 localparam int unsigned W_ITERS       = W_ITERS                ,
 localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS            
 )(
-	input  logic                    clk_i             ,
-	input  logic                    rst_ni            ,
-	input  logic                    test_mode_i       ,
+  input  logic                    clk_i             ,
+  input  logic                    rst_ni            ,
+  input  logic                    test_mode_i       ,
   output logic                    busy_o            ,
   output logic                    clear_o           ,
-	output logic [N_CORES-1:0][1:0] evt_o             ,
+  output logic [N_CORES-1:0][1:0] evt_o             ,
   output logic                    output_fill_o     ,
   output logic                    w_shift_o         ,
   output logic                    out_wrap_clk_en_o ,
   output ctrl_regfile_t           reg_file_o        ,
   input  logic                    reg_enable_i      ,
-	// Flags coming from the wrap registers
-	input  z_buffer_flgs_t          flgs_output_wrap_i,
-	// Flags coming from the engine
-	input  flgs_engine_t            flgs_engine_i     ,
+  // Flags coming from the wrap registers
+  input  z_buffer_flgs_t          flgs_output_wrap_i,
+  // Flags coming from the engine
+  input  flgs_engine_t            flgs_engine_i     ,
   // Flags coming from the state machine
   input  logic                    w_loaded_i        ,
-	// Control signals for the engine
-	output logic                    flush_o           ,
+  // Control signals for the engine
+  output logic                    flush_o           ,
   output logic                    accumulate_o      ,
   // Control signals for the state machine
   output cntrl_scheduler_t        cntrl_scheduler_o ,
-	// Peripheral slave port
-	hwpe_ctrl_intf_periph.slave     periph
+  // Peripheral slave port
+  hwpe_ctrl_intf_periph.slave     periph
 );
 
-	logic        clear;
+  logic        clear;
   logic        accumulate_q;
   logic        w_computed_en, w_computed_rst, count_weight_q, accumulate_en, accumulate_rst, storing_rst;
   logic        last_w_row, last_w_row_en, last_w_row_rst;
@@ -76,15 +76,15 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic [15:0] w_rows_iter, w_cols_iter, w_rows_lftovr, w_cols_lftovr, w_row_count_d, w_row_count_q;
   logic [15:0] out_rows_iter, out_cols_iter, out_rows_lftovr, out_cols_lftovr, out_storings_d, out_storings_q, tot_stores;
 
-	typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
-	redmule_ctrl_state current, next;
+  typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
+  redmule_ctrl_state current, next;
 
-	hwpe_ctrl_package::ctrl_regfile_t reg_file;
-	hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
+  hwpe_ctrl_package::ctrl_regfile_t reg_file;
+  hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
   hwpe_ctrl_package::flags_slave_t  flgs_slave;
 
   // Control slave interface
-	hwpe_ctrl_slave  #(
+  hwpe_ctrl_slave  #(
     .N_CORES        ( N_CORES      ),
     .N_CONTEXT      ( N_CONTEXT    ),
     .N_IO_REGS      ( REDMULE_REGS ),
@@ -105,14 +105,14 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
 
   // State register
   always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
-  	if(~rst_ni) begin
-   		current <= REDMULE_IDLE;
-   	end else begin
-   		if (clear) 
-   			current <= REDMULE_IDLE;
-   		else
-   			current <= next;
-   	end
+    if(~rst_ni) begin
+       current <= REDMULE_IDLE;
+    end else begin
+      if (clear) 
+        current <= REDMULE_IDLE;
+      else
+        current <= next;
+    end
   end
 
   // This register counts the number of weight rows loaded
@@ -239,28 +239,28 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     next               = current;
 
     case (current)
-    	REDMULE_IDLE: begin
+      REDMULE_IDLE: begin
         w_shift_o = 1'b0;
         busy_o    = 1'b0;
         out_storings_d = '0;
         w_row_count_d  = '0;
         if (clear)
           out_wrap_clk_en = 1'b1;
-    		if (flgs_slave.start || test_mode_i)
-    			next = REDMULE_STARTING;
-    		else 
-    			next = REDMULE_IDLE;
-    	end
+        if (flgs_slave.start || test_mode_i)
+          next = REDMULE_STARTING;
+        else 
+          next = REDMULE_IDLE;
+      end
   
-    	REDMULE_STARTING: begin
+      REDMULE_STARTING: begin
         w_shift_o              = 1'b0;
-    		cntrl_scheduler_o.first_load = 1'b1;
-    		if (w_loaded_i) begin
-    			next = REDMULE_COMPUTING;
+        cntrl_scheduler_o.first_load = 1'b1;
+        if (w_loaded_i) begin
+          next = REDMULE_COMPUTING;
           w_row_count_d = w_row_count_q + 1;
-    		end else
-    			next = REDMULE_STARTING;
-    	end
+        end else
+          next = REDMULE_STARTING;
+      end
 
       REDMULE_COMPUTING: begin
         if (w_loaded_i)
@@ -270,9 +270,9 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           w_computed_en = 1'b1;
         else if (w_row_count_q == w_rows_iter) begin
           if (!count_weight_q)
-              w_computed_en = 1'b1;
+            w_computed_en = 1'b1;
           if (!last_w_row)
-              last_w_row_en = 1'b1;
+            last_w_row_en = 1'b1;
         end
         
         case (last_w_row)
@@ -290,9 +290,9 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
               w_row_count_d = 16'd1;
               next = REDMULE_BUFFERING;
               if (accumulate_q)
-                  accumulate_rst = 1'b1;
+                accumulate_rst = 1'b1;
               if (count_weight_q)
-                  w_computed_rst = 1'b1;
+                w_computed_rst = 1'b1;
             end else
               next = REDMULE_COMPUTING;
           end
@@ -302,7 +302,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
       REDMULE_BUFFERING: begin
         out_wrap_clk_en = 1'b1;
         if (last_w_row)
-            last_w_row_rst = 1'b1;
+          last_w_row_rst = 1'b1;
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
         output_fill_o = reg_enable_i;
@@ -333,7 +333,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         end
       end
   
-    	REDMULE_FINISHED: begin
+      REDMULE_FINISHED: begin
         cntrl_slave.done = 1'b1;
         busy_o           = 1'b0;
         flush_o          = 1'b1;
@@ -346,7 +346,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         accumulate_rst = 1'b1;
         last_w_row_rst = 1'b1;
         storing_rst    = 1'b1;
-    	end
+      end
     endcase
   end
 
