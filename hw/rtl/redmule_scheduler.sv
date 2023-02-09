@@ -19,13 +19,13 @@
  * RedMulE Scheduler
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_scheduler #(
+module redmule_scheduler
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned Height      = ARRAY_HEIGHT   ,
 parameter  int unsigned Width       = ARRAY_WIDTH    ,
 parameter  int unsigned NumPipeRegs = PIPE_REGS      ,

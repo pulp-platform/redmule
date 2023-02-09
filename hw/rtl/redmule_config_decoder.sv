@@ -20,10 +20,10 @@
  * RedMulE Configuration Decoder
  */
 
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-
-module redmule_config_decoder #(
+module redmule_config_decoder
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+#(
   parameter int unsigned ADDR_WIDTH   = ADDR_W       ,
   parameter int unsigned ARRAY_WIDTH  = ARRAY_WIDTH  ,
   parameter int unsigned ARRAY_HEIGHT = ARRAY_HEIGHT ,

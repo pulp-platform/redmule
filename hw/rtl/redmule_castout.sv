@@ -19,11 +19,11 @@
  * RedMulE Output Cast Unit
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-
-module redmule_castout #(
+module redmule_castout
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+#(
   parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
   parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
   parameter fpnew_pkg::fp_format_e   src_format   = FPFORMAT,

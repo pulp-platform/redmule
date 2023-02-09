@@ -19,12 +19,12 @@
  * RedMulE Streamer
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-import hci_package::*;
-import hwpe_stream_package::*;
-
-module redmule_streamer #(
+module redmule_streamer
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+  import hci_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned DW      = 288,
 parameter  int unsigned UW      = 1,
 parameter  int unsigned AW      = ADDR_W,

@@ -19,11 +19,11 @@
  * RedMulE Input Cast Unit
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-
-module redmule_castin #(
+module redmule_castin
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+#(
   parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
   parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
   parameter fpnew_pkg::fp_format_e   dst_format   = FPFORMAT,

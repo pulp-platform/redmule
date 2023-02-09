@@ -19,10 +19,10 @@
  * RedMulE Z Buffer
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-
-module redmule_z_buffer #(
+module redmule_z_buffer
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+#(
 parameter int unsigned           DW       = 288,
 parameter fpnew_pkg::fp_format_e FpFormat = fpnew_pkg::FP16,
 parameter int unsigned           Width    = ARRAY_WIDTH,   // Number of parallel index

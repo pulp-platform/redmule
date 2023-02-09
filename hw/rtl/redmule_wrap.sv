@@ -19,13 +19,13 @@
  * RedMulE Wrapper
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_wrap #(
+module redmule_wrap
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned  ID_WIDTH    = 8                 ,
 parameter  int unsigned  N_CORES     = 8                 ,
 parameter  int unsigned  DW          = DATA_W            , // TCDM port dimension (in bits)

@@ -19,12 +19,12 @@
  * RedMulE Control Unit
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-
-module redmule_ctrl #(
+module redmule_ctrl
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+#(
 parameter  int unsigned N_CORES       = 8                      ,
 parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
 parameter  int unsigned ID_WIDTH      = 8                      ,

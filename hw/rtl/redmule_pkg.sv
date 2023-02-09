@@ -19,11 +19,10 @@
  * RedMulE Package
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import hwpe_stream_package::*;
-
 package redmule_pkg;
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import hwpe_stream_package::*;
 
   parameter int unsigned            DATA_W       = 288; // TCDM port dimension (in bits)
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;

@@ -19,13 +19,13 @@
  * RedMulE Top-Level Module
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-import hci_package::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_top #(
+module redmule_top
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+  import hci_package::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned  ID_WIDTH    = 8                 ,
 parameter  int unsigned  N_CORES     = 8                 ,
 parameter  int unsigned  DW          = DATA_W            , // TCDM port dimension (in bits)
