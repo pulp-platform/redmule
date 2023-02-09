@@ -129,7 +129,7 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    x_cols_iter_tmp = n_size/tile;
 
    // Calculating the number of iterations alng the two dimensions of the W matrix
-   w_rows_iter = w_rows;
+   w_rows_iter_tmp = w_rows;
    w_cols_iter_tmp = k_size/tile;
 
    // Calculating the residuals along the input dimensions
@@ -144,6 +144,11 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
      w_cols_iter = w_cols_iter_tmp + 1;
    else 
      w_cols_iter = w_cols_iter_tmp;
+
+  if (w_rows_lftovr != 0)
+    w_rows_iter = w_rows_iter_tmp + ARRAY_HEIGHT - w_rows_lftovr;
+  else
+    w_rows_iter = w_rows_iter_tmp;
 
    if (x_cols_lftovr != 0)
      x_cols_iter = x_cols_iter_tmp + 1;
@@ -210,7 +215,7 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    x_iters      |= x_rows_iter   << 16 | x_cols_iter   << 0;
    w_iters      |= w_rows_iter   << 16 | w_cols_iter   << 0;
    leftovers    |= x_rows_lftovr << 24 | x_cols_lftovr << 16 | w_rows_lftovr << 8  | w_cols_lftovr << 0;
-   left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub    << 13;
+   left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub   << 13;    //The 2 LSBs are UNUSED
    x_d1_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*x_cols_iter_tmp) + x_cols_lftovr);
    x_rows_offs   = ARRAY_WIDTH*x_d1_stride;
    w_tot_len     = w_rows_iter*w_cols_iter*x_rows_iter;

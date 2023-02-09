@@ -585,7 +585,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_leftovers
     end
   end
 end
-assign w_rows_lftovr_o = x_cols_lftovr_q;
+assign w_rows_lftovr_o = tot_w_loaded_q > reg_file_i.hwpe_params[W_ITERS][31:16] - reg_file_i.hwpe_params[LEFTOVERS][15:8] ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : '0;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : weight_cols_leftovers
   if(~rst_ni) begin
@@ -690,7 +690,6 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_stores_counter
 end
 
 always_comb begin
-
   if (store_rows_lftovr_q == '0 || tot_z_stored_q < store_rows_lftovr_q) begin
     if (store_cols_lftovr_q) begin
       for (int i = 0; i < STRB; i++) begin
@@ -704,7 +703,6 @@ always_comb begin
       strb = '1;
   end else
     strb = '0;
-
 end
 
 logic [H-1:0][$clog2(D)-1:0] count_w_q;
@@ -826,7 +824,6 @@ assign soft_clear_o = clear_regs;
 assign x_buffer_clk_en_o  = x_buffer_clk_en;
 assign z_buffer_clk_en_o = z_buffer_clk_en;
 
-//????
 assign x_rows_lftovr_en = ((x_rows_iter_d == reg_file_i.hwpe_params[X_ITERS][31:16] - 1 && w_cols_d == '0 && current == WAIT) ||
                            (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && current == X_REQ)) && 
                           reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 && x_rows_lftovr_q == '0;
@@ -900,7 +897,7 @@ z_buffer_clk_en    = '0;
 // Leftover enable and reset signals
 x_cols_lftovr_en   = 1'b0;
 x_cols_lftovr_rst  = 1'b0;
-//x_rows_lftovr_en   = 1'b0;
+//x_rows_lftovr_en   = 1'b0;  //Moved out of FSM
 x_rows_lftovr_rst  = 1'b0;
 y_cols_lftovr_en   = 1'b0;
 y_cols_lftovr_rst  = 1'b0;
@@ -1113,11 +1110,11 @@ clear_regs       = 1'b0;
         d_shift_d = d_shift_q + 1;
         h_shift_d = '0;
       end
-
-      if (tot_w_loaded_d == reg_file_i.hwpe_params[W_ITERS][31:16] && !loading_x_q) begin
-        tot_w_loaded_d = '0;
-        w_iters_d = w_iters_q + 1;
-      end
+                                                                    //Should be no longer needed
+      //if (tot_w_loaded_d == reg_file_i.hwpe_params[W_ITERS][31:16] /*&& !loading_x_q*/) begin
+      //  tot_w_loaded_d = '0;
+      //  w_iters_d = w_iters_q + 1;
+      //end
         
       if (w_valid_i == 1'b1 && w_strb_i == '1) begin
         w_loaded = 1'b1;
@@ -1126,16 +1123,23 @@ clear_regs       = 1'b0;
           y_push_en = (!y_push_q) ? 1'b1 : 1'b0;
           consume_y_en = (!consume_y_q) ? 1'b1 : 1'b0;
         end
+
         w_loaded_d = w_loaded_q + 1;
-        tot_w_loaded_d = tot_w_loaded_q + 1;
+
+        if (tot_w_loaded_d == reg_file_i.hwpe_params[W_ITERS][31:16]) begin
+          tot_w_loaded_d = '0;
+          w_iters_d = w_iters_q + 1;
+        end else
+          tot_w_loaded_d = tot_w_loaded_q + 1;
+
         flgs_scheduler_o.w_loaded = 1'b1;
 
         if (loading_x_q)
           next = LOAD_X;
-        else if ( ((loading_y_q && !flgs_z_buffer_i.loaded)                || 
-                   (y_preloaded_q && flgs_z_buffer_i.y_pushed)             || 
-                   (flgs_x_buffer_i.full && !y_loaded_q && y_fifo_valid_i)) && 
-                   reg_file_i.hwpe_params[OP_SELECTION][0]                    &&
+        else if ( ((loading_y_q && !flgs_z_buffer_i.loaded)                                                                                                         || 
+                  (y_preloaded_q && flgs_z_buffer_i.y_pushed && !(reg_file_i.hwpe_params[W_ITERS][15:0] == 16'b1 && reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1))  ||  //if only one iteration is needed to completely load Y, we skip the LOAD_Y state
+                   (flgs_x_buffer_i.full && !y_loaded_q && y_fifo_valid_i))                                                                                         && 
+                   reg_file_i.hwpe_params[OP_SELECTION][0]                                                                                                          &&
                    reg_file_i.hwpe_params[X_ITERS][15:0] > 1
                 ) begin
           next = LOAD_Y;
@@ -1375,7 +1379,7 @@ clear_regs       = 1'b0;
       if (reg_file_i.hwpe_params[X_ITERS][15:0] > 16'd1) begin // X Matrix N dimension is larger than the number of elements we read through the streamer port
 
         /*if ((x_rows_iter_d == reg_file_i.hwpe_params[X_ITERS][31:16] - 1) && reg_file_i.hwpe_params[LEFTOVERS][31:24] != 0 && w_cols_d == 0 && x_rows_lftovr_q == '0)
-          x_rows_lftovr_en = 1'b1;*/ //Moved out of fsm   
+          x_rows_lftovr_en = 1'b1; *///Moved out of fsm   
 
         if (flgs_streamer_i.x_stream_source_flags.ready_start) begin
         /*                              START FIX-ME                             */
@@ -1398,11 +1402,11 @@ clear_regs       = 1'b0;
                 x_cols_lftovr_rst = 1'b1;
               tot_x_read_d = tot_x_read_q + 1;
             end else if (tot_store_q == reg_file_i.hwpe_params[LEFT_PARAMS][31:16] - 1) begin
-              if (x_cols_iter_q < reg_file_i.hwpe_params[X_ITERS][15:0] && tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1 || reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin   //Check this if it does not work with M > 16
+              if (x_cols_iter_q < reg_file_i.hwpe_params[X_ITERS][15:0] && tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1 || reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin
                 cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
                 tot_x_read_d = tot_x_read_q + 1;
               end
-            end else if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin   //Ask
+            end else if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin
               cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
               tot_x_read_d = tot_x_read_q + 1;
             end
@@ -1485,7 +1489,7 @@ clear_regs       = 1'b0;
         if (y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0])
           y_cols_iter_d = 16'd0;
       end
-      
+                                                                 
       if (tot_w_loaded_q == reg_file_i.hwpe_params[W_ITERS][31:16] && !loading_x_q) begin
         tot_w_loaded_d = '0;
         w_iters_d = w_iters_q + 1;
@@ -1499,9 +1503,11 @@ clear_regs       = 1'b0;
         end
       end else if (flgs_streamer_i.w_stream_source_flags.ready_start && fifo_flgs_i.empty) begin
         end_computation = 1'b1;
-        if (cntrl_scheduler_i.storing)
+        if (cntrl_scheduler_i.storing) begin
           next = STORE;
-        else
+          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 && store_rows_lftovr_q == '0)
+            store_rows_lftovr_en = 1'b1;
+        end else
           next = WAIT;
       end else if (flgs_x_buffer_i.empty && tot_store_q < reg_file_i.hwpe_params[LEFT_PARAMS][31:16] - 1) begin
         next = LOAD_X;
@@ -1545,7 +1551,7 @@ clear_regs       = 1'b0;
             store_count_d = '0;
             tot_z_stored_d = '0;
             
-            if (x_rows_lftovr_q != '0 && store_rows_lftovr_q == '0)    //Must check if timing is always OK
+            if (x_rows_lftovr_q != '0 && store_rows_lftovr_q == '0)
               store_rows_lftovr_en = 1'b1;
 
           end else if ( (n_waits_d == NumPipeRegs) && (store_count_d == NumPipeRegs) ) begin
