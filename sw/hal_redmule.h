@@ -67,159 +67,185 @@ static inline void hwpe_cg_disable() {
 
 void redmule_cfg (
   uint32_t xptr, uint32_t wptr, uint32_t yptr, uint32_t zptr,
-  uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops
+  uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops, uint8_t gemm_input_fmt, uint8_t gemm_output_fmt
 ){
-   uint32_t x_iters        = 0;
-   uint32_t w_iters        = 0;
-   uint32_t leftovers      = 0;
-   uint32_t left_params    = 0;
-   uint32_t x_d1_stride    = 0;
-   uint32_t x_rows_offs    = 0;
-   uint32_t w_tot_len      = 0;
-   uint32_t w_d1_len       = 0;
-   uint32_t w_d0_stride    = 0;
-   uint32_t yz_tot_len     = 0;
-   uint32_t yz_d0_stride   = 0;
-   uint32_t yz_d2_stride   = 0;
-   uint32_t tot_x_read     = 0;
-   uint32_t x_buffer_slots = 0;
-   uint32_t op_selection   = 0;
-   uint16_t tot_stores     = 0;
-   uint16_t w_rows         = n_size;
-   uint16_t depth          = DATA_WIDTH/(ARRAY_HEIGHT*FPFORMAT);
-   uint8_t  tile           = ARRAY_HEIGHT*(PIPE_REGS + 1);
-   _Bool    x_rows_sub     = 0;
-   _Bool    x_cols_sub     = 0;
-   _Bool    w_cols_sub     = 0;
-   uint16_t x_rows_iter,
-            x_rows_iter_tmp,
-            w_rows_iter,
-            w_rows_iter_tmp;
-   uint16_t x_cols_iter,
-            x_cols_iter_tmp,
-            w_cols_iter,
-            w_cols_iter_tmp;
-   uint8_t  x_rows_lftovr,
-            x_cols_lftovr,
-            w_rows_lftovr,
-            w_cols_lftovr,
-            slots;
 
-   // Calculating the number of iterations alng the two dimensions of the X matrix
-   x_rows_iter_tmp = m_size/ARRAY_WIDTH;
-   x_cols_iter_tmp = n_size/tile;
-
-   // Calculating the number of iterations alng the two dimensions of the W matrix
-   w_rows_iter = w_rows;
-   w_cols_iter_tmp = k_size/tile;
-
-   // Calculating the residuals along the input dimensions
-   x_rows_lftovr = m_size - (x_rows_iter_tmp*ARRAY_WIDTH);
-   x_cols_lftovr = n_size - (x_cols_iter_tmp*tile);
-
-   // Calculating the residuals along the weight dimensions
-   w_rows_lftovr = n_size - (ARRAY_HEIGHT*(w_rows/ARRAY_HEIGHT));
-   w_cols_lftovr = k_size - (w_cols_iter_tmp*tile);
-
-   if (w_cols_lftovr != 0)
-     w_cols_iter = w_cols_iter_tmp + 1;
-   else 
-     w_cols_iter = w_cols_iter_tmp;
-
-   if (x_cols_lftovr != 0)
-     x_cols_iter = x_cols_iter_tmp + 1;
-   else 
-     x_cols_iter = x_cols_iter_tmp;
-
-   if (x_rows_lftovr != 0)
-     x_rows_iter = x_rows_iter_tmp + 1;
-   else 
-     x_rows_iter = x_rows_iter_tmp;
-
-   if (x_cols_lftovr%depth != 0)
-     x_buffer_slots = x_cols_lftovr/depth + 1;
-   else
-     x_buffer_slots = x_cols_lftovr/depth;
-
-   // Calculating the number of total stores
-   tot_stores = x_rows_iter*w_cols_iter;
-
-   // Determining if input matrixes are sub-matrixes
-   if (m_size < ARRAY_WIDTH)
-     x_rows_sub = 1;
-   if (n_size < ARRAY_HEIGHT)
-     x_cols_sub = 1;
-   if (k_size < tile)
-    w_cols_sub = 1;
-
-   // Operation selection
-   switch (gemm_ops) {
-     case MATMUL:
-       op_selection |= (RNE << 29 | RNE << 26 | OP_FMADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 0;
-     break;
-     
-     case GEMM:
-       op_selection |= (RNE << 29 | RNE << 26 | OP_FMADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case ADDMAX:
-       op_selection |= (RNE << 29 | RTZ << 26 | OP_ADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case ADDMIN:
-       op_selection |= (RNE << 29 | RNE << 26 | OP_ADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case MULMAX:
-       op_selection |= (RNE << 29 | RTZ << 26 | OP_MUL << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case MULMIN:
-       op_selection |= (RNE << 29 | RNE << 26 | OP_MUL << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case MAXMIN:
-       op_selection |= (RTZ << 29 | RNE << 26 | OP_MINMAX << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-     
-     case MINMAX:
-       op_selection |= (RNE << 29 | RTZ << 26 | OP_MINMAX << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
-     break;
-   }
-
-   // Storing iterations and residuals in registers
-   x_iters      |= x_rows_iter   << 16 | x_cols_iter   << 0;
-   w_iters      |= w_rows_iter   << 16 | w_cols_iter   << 0;
-   leftovers    |= x_rows_lftovr << 24 | x_cols_lftovr << 16 | w_rows_lftovr << 8  | w_cols_lftovr << 0;
-   left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub    << 13;
-   x_d1_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*x_cols_iter_tmp) + x_cols_lftovr);
-   x_rows_offs   = ARRAY_WIDTH*x_d1_stride;
-   w_tot_len     = w_rows_iter*w_cols_iter*x_rows_iter;
-   w_d0_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*w_cols_iter_tmp) + w_cols_lftovr);
-   yz_tot_len    = ARRAY_WIDTH*x_rows_iter*w_cols_iter;
-   yz_d0_stride  = w_d0_stride;
-   yz_d2_stride  = ARRAY_WIDTH*w_d0_stride;
-   tot_x_read    = x_rows_iter*x_cols_iter*w_cols_iter;
+  // assign config_d.m_size          = reg_file_i.hwpe_params[0][15:0];
+  // assign config_d.k_size          = reg_file_i.hwpe_params[0][31:16];
+  // assign config_d.n_size          = reg_file_i.hwpe_params[1][15:0];
+  // assign config_d.gemm_ops        = reg_file_i.hwpe_params[1][18:16];
+  // assign config_d.gemm_input_fmt  = reg_file_i.hwpe_params[1][20:19];
+  // assign config_d.gemm_output_fmt = reg_file_i.hwpe_params[1][22:21];
+  // assign config_d.x_addr          = reg_file_i.hwpe_params[2];
+  // assign config_d.w_addr          = reg_file_i.hwpe_params[3];
+  // assign config_d.y_addr          = reg_file_i.hwpe_params[4];
+  // assign config_d.z_addr          = reg_file_i.hwpe_params[5];
 
    // Writing the computations in configuration register
+   HWPE_PUSH_LO(k_size << 16 | m_size);
+   HWPE_PUSH_HI(gemm_output_fmt << 21 | gemm_input_fmt << 19 | gemm_ops << 16 | n_size);
    HWPE_PUSH_LO(xptr);
    HWPE_PUSH_HI(wptr);
    HWPE_PUSH_LO(yptr);
    HWPE_PUSH_HI(zptr);
-   HWPE_PUSH_LO(x_iters);
-   HWPE_PUSH_HI(w_iters);
-   HWPE_PUSH_LO(leftovers);
-   HWPE_PUSH_HI(left_params);
-   HWPE_PUSH_LO(x_d1_stride);
-   HWPE_PUSH_HI(x_rows_offs);
-   HWPE_PUSH_LO(tot_x_read);
-   HWPE_PUSH_HI(x_buffer_slots);
-   HWPE_PUSH_LO(w_tot_len);
-   HWPE_PUSH_HI(w_d0_stride);
-   HWPE_PUSH_LO(yz_tot_len);
-   HWPE_PUSH_HI(yz_d0_stride);
-   HWPE_PUSH_LO(yz_d2_stride);
-   HWPE_PUSH_HI(op_selection);
 }
+
+
+// void redmule_cfg (
+//   uint32_t xptr, uint32_t wptr, uint32_t yptr, uint32_t zptr,
+//   uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops
+// ){
+//    uint32_t x_iters        = 0;
+//    uint32_t w_iters        = 0;
+//    uint32_t leftovers      = 0;
+//    uint32_t left_params    = 0;
+//    uint32_t x_d1_stride    = 0;
+//    uint32_t x_rows_offs    = 0;
+//    uint32_t w_tot_len      = 0;
+//    uint32_t w_d1_len       = 0;
+//    uint32_t w_d0_stride    = 0;
+//    uint32_t yz_tot_len     = 0;
+//    uint32_t yz_d0_stride   = 0;
+//    uint32_t yz_d2_stride   = 0;
+//    uint32_t tot_x_read     = 0;
+//    uint32_t x_buffer_slots = 0;
+//    uint32_t op_selection   = 0;
+//    uint16_t tot_stores     = 0;
+//    uint16_t w_rows         = n_size;
+//    uint16_t depth          = DATA_WIDTH/(ARRAY_HEIGHT*FPFORMAT);
+//    uint8_t  tile           = ARRAY_HEIGHT*(PIPE_REGS + 1);
+//    _Bool    x_rows_sub     = 0;
+//    _Bool    x_cols_sub     = 0;
+//    _Bool    w_cols_sub     = 0;
+//    uint16_t x_rows_iter,
+//             x_rows_iter_tmp,
+//             w_rows_iter,
+//             w_rows_iter_tmp;
+//    uint16_t x_cols_iter,
+//             x_cols_iter_tmp,
+//             w_cols_iter,
+//             w_cols_iter_tmp;
+//    uint8_t  x_rows_lftovr,
+//             x_cols_lftovr,
+//             w_rows_lftovr,
+//             w_cols_lftovr,
+//             slots;
+
+//    // Calculating the number of iterations alng the two dimensions of the X matrix
+//    x_rows_iter_tmp = m_size/ARRAY_WIDTH;
+//    x_cols_iter_tmp = n_size/tile;
+
+//    // Calculating the number of iterations alng the two dimensions of the W matrix
+//    w_rows_iter = w_rows;
+//    w_cols_iter_tmp = k_size/tile;
+
+//    // Calculating the residuals along the input dimensions
+//    x_rows_lftovr = m_size - (x_rows_iter_tmp*ARRAY_WIDTH);
+//    x_cols_lftovr = n_size - (x_cols_iter_tmp*tile);
+
+//    // Calculating the residuals along the weight dimensions
+//    w_rows_lftovr = n_size - (ARRAY_HEIGHT*(w_rows/ARRAY_HEIGHT));
+//    w_cols_lftovr = k_size - (w_cols_iter_tmp*tile);
+
+//    if (w_cols_lftovr != 0)
+//      w_cols_iter = w_cols_iter_tmp + 1;
+//    else 
+//      w_cols_iter = w_cols_iter_tmp;
+
+//    if (x_cols_lftovr != 0)
+//      x_cols_iter = x_cols_iter_tmp + 1;
+//    else 
+//      x_cols_iter = x_cols_iter_tmp;
+
+//    if (x_rows_lftovr != 0)
+//      x_rows_iter = x_rows_iter_tmp + 1;
+//    else 
+//      x_rows_iter = x_rows_iter_tmp;
+
+//    if (x_cols_lftovr%depth != 0)
+//      x_buffer_slots = x_cols_lftovr/depth + 1;
+//    else
+//      x_buffer_slots = x_cols_lftovr/depth;
+
+//    // Calculating the number of total stores
+//    tot_stores = x_rows_iter*w_cols_iter;
+
+//    // Determining if input matrixes are sub-matrixes
+//    if (m_size < ARRAY_WIDTH)
+//      x_rows_sub = 1;
+//    if (n_size < ARRAY_HEIGHT)
+//      x_cols_sub = 1;
+//    if (k_size < tile)
+//     w_cols_sub = 1;
+
+//    // Operation selection
+//    switch (gemm_ops) {
+//      case MATMUL:
+//        op_selection |= (RNE << 29 | RNE << 26 | OP_FMADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 0;
+//      break;
+     
+//      case GEMM:
+//        op_selection |= (RNE << 29 | RNE << 26 | OP_FMADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case ADDMAX:
+//        op_selection |= (RNE << 29 | RTZ << 26 | OP_ADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case ADDMIN:
+//        op_selection |= (RNE << 29 | RNE << 26 | OP_ADD << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case MULMAX:
+//        op_selection |= (RNE << 29 | RTZ << 26 | OP_MUL << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case MULMIN:
+//        op_selection |= (RNE << 29 | RNE << 26 | OP_MUL << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case MAXMIN:
+//        op_selection |= (RTZ << 29 | RNE << 26 | OP_MINMAX << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+     
+//      case MINMAX:
+//        op_selection |= (RNE << 29 | RTZ << 26 | OP_MINMAX << 22 | OP_MINMAX << 18 | SRC_FMT << 15 | DST_FMT << 12) | 1;
+//      break;
+//    }
+
+//    // Storing iterations and residuals in registers
+//    x_iters      |= x_rows_iter   << 16 | x_cols_iter   << 0;
+//    w_iters      |= w_rows_iter   << 16 | w_cols_iter   << 0;
+//    leftovers    |= x_rows_lftovr << 24 | x_cols_lftovr << 16 | w_rows_lftovr << 8  | w_cols_lftovr << 0;
+//    left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub    << 13;
+//    x_d1_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*x_cols_iter_tmp) + x_cols_lftovr);
+//    x_rows_offs   = ARRAY_WIDTH*x_d1_stride;
+//    w_tot_len     = w_rows_iter*w_cols_iter*x_rows_iter;
+//    w_d0_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*w_cols_iter_tmp) + w_cols_lftovr);
+//    yz_tot_len    = ARRAY_WIDTH*x_rows_iter*w_cols_iter;
+//    yz_d0_stride  = w_d0_stride;
+//    yz_d2_stride  = ARRAY_WIDTH*w_d0_stride;
+//    tot_x_read    = x_rows_iter*x_cols_iter*w_cols_iter;
+
+//    // Writing the computations in configuration register
+//    HWPE_PUSH_LO(xptr);
+//    HWPE_PUSH_HI(wptr);
+//    HWPE_PUSH_LO(yptr);
+//    HWPE_PUSH_HI(zptr);
+//    HWPE_PUSH_LO(x_iters);
+//    HWPE_PUSH_HI(w_iters);
+//    HWPE_PUSH_LO(leftovers);
+//    HWPE_PUSH_HI(left_params);
+//    HWPE_PUSH_LO(x_d1_stride);
+//    HWPE_PUSH_HI(x_rows_offs);
+//    HWPE_PUSH_LO(tot_x_read);
+//    HWPE_PUSH_HI(x_buffer_slots);
+//    HWPE_PUSH_LO(w_tot_len);
+//    HWPE_PUSH_HI(w_d0_stride);
+//    HWPE_PUSH_LO(yz_tot_len);
+//    HWPE_PUSH_HI(yz_d0_stride);
+//    HWPE_PUSH_LO(yz_d2_stride);
+//    HWPE_PUSH_HI(op_selection);
+// }
 
 #endif /* __HAL_REDMULE_H__ */

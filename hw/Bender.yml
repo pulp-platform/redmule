@@ -35,6 +35,7 @@ sources:
   files:
   # RedMulE
     - rtl/redmule_pkg.sv
+    - rtl/redmule_config_decoder.sv
     - rtl/redmule_ctrl.sv
     - rtl/redmule_scheduler.sv
     - rtl/redmule_castin.sv

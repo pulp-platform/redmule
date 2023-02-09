@@ -76,7 +76,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic [15:0] w_rows_iter, w_cols_iter, w_rows_lftovr, w_cols_lftovr, w_row_count_d, w_row_count_q;
   logic [15:0] out_rows_iter, out_cols_iter, out_rows_lftovr, out_cols_lftovr, out_storings_d, out_storings_q, tot_stores;
 
-  typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
+  typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_CFGMUL, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
   redmule_ctrl_state current, next;
 
   hwpe_ctrl_package::ctrl_regfile_t reg_file;
@@ -202,9 +202,40 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
-  assign w_rows_iter       = reg_file.hwpe_params [W_ITERS    ][31:16];
-  assign tot_stores        = reg_file.hwpe_params [LEFT_PARAMS][31:16];
-  assign reg_file_o = reg_file;
+  logic cfg_valid;
+  logic cfg_start;
+  logic cfg_first_push_d, cfg_first_push_q;
+  assign cfg_start = cfg.q_write & cfg.q_valid & (cfg.q_addr[7:0] == 8'h20) & cfg_first_push_q;
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      cfg_first_push_q <= '0;
+    else if(clear | current==REDMULE_STARTING)
+      cfg_first_push_q <= 1'b1;
+    else if(cfg.q_write & cfg.q_valid & (cfg.q_addr[7:0] == 8'h20))
+      cfg_first_push_q <= 1'b0;
+  end 
+
+  redmule_config_decoder #(
+    .ADDR_WIDTH   ( ADDR_W       ),
+    .ARRAY_WIDTH  ( ARRAY_WIDTH  ),
+    .ARRAY_HEIGHT ( ARRAY_HEIGHT ),
+    .PIPE_REGS    ( PIPE_REGS    ),
+    .FPFORMAT     ( 16           ),
+    .DATA_WIDTH   ( DATAW        )
+  ) i_config_decoder (
+    .clk_i      ( clk_i      ),
+    .rst_ni     ( rst_ni     ),
+    .clear_i    ( clear      ),
+    .start_i    ( cfg_start  ),
+    .valid_o    ( cfg_valid  ),
+    .reg_file_i ( reg_file   ),
+    .reg_file_o ( reg_file_o )
+  );
+  assign w_rows_iter = reg_file_o.hwpe_params [W_ITERS    ][31:16];
+  assign tot_stores  = reg_file_o.hwpe_params [LEFT_PARAMS][31:16];
+
   assign out_wrap_clk_en_o = out_wrap_clk_en;
 
   /*---------------------------------------------------------------------------------------------*/
@@ -243,10 +274,23 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         w_row_count_d  = '0;
         if (clear)
           out_wrap_clk_en = 1'b1;
-        if (flgs_slave.start || test_mode_i)
+        if (cfg_valid & (flgs_slave.start || test_mode_i))
           next = REDMULE_STARTING;
+        else if (flgs_slave.start || test_mode_i)
+          next = REDMULE_CFGMUL;
         else 
           next = REDMULE_IDLE;
+      end
+
+      REDMULE_CFGMUL: begin
+        w_shift_o = 1'b0;
+        busy_o    = 1'b0;
+        out_storings_d = '0;
+        w_row_count_d  = '0;
+        if (clear)
+          out_wrap_clk_en = 1'b1;
+        if (cfg_valid)
+          next = REDMULE_STARTING;
       end
   
       REDMULE_STARTING: begin

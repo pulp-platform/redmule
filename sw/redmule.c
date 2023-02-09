@@ -211,7 +211,7 @@ int main() {
     (unsigned int) w,
     (unsigned int) y,
     (unsigned int) z,
-    m_size, n_size, k_size, gemm_ops
+    m_size, n_size, k_size, gemm_ops, SRC_FMT, DST_FMT
   );
 
   // Start RedMulE operation
