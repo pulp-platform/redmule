@@ -126,24 +126,34 @@ module redmule_config_decoder #(
 
   // Sequential multiplier x_rows x w_cols
   logic [31:0] x_rows_by_w_cols_iter;
-  logic        x_rows_by_w_cols_iter_valid;
+  logic        x_rows_by_w_cols_iter_valid, x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
   logic        x_rows_by_w_cols_iter_ready;
   hwpe_ctrl_seq_mult #(
     .AW ( 16 ),
     .BW ( 16 )
   ) i_x_rows_by_w_cols_seqmult
   (
-    .clk_i    ( clk_i                       ),
-    .rst_ni   ( rst_ni                      ),
-    .clear_i  ( clear_i                     ),
-    .start_i  ( start_i                     ),
-    .a_i      ( config_d.x_rows_iter        ),
-    .b_i      ( config_d.w_cols_iter        ),
-    .invert_i ( 1'b0                        ),
-    .valid_o  ( x_rows_by_w_cols_iter_valid ),
-    .ready_o  ( x_rows_by_w_cols_iter_ready ),
-    .prod_o   ( x_rows_by_w_cols_iter       )
+    .clk_i    ( clk_i                         ),
+    .rst_ni   ( rst_ni                        ),
+    .clear_i  ( clear_i                       ),
+    .start_i  ( start_i                       ),
+    .a_i      ( config_d.x_rows_iter          ),
+    .b_i      ( config_d.w_cols_iter          ),
+    .invert_i ( 1'b0                          ),
+    .valid_o  ( x_rows_by_w_cols_iter_valid_d ),
+    .ready_o  ( x_rows_by_w_cols_iter_ready   ),
+    .prod_o   ( x_rows_by_w_cols_iter         )
   );
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      x_rows_by_w_cols_iter_valid_q <= '0;
+    else if(clear_i)
+      x_rows_by_w_cols_iter_valid_q <= '0;
+    else
+      x_rows_by_w_cols_iter_valid_q <= x_rows_by_w_cols_iter_valid_d;
+  end
+  assign x_rows_by_w_cols_iter_valid = ~x_rows_by_w_cols_iter_valid_q & x_rows_by_w_cols_iter_valid_d;
 
   // Sequential multiplier x_rows x w_cols x x_cols
   logic [31:0] x_rows_by_w_cols_by_x_cols_iter;
@@ -228,12 +238,12 @@ module redmule_config_decoder #(
 
   assign config_d.x_d1_stride = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);
   assign config_d.x_rows_offs = ARRAY_WIDTH*config_d.x_d1_stride;
-  assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter[15:0];
+  assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter[31:0];
   assign config_d.w_d0_stride = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*w_cols_iter_nolftovr) + config_d.w_cols_lftovr);
   assign config_d.yz_tot_len  = ARRAY_WIDTH*x_rows_by_w_cols_iter[15:0];
   assign config_d.yz_d0_stride = config_d.w_d0_stride;
   assign config_d.yz_d2_stride = ARRAY_WIDTH*config_d.w_d0_stride;
-  assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter[15:0];
+  assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter[31:0];
   assign config_d.x_tot_len    = '0; // not used
 
   // register configuration to avoid critical paths (maybe removable!)
