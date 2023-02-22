@@ -71,7 +71,7 @@ localparam int unsigned W           = Width
   output logic                            x_buffer_clk_en_o ,
   output logic                            z_buffer_clk_en_o ,
   output logic                            reg_enable_o      ,
-  output logic                            z_store_o       ,
+  output logic                            z_store_o         ,
   output logic                            y_buffer_load_o   ,
   output cntrl_engine_t                   cntrl_engine_o    ,
   output cntrl_streamer_t                 cntrl_streamer_o  ,
@@ -128,6 +128,10 @@ logic x_rows_lftovr_en, x_rows_lftovr_rst,
       y_cols_lftovr_en, y_cols_lftovr_rst,
       y_rows_lftovr_en, y_rows_lftovr_rst;
 logic y_push_q;
+logic skip_w_q, skip_w_en,
+      skip_w_rst;
+logic reg_disable, shift_disable;
+logic [$clog2(NumPipeRegs)] skipped_w_q;
 logic [$clog2(W)-1:0] x_rows_lftovr_q,
                       y_rows_lftovr_q,
                       store_rows_lftovr_q;
@@ -179,7 +183,7 @@ fpnew_pkg::fp_format_e input_cast_src_fmt ,
 localparam int unsigned JMP    = (4*DATA_W/ADDR_W) - 4;
 localparam int unsigned NBYTES = BITW/8;
 
-typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE} tensorcore_fsm_state;
+typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} tensorcore_fsm_state;
 tensorcore_fsm_state current, next;
 
 always_comb begin : address_gen_signals
@@ -541,6 +545,30 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : store_rows_leftovers
   end
 end
 
+always_ff @ (posedge clk_i or negedge rst_ni) begin : skip_w_reg
+  if(~rst_ni) begin
+    skip_w_q <= '0;
+  end else begin
+    if (clear_i || clear_regs || skip_w_rst)
+      skip_w_q <= '0;
+    else if (skip_w_en)
+      skip_w_q <= 1;
+  end
+end
+
+always_ff @ (posedge clk_i or negedge rst_ni) begin : skipped_w_counter
+  if(~rst_ni) begin
+    skipped_w_q <= '0;
+  end else begin
+    if (clear_i || clear_regs || skip_w_rst)
+      skipped_w_q <= '0;
+    else if (skip_w_q && skipped_w_q != NumPipeRegs)
+      skipped_w_q <= skipped_w_q + 1;
+  end
+end
+assign reg_disable    = skipped_w_q == NumPipeRegs;
+assign shift_disable  = skipped_w_q >= NumPipeRegs - 1;
+
 always_ff @(posedge clk_i or negedge rst_ni) begin : x_rows_and_columns_iteration
   if(~rst_ni) begin
     x_rows_iter_q <= '0;
@@ -761,9 +789,9 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     end
   end
 end
-assign shift_count_en = (shift_count_q[0][1:0] == '1 && !end_computation) ? w_loaded : 1'b1;
+assign shift_count_en = ((shift_count_q[0][1:0] == '1 && !end_computation && !skip_w_q) ? w_loaded : 1'b1);
 
-assign reg_enable   = shift_count_en | (flgs_streamer_i.w_stream_source_flags.ready_start & fifo_flgs_i.empty);
+assign reg_enable   = (shift_count_en | (flgs_streamer_i.w_stream_source_flags.ready_start & fifo_flgs_i.empty)) & !reg_disable;
 assign reg_enable_o = reg_enable;
 assign count_w_q    = shift_count_q;
 
@@ -839,7 +867,7 @@ flgs_scheduler_o.y_ready            = '0;
 flgs_scheduler_o.z_valid            = '0;
 flgs_scheduler_o.x_full             = '0;
 flgs_scheduler_o.w_loaded           = '0;
-flgs_scheduler_o.w_shift            = shift_count_en; // 1'b1;
+flgs_scheduler_o.w_shift            = shift_count_en && !shift_disable; // 1'b1;
 flgs_scheduler_o.stored             = '0;
 flgs_scheduler_o.z_strb             = strb;
 // Input wrap control default assignments
@@ -893,6 +921,8 @@ last_store_rst     = 1'b0;
 end_computation    = '0;
 x_buffer_clk_en    = '0;
 z_buffer_clk_en    = '0;
+skip_w_en          = 1'b0;
+skip_w_rst         = 1'b0;
 
 // Leftover enable and reset signals
 x_cols_lftovr_en   = 1'b0;
@@ -990,9 +1020,9 @@ clear_regs       = 1'b0;
       z_buffer_clk_en = (flgs_z_buffer_i.loaded) ? 1'b1 : 1'b0;
       cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
       n_waits_d = n_waits_q + 1;
-      if (cntrl_scheduler_i.first_load)
+      if (cntrl_scheduler_i.first_load) begin
         next = FIRST_LOAD;
-      else if (n_waits_q == 2'd1) begin
+      end else if (n_waits_q == 2'd1) begin
         tot_x_read_d = tot_x_read_q + 1;
         next = LOAD_W;
         n_waits_d = '0;
@@ -1039,13 +1069,33 @@ clear_regs       = 1'b0;
       end 
     end
 
+    SKIP_W: begin
+      transfer_count_d = '0;
+      if (loading_x_q) begin
+        next = LOAD_X;
+      end else begin
+        next = WAIT;
+      end
+
+      x_buffer_clk_en = 1'b1;
+      h_shift_d = h_shift_q + 1;
+
+      if (h_shift_q == H - 1) begin
+        cntrl_x_buffer_o.d_shift = 1'b1;
+        x_buffer_clk_en = 1'b1;
+        d_shift_d = d_shift_q + 1;
+        h_shift_d = '0;
+      end
+
+    end
+
     LOAD_W: begin
       transfer_count_d = '0;
       gate_count_d = gate_count_q + 1;
       if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
         y_push_rst = (flgs_z_buffer_i.y_pushed) ?  1'b1 : 1'b0;
         consume_y_rst = (flgs_z_buffer_i.y_pushed && consume_y_q) ? 1'b1 : 1'b0;
-        if (!accumulate_i && consume_y_q) begin
+        if (!accumulate_i && consume_y_q && !skip_w_q) begin
           flgs_scheduler_o.y_push_enable = 1'b1;
           z_buffer_clk_en          = 1'b1;
         end
@@ -1069,6 +1119,11 @@ clear_regs       = 1'b0;
         y_rows_iter_d = y_rows_iter_q + 1;*/
       if (y_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16] - 1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != 0 && y_rows_lftovr_q == '0)
         y_rows_lftovr_en = 1'b1;
+
+      /*If x_cols_lftovr_q is less than or equal to 4 we must reset it here; Needed?*/ 
+     /* if (x_cols_lftovr_q != '0 && (flgs_x_buffer_i.full) )
+        x_cols_lftovr_rst = 1'b1; */
+
 
       /*Here it is mandatory to check if the x_buffer is full because we want to schedule Y loads only once X has been reloaded*/
       if (reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_x_buffer_i.full && !flgs_streamer_i.y_stream_source_flags.ready_start && !y_loaded_q) begin
@@ -1115,6 +1170,9 @@ clear_regs       = 1'b0;
       //  tot_w_loaded_d = '0;
       //  w_iters_d = w_iters_q + 1;
       //end
+
+      if (skip_w_q)
+        skip_w_rst = 1'b1;
         
       if (w_valid_i == 1'b1 && w_strb_i == '1) begin
         w_loaded = 1'b1;
@@ -1132,7 +1190,7 @@ clear_regs       = 1'b0;
         end else
           tot_w_loaded_d = tot_w_loaded_q + 1;
 
-        flgs_scheduler_o.w_loaded = 1'b1;
+        flgs_scheduler_o.w_loaded = skip_w_q ? 1'b0 : 1'b1;
 
         if (loading_x_q)
           next = LOAD_X;
@@ -1149,9 +1207,11 @@ clear_regs       = 1'b0;
           end
         end else if (d_shift_d == H && !flgs_streamer_i.x_stream_source_flags.ready_start) begin
           load_x_en = 1'b1;
-          d_shift_d = '0;
+          /*if (reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 && reg_file_i.hwpe_params[LEFTOVERS][23:16] < H)
+            d_shift_d = 1;
+          else*/
+            d_shift_d = '0;
           next = LOAD_X;
-
           if (x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]) begin
             if ( (reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0) && (x_cols_lftovr_q == '0) )
               x_cols_lftovr_en = 1'b1;
@@ -1200,7 +1260,7 @@ clear_regs       = 1'b0;
       flgs_scheduler_o.x_ready = 1'b1;
       x_buffer_clk_en = 1'b1;
       if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
-        if (!accumulate_i) begin
+        if (!accumulate_i & !skip_w_q) begin
           flgs_scheduler_o.y_push_enable = 1'b1;
           z_buffer_clk_en          = 1'b1;
         end
@@ -1230,7 +1290,8 @@ clear_regs       = 1'b0;
         tot_x_loaded_d = '0;
         load_x_rst = 1'b1;
         if (n_waits_q > 1) begin
-          next = LOAD_W;
+          //next = LOAD_W;
+          next = skip_w_q ? SKIP_W : LOAD_W;
           n_waits_d = '0;
           load_x_rst = (loading_x_q) ? 1'b1 : 1'b0;
         end else
@@ -1240,7 +1301,8 @@ clear_regs       = 1'b0;
           next = WAIT;
           shift_lock_rst = 1'b1;
         end else if (n_waits_q > 1 ) begin
-          next = LOAD_W;
+          //next = LOAD_W;
+          next = skip_w_q ? SKIP_W : LOAD_W;
           n_waits_d = '0;
         end
       end
@@ -1313,7 +1375,7 @@ clear_regs       = 1'b0;
       transfer_count_d = '0;
       gate_count_d = '0;
 
-      if (!accumulate_i && reg_file_i.hwpe_params[OP_SELECTION][0]) begin
+      if (!accumulate_i && reg_file_i.hwpe_params[OP_SELECTION][0] && !skip_w_q) begin
         flgs_scheduler_o.y_push_enable = 1'b1;
         z_buffer_clk_en          = 1'b1;
       end
@@ -1513,6 +1575,16 @@ clear_regs       = 1'b0;
         next = LOAD_X;
         load_x_en = 1'b1;
         d_shift_d = '0;
+
+        //This handles the case where the number of iterations on X rows is 2 but we have a leftover <= H
+        if (x_cols_iter_d == reg_file_i.hwpe_params[X_ITERS][15:0] - 1 && 
+            !(x_rows_iter_d == '0 && w_iters_d == '0) &&
+            reg_file_i.hwpe_params[X_ITERS][15:0] == 16'd2 && 
+            reg_file_i.hwpe_params[LEFTOVERS][23:16] <= H && 
+            reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 &&
+            tot_x_read_d != reg_file_i.hwpe_params[TOT_X_READ])
+          skip_w_en = 1'b1;
+
       end
     end
 

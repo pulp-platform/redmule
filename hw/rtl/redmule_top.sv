@@ -282,7 +282,7 @@ assign w_buffer_ctrl.rows_lftovr       = w_rows_lftovr;
 assign z_buffer_ctrl.fill              = z_buffer_fill;
 assign z_buffer_ctrl.load              = y_buffer_load;
 assign z_buffer_ctrl.store             = z_buffer_store;
-assign z_buffer_ctrl.buffer_clk_en     = fsm_z_clk_en | ctrl_z_clk_en;
+assign z_buffer_ctrl.buffer_clk_en     = (fsm_z_clk_en | ctrl_z_clk_en);
 assign z_buffer_ctrl.cols_lftovr       = y_cols_lftovr;
 assign z_buffer_ctrl.rows_lftovr       = y_rows_lftovr;
 

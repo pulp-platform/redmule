@@ -215,7 +215,7 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    x_iters      |= x_rows_iter   << 16 | x_cols_iter   << 0;
    w_iters      |= w_rows_iter   << 16 | w_cols_iter   << 0;
    leftovers    |= x_rows_lftovr << 24 | x_cols_lftovr << 16 | w_rows_lftovr << 8  | w_cols_lftovr << 0;
-   left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub   << 13;    //The 2 LSBs are UNUSED
+   left_params  |= tot_stores    << 16 | x_rows_sub    << 15 | x_cols_sub    << 14 | w_cols_sub   << 13;
    x_d1_stride   = ((4*FPFORMAT)/ADDR_WIDTH)*(((DATA_WIDTH/FPFORMAT)*x_cols_iter_tmp) + x_cols_lftovr);
    x_rows_offs   = ARRAY_WIDTH*x_d1_stride;
    w_tot_len     = w_rows_iter*w_cols_iter*x_rows_iter;
