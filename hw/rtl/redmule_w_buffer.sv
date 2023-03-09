@@ -54,8 +54,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : w_trailer
       for (int d = 0; d < D; d++) begin
         w_buffer_q[w_row][d] <= (d < depth && w_row < count_limit) ? w_buffer_i[d*BITW+:BITW] : '0;
         for (int h = 0; h < H; h++) begin
-      	  if (h != w_row)
-       	    w_buffer_q[h][d] <= (d < D - 1) ? w_buffer_q[h][d+1] : '0;
+          if (h != w_row)
+             w_buffer_q[h][d] <= (d < D - 1) ? w_buffer_q[h][d+1] : '0;
         end
       end
     end else if ({ctrl_i.load, ctrl_i.shift} == 2'b01) begin

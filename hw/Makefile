@@ -50,12 +50,9 @@ lib:
 	@touch modelsim.ini
 	@mkdir -p work
 	@vlib work
-	@chmod +w modelsim.ini
 	@vmap work work
+	@chmod +w modelsim.ini
 
 clean:
-	@mkdir -p work
 	rm -rf work
-	@touch modelsim.ini
-	@chmod +w modelsim.ini
 	rm -rf modelsim.ini

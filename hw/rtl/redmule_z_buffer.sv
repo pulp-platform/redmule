@@ -44,8 +44,8 @@ localparam int unsigned          D        = DW/BITW
 
 logic rst_store  ,
       rst_fill   ,
-			rst_w_load ,
-			rst_d_count;
+      rst_w_load ,
+      rst_d_count;
 logic                          buffer_clock;
 logic [$clog2(D):0]            fill_shift , d_index, depth;
 logic [$clog2(W):0]            store_shift, w_index, y_width;
@@ -75,12 +75,11 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : z_buffer
     end else if (ctrl_i.store && ctrl_i.ready) begin
       for (int w = 0; w < W; w++) begin
         for (int d = 0; d < D; d++)
-      	  z_buffer_q[d][w] <= (w < W - 1) ? z_buffer_q[d][w+1] : '0;
+          z_buffer_q[d][w] <= (w < W - 1) ? z_buffer_q[d][w+1] : '0;
       end
 	  end else if (ctrl_i.load && ctrl_i.y_valid) begin
 	    for (int d = 0; d < D; d++)
 	      z_buffer_q[D - d - 1][w_index] <= (d < depth && w_index < y_width) ? y_buffer_i[d*BITW+:BITW] : '0;
-
     end else
       z_buffer_q <= z_buffer_q;
   end
@@ -107,25 +106,25 @@ always_comb begin : fill_shift_rst
   rst_fill      = 1'b0;
   flags_o.full  = 1'b0;
   if (fill_shift == D - 1 && ctrl_i.fill) begin
-  	rst_fill     = 1'b1;
-  	flags_o.full = 1'b1;
+    rst_fill     = 1'b1;
+    flags_o.full = 1'b1;
   end else begin
-  	rst_fill     = 1'b0;
-  	flags_o.full = 1'b0;
+    rst_fill     = 1'b0;
+    flags_o.full = 1'b0;
   end
 end
 
 // Counter to track the number of store rows
 always_ff @(posedge buffer_clock or negedge rst_ni) begin : stored_rows_counter
   if(~rst_ni) begin
-  	store_shift <= '0;
+    store_shift <= '0;
   end else begin
-  	if (rst_store || clear_i)
-  	  store_shift <= '0;
-  	else if (ctrl_i.store)
-  	  store_shift <= store_shift + 1; 
-  	else
-  	  store_shift <= store_shift;
+    if (rst_store || clear_i)
+      store_shift <= '0;
+    else if (ctrl_i.store)
+      store_shift <= store_shift + 1; 
+    else
+      store_shift <= store_shift;
   end
 end
 // Reset for the store value
@@ -136,8 +135,8 @@ always_comb begin : store_shift_rst
   	rst_store     = 1'b1;
   	flags_o.empty = 1'b1;
   end else begin
-  	rst_store     = 1'b0;
-  	flags_o.empty = 1'b0;
+    rst_store     = 1'b0;
+    flags_o.empty = 1'b0;
   end
 end
 
@@ -160,35 +159,35 @@ always_comb begin : reset_y_load_counter
   flags_o.loaded = 1'b0;
   if (w_index == W) begin
     rst_w_load     = 1'b1;
-	  flags_o.loaded = 1'b1;
+    flags_o.loaded = 1'b1;
   end else begin
     rst_w_load     = 1'b0;
-	  flags_o.loaded = 1'b0;
+    flags_o.loaded = 1'b0;
   end
 end
 
- always_ff @(posedge buffer_clock or negedge rst_ni) begin : depth_read_counter
-   if(~rst_ni) begin
-     d_index <= '0;
-   end else begin
-     if (rst_d_count || clear_i)
-       d_index <= '0;
- 	else if (ctrl_i.y_push_enable && reg_enable_i)
-       d_index <= d_index + 1;
-     else
-       d_index <= d_index;
-   end
- end
+always_ff @(posedge buffer_clock or negedge rst_ni) begin : depth_read_counter
+  if(~rst_ni) begin
+    d_index <= '0;
+  end else begin
+    if (rst_d_count || clear_i)
+      d_index <= '0;
+    else if (ctrl_i.y_push_enable && reg_enable_i)
+      d_index <= d_index + 1;
+    else
+      d_index <= d_index;
+  end
+end
 
 always_comb begin : reset_depth_counter
   rst_d_count    = 1'b0;
   flags_o.y_pushed = 1'b0;
   if (d_index == D - 1 && reg_enable_i) begin
     rst_d_count    = 1'b1;
-	  flags_o.y_pushed = 1'b1;
+    flags_o.y_pushed = 1'b1;
   end else begin
     rst_d_count    = 1'b0;
-	  flags_o.y_pushed = 1'b0;
+    flags_o.y_pushed = 1'b0;
   end
 end
 
