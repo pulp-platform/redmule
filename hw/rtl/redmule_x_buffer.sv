@@ -36,7 +36,7 @@ localparam int unsigned          TOT_DEPTH = H*D
 )(
   input  logic                                               clk_i     ,
   input  logic                                               rst_ni    ,
-  input  logic                                               clear_i   ,  
+  input  logic                                               clear_i   , 
   input  x_buffer_ctrl_t                                     ctrl_i    ,
   output x_buffer_flgs_t                                     flags_o   ,
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o,
@@ -160,6 +160,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : empty_count_reg
     else begin
       if (ctrl_i.cols_lftovr != '0)
         empty_count_q <= ctrl_i.slots;
+      else
+        empty_count_q <= empty_count_q;
     end
   end
 end
@@ -171,7 +173,7 @@ always_comb begin : empty_gen_and_shift_count_rst
   if (d_shift == empty_count_q) begin
     flags_o.empty = 1'b1;
     rst_d_shift   = 1'b1;
-    if (empty_count_q != D)
+    if (empty_count_q != depth)
       empty_rst = 1'b1;
   end else begin
     flags_o.empty = 1'b0;

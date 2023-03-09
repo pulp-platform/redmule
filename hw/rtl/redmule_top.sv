@@ -64,6 +64,7 @@ logic                       reg_enable,
 logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
                             y_cols_lftovr;
 logic [$clog2(Height):0]    w_rows_lftovr;
+logic [$clog2(Width):0]     y_rows_lftovr;
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;
@@ -274,15 +275,16 @@ redmule_z_buffer #(
 
 // Ready and valid assignments for wrapper registers
 // Wrapper cntrl assigments
-assign w_buffer_ctrl.load          = w_load;
-assign w_buffer_ctrl.shift         = w_shift & flgs_scheduler.w_shift;
-assign w_buffer_ctrl.cols_lftovr   = w_cols_lftovr;
-assign w_buffer_ctrl.rows_lftovr   = w_rows_lftovr;
-assign z_buffer_ctrl.fill          = z_buffer_fill;
-assign z_buffer_ctrl.load          = y_buffer_load;
-assign z_buffer_ctrl.store         = z_buffer_store;
-assign z_buffer_ctrl.buffer_clk_en = fsm_z_clk_en | ctrl_z_clk_en;
-assign z_buffer_ctrl.cols_lftovr   = y_cols_lftovr;
+assign w_buffer_ctrl.load              = w_load;
+assign w_buffer_ctrl.shift             = w_shift & flgs_scheduler.w_shift;
+assign w_buffer_ctrl.cols_lftovr       = w_cols_lftovr;
+assign w_buffer_ctrl.rows_lftovr       = w_rows_lftovr;
+assign z_buffer_ctrl.fill              = z_buffer_fill;
+assign z_buffer_ctrl.load              = y_buffer_load;
+assign z_buffer_ctrl.store             = z_buffer_store;
+assign z_buffer_ctrl.buffer_clk_en     = (fsm_z_clk_en | ctrl_z_clk_en);
+assign z_buffer_ctrl.cols_lftovr       = y_cols_lftovr;
+assign z_buffer_ctrl.rows_lftovr       = y_rows_lftovr;
 
 /*---------------------------------------------------------------*/
 /* |                          Engine                           | */
@@ -459,6 +461,7 @@ redmule_scheduler    #(
   .w_cols_lftovr_o    ( w_cols_lftovr       ),
   .w_rows_lftovr_o    ( w_rows_lftovr       ),
   .y_cols_lftovr_o    ( y_cols_lftovr       ),
+  .y_rows_lftovr_o    ( y_rows_lftovr       ),
   .gate_en_o          ( gate_en             ),
   .x_buffer_clk_en_o  ( x_buffer_clk_en     ),
   .z_buffer_clk_en_o  ( fsm_z_clk_en        ),
