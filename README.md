@@ -22,7 +22,7 @@ If you want to use RedMulE for academic purposes, please cite it as:
 ```
 @INPROCEEDINGS{9774759,
   author={Tortorella, Yvan and Bertaccini, Luca and Rossi, Davide and Benini, Luca and Conti, Francesco},
-  booktitle={2022 Design, Automation & Test in Europe Conference & Exhibition (DATE)}, 
+  booktitle={2022 Design, Automation \& Test in Europe Conference \& Exhibition (DATE)}, 
   title={RedMulE: A Compact FP16 Matrix-Multiplication Accelerator for Adaptive Deep Learning on RISC-V-Based Ultra-Low-Power SoCs}, 
   year={2022},
   pages={1099-1102},
