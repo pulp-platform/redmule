@@ -19,10 +19,10 @@
  * RedMulE W Buffer
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-
-module redmule_w_buffer #(
+module redmule_w_buffer
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+#(
 parameter int unsigned  DW       = 288               ,
 parameter fp_format_e   FpFormat = FP16              ,
 parameter int unsigned  Height   = ARRAY_HEIGHT      , // Number of PEs per row

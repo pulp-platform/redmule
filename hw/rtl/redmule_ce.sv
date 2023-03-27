@@ -19,9 +19,9 @@
  * RedMulE Computing Element (CE)
  */
 
-import fpnew_pkg::*;
-
-module redmule_ce #(
+module redmule_ce
+  import fpnew_pkg::*;
+#(
   parameter fpnew_pkg::fp_format_e   FpFormat    = fpnew_pkg::FP16              ,
   parameter int unsigned             NumPipeRegs = 2                            ,
   parameter fpnew_pkg::pipe_config_t PipeConfig  = fpnew_pkg::DISTRIBUTED       ,

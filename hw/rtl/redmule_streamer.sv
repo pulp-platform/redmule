@@ -19,14 +19,14 @@
  * RedMulE Streamer
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-import hci_package::*;
-import hwpe_stream_package::*;
-
-module redmule_streamer #(
-parameter  int unsigned DW      = 288,
-parameter  int unsigned UW      = 1,
+module redmule_streamer
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+  import hci_package::*;
+  import hwpe_stream_package::*;
+#(
+parameter  int unsigned DW      = 288   ,
+parameter  int unsigned UW      = 1     ,
 parameter  int unsigned AW      = ADDR_W,
 localparam int unsigned REALIGN = 1
 )(
@@ -44,7 +44,7 @@ localparam int unsigned REALIGN = 1
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
-  hci_core_intf.master           tcdm,
+  hci_core_intf.master           tcdm      ,
   
   // Control signals
   input  cntrl_streamer_t        ctrl_i,

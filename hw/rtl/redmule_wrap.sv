@@ -19,22 +19,22 @@
  * RedMulE Wrapper
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_wrap #(
-parameter  int unsigned  ID_WIDTH    = 8                 ,
-parameter  int unsigned  N_CORES     = 8                 ,
-parameter  int unsigned  DW          = DATA_W            , // TCDM port dimension (in bits)
-parameter  int unsigned  MP          = DW/ADDR_W         ,
-localparam fp_format_e   FpFormat    = FPFORMAT          , // Data format (default is FP16)
-localparam int unsigned  Height      = ARRAY_HEIGHT      , // Number of PEs within a row
-localparam int unsigned  Width       = ARRAY_WIDTH       , // Number of parallel rows
-localparam int unsigned  NumPipeRegs = PIPE_REGS         , // Number of pipeline registers within each PE 
-localparam pipe_config_t PipeConfig  = DISTRIBUTED       ,
+module redmule_wrap
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
+parameter  int unsigned  ID_WIDTH    = 8                    ,
+parameter  int unsigned  N_CORES     = 8                    ,
+parameter  int unsigned  DW          = DATA_W               , // TCDM port dimension (in bits)
+parameter  int unsigned  MP          = DW/redmule_pkg::MemDw,
+localparam fp_format_e   FpFormat    = FPFORMAT             , // Data format (default is FP16)
+localparam int unsigned  Height      = ARRAY_HEIGHT         , // Number of PEs within a row
+localparam int unsigned  Width       = ARRAY_WIDTH          , // Number of parallel rows
+localparam int unsigned  NumPipeRegs = PIPE_REGS            , // Number of pipeline registers within each PE 
+localparam pipe_config_t PipeConfig  = DISTRIBUTED          ,
 localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
 ) (
   // global signals
