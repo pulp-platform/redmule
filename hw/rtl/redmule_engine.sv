@@ -19,10 +19,10 @@
  * RedMulE Engine
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-
-module redmule_engine #(
+module redmule_engine
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+#(
  parameter  fp_format_e   FpFormat    = FP16                         ,
  parameter  int unsigned  Height      = 4                            ,                             // Number of PEs per row
  parameter  int unsigned  Width       = 8                            ,                             // Number of parallel index

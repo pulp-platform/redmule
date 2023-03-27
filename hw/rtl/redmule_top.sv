@@ -19,23 +19,23 @@
  * RedMulE Top-Level Module
  */
 
-import fpnew_pkg::*;
-import redmule_pkg::*;
-import hci_package::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_top #(
+module redmule_top
+  import fpnew_pkg::*;
+  import redmule_pkg::*;
+  import hci_package::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned  ID_WIDTH    = 8                 ,
 parameter  int unsigned  N_CORES     = 8                 ,
 parameter  int unsigned  DW          = DATA_W            , // TCDM port dimension (in bits)
-localparam int unsigned  N_CONTEXT   = N_CONTEXT         , // Number of sequential jobs for the slave device
+localparam int unsigned  NumContext  = N_CONTEXT         , // Number of sequential jobs for the slave device
 localparam fp_format_e   FpFormat    = FPFORMAT          , // Data format (default is FP16)
 localparam int unsigned  Height      = ARRAY_HEIGHT      , // Number of PEs within a row
 localparam int unsigned  Width       = ARRAY_WIDTH       , // Number of parallel rows
 localparam int unsigned  NumPipeRegs = PIPE_REGS         , // Number of pipeline registers within each PE
 localparam pipe_config_t PipeConfig  = DISTRIBUTED       ,
-localparam int unsigned  BITW        = fp_width(FpFormat) // Number of bits for the given format
+localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
@@ -407,7 +407,7 @@ redmule_ctrl        #(
   .N_CORES            ( N_CORES                 ),
   .IO_REGS            ( REDMULE_REGS            ),
   .ID_WIDTH           ( ID_WIDTH                ),
-  .N_CONTEXT          ( N_CONTEXT               ),
+  .N_CONTEXT          ( NumContext              ),
   .Height             ( Height                  ),
   .Width              ( Width                   ),
   .NumPipeRegs        ( NumPipeRegs             )

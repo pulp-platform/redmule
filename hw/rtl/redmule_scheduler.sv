@@ -19,13 +19,13 @@
  * RedMulE Scheduler
  */
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-import hwpe_ctrl_package::*;
-import hwpe_stream_package::*;
-
-module redmule_scheduler #(
+module redmule_scheduler
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+  import hwpe_ctrl_package::*;
+  import hwpe_stream_package::*;
+#(
 parameter  int unsigned Height      = ARRAY_HEIGHT   ,
 parameter  int unsigned Width       = ARRAY_WIDTH    ,
 parameter  int unsigned NumPipeRegs = PIPE_REGS      ,
@@ -131,7 +131,7 @@ logic y_push_q;
 logic skip_w_q, skip_w_en,
       skip_w_rst;
 logic reg_disable, shift_disable;
-logic [$clog2(NumPipeRegs)] skipped_w_q;
+logic [$clog2(NumPipeRegs):0] skipped_w_q;
 logic [$clog2(W)-1:0] x_rows_lftovr_q,
                       y_rows_lftovr_q,
                       store_rows_lftovr_q;

@@ -1,5 +1,6 @@
+export PYTHON=python3
 export PENV=$(pwd)/venv
-python -m venv $PENV
+$PYTHON -m venv $PENV
 source $PENV/bin/activate
 pip install --upgrade pip
 pip3 install numpy

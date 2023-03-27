@@ -19,9 +19,9 @@
  * RedMulE Row of Computing Elements
  */
 
-import fpnew_pkg::*;
-
-module redmule_row #(
+module redmule_row
+  import fpnew_pkg::*;
+#(
   parameter fpnew_pkg::fp_format_e    FpFormat    = fpnew_pkg::FP16,
   parameter int unsigned              Height      = 4,                             // Number of PEs per row
   parameter int unsigned              NumPipeRegs = 2,
