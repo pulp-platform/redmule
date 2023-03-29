@@ -76,7 +76,7 @@ module redmule_engine
   output logic                    [W-1:0][H-1:0]           busy_o
 );
 
- /*This module contains the complete datapath of the tensorcore unit. The datapath is mainly composed by:
+ /*This module contains the complete RedMulE datapath. The datapath is mainly composed by:
  1) An input buffer that loads the operands from the input
  2) An output buffer, made of HxW array that stores the partial products
  3) The real datapath, which is an array of W parallel rows, each composed by H fma modules interconnected in series*/

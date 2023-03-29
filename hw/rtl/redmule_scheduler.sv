@@ -183,8 +183,8 @@ fpnew_pkg::fp_format_e input_cast_src_fmt ,
 localparam int unsigned JMP    = (4*DATA_W/ADDR_W) - 4;
 localparam int unsigned NBYTES = BITW/8;
 
-typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} tensorcore_fsm_state;
-tensorcore_fsm_state current, next;
+typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} redmule_fsm_state;
+redmule_fsm_state current, next;
 
 always_comb begin : address_gen_signals
   // Here we initialize the streamer source signals 
