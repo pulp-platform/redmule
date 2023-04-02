@@ -73,7 +73,9 @@ module redmule_engine
   output logic                    [W-1:0][H-1:0]           out_valid_o        ,
   input  logic                                             out_ready_i        ,
   // fpnew_fma Indication of valid data in flight
-  output logic                    [W-1:0][H-1:0]           busy_o
+  output logic                    [W-1:0][H-1:0]           busy_o             ,
+  // control bus from FSM
+  input  cntrl_engine_t                                    ctrl_engine_i
 );
 
  /*This module contains the complete RedMulE datapath. The datapath is mainly composed by:
@@ -81,18 +83,26 @@ module redmule_engine
  2) An output buffer, made of HxW array that stores the partial products
  3) The real datapath, which is an array of W parallel rows, each composed by H fma modules interconnected in series*/
 
+logic [W-1:0] row_clk;
 logic [W-1:0]       [BITW-1:0] result, feedback;
 
 generate
   for (genvar index = 0; index < W; index++) begin
   /*--------------------------------------- Array ----------------------------------------*/
+    tc_clk_gating i_row_clk_gating (
+      .clk_i     ( clk_i                                ),
+      .en_i      ( ctrl_engine_i.row_clk_gate_en[index] ),
+      .test_en_i ( '0                                   ),
+      .clk_o     ( row_clk[index]                       )
+    );
+
     redmule_row       #(
       .FpFormat        ( FpFormat    ),
       .Height          ( H           ),
       .NumPipeRegs     ( NumPipeRegs ),
       .PipeConfig      ( PipeConfig  )
     ) i_row            (
-      .clk_i              ( clk_i                   ),
+      .clk_i              ( row_clk[index]          ),
       .rst_ni             ( rst_ni                  ),
       .x_input_i          ( x_input_i       [index] ),
       .w_input_i          ( w_input_i               ),

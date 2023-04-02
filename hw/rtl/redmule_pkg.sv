@@ -28,7 +28,7 @@ package redmule_pkg;
   parameter int unsigned            DATA_W       = 288; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
-  parameter int unsigned            DATAW        = DATA_W - ADDR_W;
+  parameter int unsigned            DATAW        = DATA_W - MemDw;
   parameter int unsigned            REDMULE_REGS = 19;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
@@ -164,6 +164,7 @@ package redmule_pkg;
     logic                         in_valid;
     logic                         flush;
     logic                         out_ready;
+    logic       [ARRAY_WIDTH-1:0] row_clk_gate_en;
   } cntrl_engine_t;
 
   typedef struct packed {

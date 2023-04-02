@@ -217,11 +217,11 @@ assign z_buffer_ctrl.y_push_enable = flgs_scheduler.y_push_enable;
 /*----------------------------------------------------------------*/
 
 logic x_buffer_clk_en, x_buffer_clock;
-cluster_clock_gating i_x_buffer_clock_gating (
-  .clk_i      ( clk_i           ),
-  .en_i       ( x_buffer_clk_en ),
-  .test_en_i  ( '0              ),
-  .clk_o      ( x_buffer_clock  )
+tc_clk_gating i_x_buffer_clock_gating (
+  .clk_i     ( clk_i           ),
+  .en_i      ( x_buffer_clk_en ),
+  .test_en_i ( '0              ),
+  .clk_o     ( x_buffer_clock  )
 );
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
@@ -383,7 +383,8 @@ redmule_engine     #(
   .aux_o              ( out_aux          ),
   .out_valid_o        ( out_valid        ),
   .out_ready_i        ( out_ready        ),
-  .busy_o             ( busy             )
+  .busy_o             ( busy             ),
+  .ctrl_engine_i      ( cntrl_engine     )
 );
 
 /*---------------------------------------------------------------*/

@@ -51,11 +51,11 @@ logic [$clog2(D):0]            fill_shift , d_index, depth;
 logic [$clog2(W):0]            store_shift, w_index, y_width;
 logic [D-1:0][W-1:0][BITW-1:0] z_buffer_q;
 
-cluster_clock_gating i_z_buffer_clock_gating (
-  .clk_i      ( clk_i                ),
-  .en_i       ( ctrl_i.buffer_clk_en ),
-  .test_en_i  ( '0                   ),
-  .clk_o      ( buffer_clock         )
+tc_clk_gating i_z_buffer_clock_gating (
+  .clk_i     ( clk_i                ),
+  .en_i      ( ctrl_i.buffer_clk_en ),
+  .test_en_i ( '0                   ),
+  .clk_o     ( buffer_clock         )
 );
 
 always_ff @(posedge buffer_clock or negedge rst_ni) begin : z_buffer

@@ -35,9 +35,13 @@ WORK_PATH = $(BUILD_DIR)
 endif
 
 # Useful Parameters
-gui         ?= 0
-ipstools    ?= 0
-P_STALL     ?= 0.0
+gui      ?= 0
+ipstools ?= 0
+P_STALL  ?= 0.0
+
+ifeq ($(verbose),1)
+FLAGS += -DVERBOSE
+endif
 
 # Setup toolchain (from SDK) and options
 CC=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc
@@ -69,7 +73,7 @@ $(CRT): $(BUILD_DIR) sw/crt0.S
 	$(CC) $(CC_OPTS) -c sw/crt0.S -o $(CRT)
 
 $(OBJ): $(TEST_SRCS) $(BUILD_DIR)/$(TEST_SRCS)
-	$(CC) $(CC_OPTS) -c $(TEST_SRCS) -Isw -o $(OBJ)
+	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) -Isw -o $(OBJ)
 
 $(BUILD_DIR)/$(TEST_SRCS):
 	mkdir -p $(BUILD_DIR)/$(TEST_SRCS)
