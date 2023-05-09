@@ -124,7 +124,7 @@ logic shift_lock_q,
 logic reg_enable,
       shift_count_en;
 logic w_loaded;
-logic x_rows_lftovr_en, x_rows_lftovr_rst,
+logic x_rows_lftovr_en, x_rows_lftovr_rst, x_rows_clk_gate_en,
       y_cols_lftovr_en, y_cols_lftovr_rst,
       y_rows_lftovr_en, y_rows_lftovr_rst;
 logic y_push_q;
@@ -852,6 +852,14 @@ assign soft_clear_o = clear_regs;
 assign x_buffer_clk_en_o  = x_buffer_clk_en;
 assign z_buffer_clk_en_o = z_buffer_clk_en;
 
+assign x_rows_clk_gate_en = (reg_file_i.hwpe_params[X_ITERS][31:16] > 'd1) ?       // If M > L we count all iterations before leftovers before clock gating
+                                                                           (w_loaded_q == 'd1 +                                                // One cycle due to delay
+                                                                                              ( (reg_file_i.hwpe_params[X_ITERS][31:16] - 1)   // We need to count all iterations before we
+                                                                                              * (reg_file_i.hwpe_params[W_ITERS][31:16]    )   // get to the leftover. The number of iterations
+                                                                                              * (reg_file_i.hwpe_params[W_ITERS][ 15:0]    ) ) // are ceil(M/L)*N*ceil(K/[H*(P+1)])
+                                                                                              + PIPE_REGS + 1                              )   // PIPE_REGS + 1 are needed to drain the pipeline
+                                                                           : 1'b1; // If M < L we need to clock gate the whole computation
+
 assign x_rows_lftovr_en = ((x_rows_iter_d == reg_file_i.hwpe_params[X_ITERS][31:16] - 1 && w_cols_d == '0)
                            || (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && current == X_REQ))
                           && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0
@@ -863,12 +871,7 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: rows_clock_gating
   else begin
     if (clear_i || clear_regs)
       cntrl_engine_o.row_clk_gate_en <= '1;
-    else if (x_rows_lftovr_q != '0 &&
-             flgs_z_buffer_i.full  &&
-             w_loaded_q == (reg_file_i.hwpe_params[X_ITERS][31:16] - 1)
-                          *(reg_file_i.hwpe_params[W_ITERS][31:16]    )
-                          *(reg_file_i.hwpe_params[W_ITERS][ 15:0]    )
-            ) begin
+    else if (x_rows_lftovr_q != '0  && x_rows_clk_gate_en) begin
       for (int i = 0; i < W; i++) begin
         if (i > x_rows_lftovr_q - 1)
           cntrl_engine_o.row_clk_gate_en[i] <= 1'b0;
