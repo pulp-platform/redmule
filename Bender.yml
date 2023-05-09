@@ -22,11 +22,13 @@ package:
     - "Yvan Tortorella (yvan.tortorella@unibo.it)"
 
 dependencies:
-  zeroriscy:   {git: "git@github.com:yvantor/ibex.git"              , rev: "bender"    }
-  hwpe-stream: { git: "git@github.com:pulp-platform/hwpe-stream.git", version: 1.6     }
-  hci:         { git: "git@github.com:pulp-platform/hci.git"        , rev: bender-fix  }
-  hwpe-ctrl:   { git: "git@github.com:pulp-platform/hwpe-ctrl.git"  , version: 1.6     }
-  fpnew:       { git: "git@github.com:yvantor/cvfpu.git"            , rev: "stallable" }
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"         , rev: "pulpissimo-v4.1.0" }
+  hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"      , version: 1.6             }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"              , rev: bender-fix          }
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"        , version: 1.6             }
+  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"            , rev: "pulp-v0.1.1"       }
+  common_cells      : {git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0          }
+  tech_cells_generic: {git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11          }
 
 sources:
   files:
@@ -40,6 +42,8 @@ sources:
     - rtl/redmule_x_buffer.sv
     - rtl/redmule_w_buffer.sv
     - rtl/redmule_z_buffer.sv
+    - rtl/redmule_fma.sv
+    - rtl/redmule_noncomp.sv
     - rtl/redmule_ce.sv
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv

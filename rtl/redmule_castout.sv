@@ -16,17 +16,17 @@
  *
  * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
  * 
- * RedMulE Input Cast Unit
+ * RedMulE Output Cast Unit
  */
 
 import fpnew_pkg::*;
 import hci_package::*;
 import redmule_pkg::*;
 
-module redmule_castin #(
+module redmule_castout #(
   parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
   parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
-  parameter fpnew_pkg::fp_format_e   dst_format   = FPFORMAT,
+  parameter fpnew_pkg::fp_format_e   src_format   = FPFORMAT,
   parameter fpnew_pkg::operation_e   Operation    = CAST_OP,
   parameter logic Pipe                            = 1'b0    ,
   localparam int unsigned BW = hci_package::DEFAULT_BW      ,
@@ -41,7 +41,7 @@ module redmule_castin #(
   input  logic                   clear_i  ,
   input  logic                   cast_i   ,
   input  logic [DATA_W-1:0]      src_i    ,
-  input  fpnew_pkg::fp_format_e  src_fmt_i,
+  input  fpnew_pkg::fp_format_e  dst_fmt_i,
   output logic [DATA_W-1:0]      dst_o
 );
 
@@ -51,23 +51,19 @@ localparam int unsigned NARRBITW = fpnew_pkg::fp_width(fpnew_pkg::FP8);
 localparam int unsigned ZEROBITS = MIN_FMT;
 localparam fpnew_pkg::int_format_e INT_SRC = fpnew_pkg::INT8;
 
-logic [DATA_W-1:0] src_int;
-
-assign src_int[DATA_W-DW_CUT-1:0] = src_i[DATA_W-DW_CUT-1:0];
-assign src_int[DATA_W-1:DATA_W-DW_CUT] = '0;
-
-logic [DATA_W-1:0] dst_int;
+logic [DATA_W-1:0] dst_int,
+                   res;
 logic [NUM_CAST-1:0][WIDTH-1:0] result ,
                                 operand;
 
 generate
   for (genvar i = 0; i < NUM_CAST; i++) begin : generate_cast_units
 
-    assign operand [i] = {{ZEROBITS{1'b0}}, src_int[i*MIN_FMT+:MIN_FMT]};
+    assign operand [i] = src_i[i*WIDTH+:WIDTH];
   
     fpnew_cast_multi  #(
-      .FpFmtConfig     ( FpFmtConfig    ),
-      .IntFmtConfig    ( IntFmtConfig   )
+      .FpFmtConfig     ( FpFmtConfig  ),
+      .IntFmtConfig    ( IntFmtConfig )
     ) redmule_cast_i   (
       .clk_i           ( clk_i          ),
       .rst_ni          ( rst_ni         ),
@@ -76,10 +72,11 @@ generate
       .rnd_mode_i      ( fpnew_pkg::RNE ),
       .op_i            ( Operation      ),
       .op_mod_i        ( '0             ),
-      .src_fmt_i       ( src_fmt_i      ),
-      .dst_fmt_i       ( dst_format     ),
+      .src_fmt_i       ( src_format     ),
+      .dst_fmt_i       ( dst_fmt_i      ),
       .int_fmt_i       ( INT_SRC        ),
       .tag_i           ( '0             ),
+      .mask_i          ( '0             ),
       .aux_i           ( '0             ),
       .in_valid_i      ( '1             ),
       .in_ready_o      (                ),
@@ -88,18 +85,21 @@ generate
       .status_o        (                ),
       .extension_bit_o (                ),
       .tag_o           (                ),
+      .mask_o          (                ),
       .aux_o           (                ),
       .out_valid_o     (                ),
       .out_ready_i     ( '1             ),
       .busy_o          (                )
     );
   
-    assign  dst_int [i*WIDTH+:WIDTH] = result[i];
+    assign  res [i*MIN_FMT+:MIN_FMT] = result[i][WIDTH-MIN_FMT-1:0];
   
   end // block: generate_cast_units
   
 endgenerate
 
+assign dst_int = {{DATA_W-DW_CUT{1'b0}}, res[DATA_W-DW_CUT-1:0]};
+
 assign dst_o = cast_i ? dst_int : src_i;
 
-endmodule : redmule_castin
+endmodule : redmule_castout

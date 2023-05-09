@@ -157,10 +157,10 @@
 
 #define RNE       0x0
 #define RTZ       0x1
-#define OP_FMADD  0x0
-#define OP_ADD    0x2
-#define OP_MUL    0x3
-#define OP_MINMAX 0x7
+#define OP_FMADD  0x3
+#define OP_ADD    0x5
+#define OP_MUL    0x6
+#define OP_MINMAX 0xA
 
 // FP Formats encoding
 #define FP16    0x2

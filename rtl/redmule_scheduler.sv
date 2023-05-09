@@ -1138,7 +1138,6 @@ clear_regs       = 1'b0;
           !y_loaded_q) begin
         z_buffer_clk_en = 1'b1;
         load_y_en = (loading_y_q) ? 1'b0 : 1'b1;
-        tot_store_d = tot_store_q + 1;
         last_store_rst = 1'b1;
         if (store_cols_lftovr_q)
           store_cols_lftovr_rst = 1'b1;
@@ -1349,7 +1348,6 @@ clear_regs       = 1'b0;
           && !y_loaded_q) begin
         z_buffer_clk_en = 1'b1;
         x_buffer_clk_en = 1'b1;
-        tot_store_d = tot_store_q + 1;
         last_store_rst = 1'b1;
         load_y_en = (loading_y_q) ? 1'b0 : 1'b1;
         if (store_cols_lftovr_q)

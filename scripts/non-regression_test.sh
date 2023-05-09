@@ -1,8 +1,10 @@
 #!/bin/bash
 
-BASE_TIMEOUT=10
+BASE_TIMEOUT=100
 
 PARAMS=(
+    96 96 96
+    128 128 128
     12 16 16
     48 32 32
     30 32 17

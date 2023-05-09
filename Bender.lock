@@ -1,0 +1,82 @@
+packages:
+  cluster_interconnect:
+    revision: 7d0a4f8acae71a583a6713cab5554e60b9bb8d27
+    version: 1.2.1
+    source:
+      Git: https://github.com/pulp-platform/cluster_interconnect.git
+    dependencies:
+    - common_cells
+  common_cells:
+    revision: 4ac82b420e46fd0005513ca2283cb3c905e7599a
+    version: 1.29.0
+    source:
+      Git: https://github.com/pulp-platform/common_cells.git
+    dependencies:
+    - common_verification
+    - tech_cells_generic
+  common_verification:
+    revision: 9c07fa860593b2caabd9b5681740c25fac04b878
+    version: 0.2.3
+    source:
+      Git: https://github.com/pulp-platform/common_verification.git
+    dependencies: []
+  cv32e40p:
+    revision: 800a09d97a1e9418e127e8bbf1763c1d1097c92f
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/cv32e40p.git
+    dependencies:
+    - common_cells
+    - fpnew
+    - tech_cells_generic
+  fpnew:
+    revision: f231041c610f270ffc03cbdac38739ddb6426572
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/cvfpu.git
+    dependencies:
+    - common_cells
+    - fpu_div_sqrt_mvp
+  fpu_div_sqrt_mvp:
+    revision: 86e1f558b3c95e91577c41b2fc452c86b04e85ac
+    version: 1.0.4
+    source:
+      Git: https://github.com/pulp-platform/fpu_div_sqrt_mvp.git
+    dependencies:
+    - common_cells
+  hci:
+    revision: b5c11e3645356ed6031d41c85becb7214598c59d
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/hci.git
+    dependencies:
+    - cluster_interconnect
+    - hwpe-stream
+    - l2_tcdm_hybrid_interco
+  hwpe-ctrl:
+    revision: 4bf1487a463c262bf7d8ffee79d1cf392937daa2
+    version: 1.7.1
+    source:
+      Git: https://github.com/pulp-platform/hwpe-ctrl.git
+    dependencies:
+    - tech_cells_generic
+  hwpe-stream:
+    revision: ddc154424187dff42a8fcec946c768ceb13f13de
+    version: 1.6.4
+    source:
+      Git: https://github.com/pulp-platform/hwpe-stream.git
+    dependencies:
+    - tech_cells_generic
+  l2_tcdm_hybrid_interco:
+    revision: fa55e72859dcfb117a2788a77352193bef94ff2b
+    version: 1.0.0
+    source:
+      Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
+    dependencies: []
+  tech_cells_generic:
+    revision: a9cae21902e75b1434328ecf36f85327ba5717de
+    version: 0.2.11
+    source:
+      Git: https://github.com/pulp-platform/tech_cells_generic.git
+    dependencies:
+    - common_verification

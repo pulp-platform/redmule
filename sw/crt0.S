@@ -29,6 +29,12 @@ _start:
   csrr    a0, 0xF14
   andi    a1, a0, 0x1f
   srli    a0, a0, 5
+  # Enabling CV32E40P mstatus.MIE
+  li      t0, 0x1
+  csrrs   zero, mstatus, t0
+  # Enabling CV32E40P SW interrupt (mie[3])
+  li      t0, 0x8
+  csrrs   zero, mie, t0
 
   # clear the bss segment
   la      t0, _bss_start

@@ -19,20 +19,23 @@
 
 # Paths to folders
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-HW             := $(shell pwd)/hw
-SW             ?= $(shell pwd)/sw
-BUILD_DIR      ?= $(HW)/work
-BENDER_DIR     ?= $(HW)/bender
+SW             ?= $(mkfile_path)/sw
+BUILD_DIR      ?= $(mkfile_path)/work
+QUESTA         ?= questa-2019.3-kgf
+BENDER_DIR     ?= .
+BENDER         ?= bender
 TEST_SRCS      ?= sw/redmule.c
-WAVES          ?= $(HW)/wave.do
+WAVES          ?= $(mkfile_path)/wave.do
+ISA            ?= riscv
+ARCH           ?= rv
+XLEN           ?= 32
+XTEN           ?= imc
 
-ifeq ($(ipstools),1) # IPstools-based flow
-INI_PATH  = $(mkfile_path)/hw/tb/modelsim.ini
-WORK_PATH = $(mkfile_path)/hw/tb/work
-else # Bender-based flow
-INI_PATH  = $(HW)/modelsim.ini
+compile_script ?= scripts/compile.tcl
+compile_flag   ?= -suppress 2583 -suppress 13314
+
+INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
-endif
 
 # Useful Parameters
 gui      ?= 0
@@ -44,15 +47,17 @@ FLAGS += -DVERBOSE
 endif
 
 # Setup toolchain (from SDK) and options
-CC=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc
-LD=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc
-CC_OPTS=-march=rv32imc -D__riscv__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-LD_OPTS=-march=rv32imc -D__riscv__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+CC=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
+LD=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
+OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Setup build object dirs
 CRT=$(BUILD_DIR)/crt0.o
 OBJ=$(BUILD_DIR)/$(TEST_SRCS)/verif.o
 BIN=$(BUILD_DIR)/$(TEST_SRCS)/verif
+DUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.dump
 STIM_INSTR=$(BUILD_DIR)/$(TEST_SRCS)/stim_instr.txt
 STIM_DATA=$(BUILD_DIR)/$(TEST_SRCS)/stim_data.txt
 VSIM_INI=$(BUILD_DIR)/$(TEST_SRCS)/modelsim.ini
@@ -84,19 +89,19 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Generate instructions and data stimuli
-all: $(STIM_INSTR) $(STIM_DATA)
+all: $(STIM_INSTR) $(STIM_DATA) dis
 
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);   \
-	vsim -c vopt_tb -do "run -a"    \
-	-gSTIM_INSTR=stim_instr.txt     \
-	-gSTIM_DATA=stim_data.txt       \
+	cd $(BUILD_DIR)/$(TEST_SRCS);          \
+	$(QUESTA) vsim -c vopt_tb -do "run -a" \
+	-gSTIM_INSTR=stim_instr.txt            \
+	-gSTIM_DATA=stim_data.txt              \
 	-gPROB_STALL=$(P_STALL)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);      \
-	vsim vopt_tb                       \
+	$(QUESTA) vsim vopt_tb             \
 	-do "add log -r sim:/redmule_tb/*" \
 	-do "source $(WAVES)"              \
 	-gSTIM_INSTR=stim_instr.txt        \
@@ -106,39 +111,17 @@ endif
 
 # Download bender
 bender:
-	mkdir -p $(BENDER_DIR)
-	cd $(BENDER_DIR);      \
 	curl --proto '=https'  \
 	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.24.0
 
-ifeq ($(ipstools),0) # Bender-based flow
 update-ips:
-	$(MAKE) -C $(HW) scripts
+	$(BENDER) update
+	$(BENDER) script vsim                                       \
+	--vlog-arg="$(compile_flag)"                                \
+	--vcom-arg="-pedanticerrors"                                \
+	-t rtl -t test -t cv32e40p_exclude_tracer> ${compile_script}
 
-build-hw:
-	$(MAKE) -C $(HW) lib build opt
-
-clean-hw:
-	$(MAKE) -C $(HW) clean-env
-
-else # IPstools-based flow
-update-ips:
-	cd hw; ./update-ips
-
-build-hw:
-	cd hw/tb; make clean lib build opt
-
-clean-hw:
-	rm -rf $(HW)/ips
-	rm -rf $(HW)/ipstools
-	rm -rf $(HW)/ipstools_cfg.pyc
-	rm -rf $(HW)/tb/modelsim*
-	rm -rf $(HW)/tb/work
-	rm -rf $(HW)/tb/vcompile/ips
-	rm -rf $(HW)/tb/vcompile/rtl
-	rm -rf $(HW)/tb/vcompile/tb
-	rm -rf $(HW)/.cached_ipdb.json
-endif
+build-hw: hw-all
 
 sdk:
 	cd $(SW); \
@@ -150,8 +133,9 @@ clean-sdk:
 
 clean:
 	rm -rf $(BUILD_DIR)/$(TEST_SRCS)
-	rm -rf modelsim.ini
-	rm -rf transcript
+
+dis:
+	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
 OP     ?= gemm
 fp_fmt ?= FP16
@@ -159,8 +143,37 @@ M      ?= 12
 N      ?= 16
 K      ?= 16
 
-golden: clean-golden
+golden: golden-clean
 	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
 
-clean-golden:
-	$(MAKE) -C golden-model clean
+golden-clean:
+	$(MAKE) -C golden-model golden-clean
+
+# Hardware rules
+hw-clean-all:
+	rm -rf $(BUILD_DIR)
+	rm -rf .bender
+	rm -rf $(compile_script)
+	rm -rf modelsim.ini
+	rm -rf *.log
+	rm -rf transcript
+	rm -rf .cached_ipdb.json
+
+hw-opt:
+	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
+
+hw-compile:
+	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'source $(compile_script); quit'
+
+hw-lib:
+	@touch modelsim.ini
+	@mkdir -p $(BUILD_DIR)
+	@$(QUESTA) vlib $(BUILD_DIR)
+	@$(QUESTA) vmap work $(BUILD_DIR)
+	@chmod +w modelsim.ini
+
+hw-clean:
+	rm -rf transcript
+	rm -rf modelsim.ini
+
+hw-all: hw-clean hw-lib hw-compile hw-opt
