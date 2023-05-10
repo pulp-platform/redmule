@@ -156,36 +156,34 @@ module redmule_tb;
       other_r_valid <= data_req & (data_addr[31:24] == 8'h80);
   end
 
-  generate
-    for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
-      assign tcdm[ii].req  = tcdm_req  [ii];
-      assign tcdm[ii].add  = tcdm_add  [ii];
-      assign tcdm[ii].wen  = tcdm_wen  [ii];
-      assign tcdm[ii].be   = tcdm_be   [ii];
-      assign tcdm[ii].data = tcdm_data [ii];
-      assign tcdm_gnt     [ii] = tcdm[ii].gnt;
-      assign tcdm_r_data  [ii] = tcdm[ii].r_data;
-      assign tcdm_r_valid [ii] = tcdm[ii].r_valid;
-    end
-    assign tcdm[MP].req  = data_req & (data_addr[31:24] != '0) & (data_addr[31:24] != 8'h80) & ~data_addr[HWPE_ADDR_BASE_BIT];
-    assign tcdm[MP].add  = data_addr;
-    assign tcdm[MP].wen  = ~data_we;
-    assign tcdm[MP].be   = data_be;
-    assign tcdm[MP].data = data_wdata;
-    assign tcdm_r_opc   = 0;
-    assign tcdm_r_user  = 0;
-    assign data_gnt    = periph_req ?
-                         periph_gnt : stack[0].req ?
-                                      stack[0].gnt : tcdm[MP].req ?
-                                                     tcdm[MP].gnt : '1;
-    assign data_rdata  = periph_r_valid ? periph_r_data  :
-                                          stack[0].r_valid ? stack[0].r_data  :
-                                                             tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
-    assign data_rvalid = periph_r_valid   |
-                         stack[0].r_valid |
-                         tcdm[MP].r_valid |
-                         other_r_valid    ;
-  endgenerate
+  for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
+    assign tcdm[ii].req  = tcdm_req  [ii];
+    assign tcdm[ii].add  = tcdm_add  [ii];
+    assign tcdm[ii].wen  = tcdm_wen  [ii];
+    assign tcdm[ii].be   = tcdm_be   [ii];
+    assign tcdm[ii].data = tcdm_data [ii];
+    assign tcdm_gnt     [ii] = tcdm[ii].gnt;
+    assign tcdm_r_data  [ii] = tcdm[ii].r_data;
+    assign tcdm_r_valid [ii] = tcdm[ii].r_valid;
+  end
+  assign tcdm[MP].req  = data_req & (data_addr[31:24] != '0) & (data_addr[31:24] != 8'h80) & ~data_addr[HWPE_ADDR_BASE_BIT];
+  assign tcdm[MP].add  = data_addr;
+  assign tcdm[MP].wen  = ~data_we;
+  assign tcdm[MP].be   = data_be;
+  assign tcdm[MP].data = data_wdata;
+  assign tcdm_r_opc   = 0;
+  assign tcdm_r_user  = 0;
+  assign data_gnt    = periph_req ?
+                       periph_gnt : stack[0].req ?
+                                    stack[0].gnt : tcdm[MP].req ?
+                                                   tcdm[MP].gnt : '1;
+  assign data_rdata  = periph_r_valid ? periph_r_data  :
+                                        stack[0].r_valid ? stack[0].r_data  :
+                                                           tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
+  assign data_rvalid = periph_r_valid   |
+                       stack[0].r_valid |
+                       tcdm[MP].r_valid |
+                       other_r_valid    ;
 
   redmule_wrap #(
     .ID_WIDTH          ( ID             ),
