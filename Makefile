@@ -119,7 +119,8 @@ update-ips:
 	$(BENDER) script vsim                                       \
 	--vlog-arg="$(compile_flag)"                                \
 	--vcom-arg="-pedanticerrors"                                \
-	-t rtl -t test -t cv32e40p_exclude_tracer> ${compile_script}
+	-t rtl -t test -t cv32e40p_exclude_tracer -t redmule_test   \
+	> ${compile_script}
 
 build-hw: hw-all
 

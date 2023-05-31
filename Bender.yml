@@ -17,18 +17,18 @@
 # Bender manifest
 
 package:
-  name: redmule-tb
+  name: redmule
   authors:
     - "Yvan Tortorella (yvan.tortorella@unibo.it)"
 
 dependencies:
-  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"         , rev: "pulpissimo-v4.1.0" }
-  hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"      , version: 1.6             }
-  hci               : { git: "https://github.com/pulp-platform/hci.git"              , rev: bender-fix          }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"        , version: 1.6             }
-  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"            , rev: "pulp-v0.1.1"       }
-  common_cells      : {git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0          }
-  tech_cells_generic: {git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11          }
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
+  hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: b2e6f391aa6c10c03f45b693d80a0aaddecf169b }
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 1.6                                  }
+  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.1"                            }
+  common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
+  tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
 
 sources:
   files:
@@ -50,5 +50,7 @@ sources:
     - rtl/redmule_top.sv
     - rtl/redmule_wrap.sv
   # Testbench
-    - tb/tb_dummy_memory.sv
-    - tb/redmule_tb.sv
+    - target: redmule_test
+      files:
+        - tb/tb_dummy_memory.sv
+        - tb/redmule_tb.sv
