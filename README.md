@@ -36,7 +36,7 @@ RedMulE is fully parametric and based on a 2-Dimensional array (*Engine*) of Com
 ![](doc/redmule_overview.png)
 
 RedMulE's *Engine* features a parametric number of CEs, that can be decided throught the *ARRAY_WIDTH* and *ARRAY_HEIGHT* parameters, and a parametric number of Pipeline Registers (*PIPE_REGS*) within each CE. The value of the *ARRAY_WIDTH* parameter is upper-bounded as it depends on the *ARRAY_HEIGHT* and the *PIPE_REGS* values. Its maximum value equals **ARRAY_HEIGHTxPIPE_REGS**, while the bitwidth of RedMulE's memory interface can be calculated as **ARRAY_HEIGHTx(PIPE_REGS+1)xnumbits(FP_FORMAT)**. *FP_FORMAT* corresponds always to the internal precision (FP16). For example, the default RedMulE configuration provides *ARRAY_HEIGHT*=4 and *PIPE_REGS*=3, resulting in a 256-bits memory port and in *ARRAY_WIDTH* $\le$ 12. Each CE contains a Fused Multiply-Add (FMA) and two FP Non Computation Operators (FNCOMP) to support all the GEMM-Ops grouped under the table above. The FMA and FNCOMP modules are adapted from the open-source [Transprecision Floating-Point Unit](https://github.com/openhwgroup/cvfpu).
-RedMulE code is written in System Verilog and all its submodules are available under the `hw/rtl` folder. The `hw/rtl/redmule_pkg.sv` contains all the required parameters available to instantiate RedMulE.
+RedMulE code is written in System Verilog and all its submodules are available under the `rtl` folder. The `rtl/redmule_pkg.sv` contains all the required parameters available to instantiate RedMulE.
 RedMulE's dependencies are handled through [bender](https://github.com/pulp-platform/bender), but can also be managed through IPstools.
 
 ## RedMulE Golden Model
@@ -78,7 +78,7 @@ Each execution of the RedMulE Golden Model also generates data in `.txt` format 
 the generated matrices.
 
 ## RedMulE Testbench
-RedMulE offers a complete testing environment for under the `hw/tb` folder. The `hw/tb/redmule-tb.sv` features a RedMulE instance, an Ibex core as a controller and programmer, and dummy memories to simulate software stack, data-memory and instruction memory, as shown in the picture below.
+RedMulE offers a complete testing environment for under the `tb` folder. The `tb/redmule-tb.sv` features a RedMulE instance, an Ibex core as a controller and programmer, and dummy memories to simulate software stack, data-memory and instruction memory, as shown in the picture below.
 
 ![](doc/redmule_testbench.png)
 
@@ -91,7 +91,7 @@ The software required to use the testbench is located under the `sw` folder. It 
 * redmule.c: the SW test executed by the Ibex core;
 
 ### Getting Started
-If you are working on ETH Lagrev serversm sourcing the `setup.sh` should suffice to export the path to the bender, to the SDK, and to the toolchain. Otherwise, it ise recommanded to install a riscv [toolchain](https://github.com/pulp-platform/pulp-riscv-gnu-toolchain) and export the following environment varibles:
+If you are working on ETH Lagrev serversm sourcing the `scripts/setup.sh` should suffice to export the path to the bender, to the SDK, and to the toolchain. Otherwise, it ise recommanded to install a riscv [toolchain](https://github.com/pulp-platform/pulp-riscv-gnu-toolchain) and export the following environment varibles:
 ```bash
 export PATH=/absolute/path/to/riscv/toolchain/bin:$PATH
 export PULP_RISCV_GCC_TOOLCHAIN=/absolute/path/to/riscv/toolchain
@@ -114,7 +114,6 @@ Build the hardware:
 ```bash
 make build-hw
 ```
-The last two steps can be done using IPstools instead of bender by running the make commands with `ipstools=1` (e.g. `make update-ips ipstools=1`).
 
 ### Run the test
 

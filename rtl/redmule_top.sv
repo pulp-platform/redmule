@@ -217,11 +217,11 @@ assign z_buffer_ctrl.y_push_enable = flgs_scheduler.y_push_enable;
 /*----------------------------------------------------------------*/
 
 logic x_buffer_clk_en, x_buffer_clock;
-cluster_clock_gating i_x_buffer_clock_gating (
-  .clk_i      ( clk_i           ),
-  .en_i       ( x_buffer_clk_en ),
-  .test_en_i  ( '0              ),
-  .clk_o      ( x_buffer_clock  )
+tc_clk_gating i_x_buffer_clock_gating (
+  .clk_i     ( clk_i           ),
+  .en_i      ( x_buffer_clk_en ),
+  .test_en_i ( '0              ),
+  .clk_o     ( x_buffer_clock  )
 );
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
@@ -319,23 +319,10 @@ logic       [Width-1:0][Height-1:0] out_aux;
 // fpnew_fma Output handshake   
 logic       [Width-1:0][Height-1:0] out_valid;
 logic                               out_ready;
-// fpnew_fma Indication of valID_WIDTH data in flight
+// fpnew_fma Indication of valid data in flight
 logic       [Width-1:0][Height-1:0] busy;
 
 // Binding from engine interface types to cntrl_engine_t and
-// flgs_engine_t types
-// assign fma_is_boxed     = 3'b111;
-// assign noncomp_is_boxed = 2'b11;
-// assign stage1_rnd       = RNE;
-// assign stage2_rnd       = RNE;
-// assign op1              = FMADD;
-// assign op2              = MINMAX;
-// assign op_mod           = 1'b0;
-// assign in_tag           = 1'b0;
-// assign in_aux           = 1'b0;
-// assign in_valid         = 1'b1;
-// assign flush            = engine_flush | clear;
-// assign out_ready        = 1'b1;
 assign fma_is_boxed     = cntrl_engine.fma_is_boxed;
 assign noncomp_is_boxed = cntrl_engine.noncomp_is_boxed;
 assign stage1_rnd       = cntrl_engine.stage1_rnd;
@@ -396,7 +383,8 @@ redmule_engine     #(
   .aux_o              ( out_aux          ),
   .out_valid_o        ( out_valid        ),
   .out_ready_i        ( out_ready        ),
-  .busy_o             ( busy             )
+  .busy_o             ( busy             ),
+  .ctrl_engine_i      ( cntrl_engine     )
 );
 
 /*---------------------------------------------------------------*/
@@ -404,32 +392,32 @@ redmule_engine     #(
 /*---------------------------------------------------------------*/
 
 redmule_ctrl        #(
-  .N_CORES            ( N_CORES                 ),
-  .IO_REGS            ( REDMULE_REGS            ),
-  .ID_WIDTH           ( ID_WIDTH                ),
-  .N_CONTEXT          ( NumContext              ),
-  .Height             ( Height                  ),
-  .Width              ( Width                   ),
-  .NumPipeRegs        ( NumPipeRegs             )
-) i_control           (                         
-  .clk_i              ( clk_i                   ),
-  .rst_ni             ( rst_ni                  ),
-  .test_mode_i        ( test_mode_i             ),
-  .busy_o             ( busy_o                  ),
-  .clear_o            ( clear                   ),
-  .evt_o              ( evt_o                   ),
-  .output_fill_o      ( z_buffer_fill           ),
-  .w_shift_o          ( w_shift                 ),
-  .out_wrap_clk_en_o  ( ctrl_z_clk_en           ),
-  .reg_file_o         ( reg_file                ),
-  .reg_enable_i       ( reg_enable              ),
-  .flgs_output_wrap_i ( z_buffer_flgs           ),
-  .flgs_engine_i      ( flgs_engine             ),
-  .w_loaded_i         ( flgs_scheduler.w_loaded ),
-  .flush_o            ( engine_flush            ),
-  .accumulate_o       ( accumulate              ),
-  .cntrl_scheduler_o  ( cntrl_scheduler         ),
-  .periph             ( periph_local            )
+  .N_CORES           ( N_CORES                 ),
+  .IO_REGS           ( REDMULE_REGS            ),
+  .ID_WIDTH          ( ID_WIDTH                ),
+  .N_CONTEXT         ( NumContext              ),
+  .Height            ( Height                  ),
+  .Width             ( Width                   ),
+  .NumPipeRegs       ( NumPipeRegs             )
+) i_control          (                         
+  .clk_i             ( clk_i                   ),
+  .rst_ni            ( rst_ni                  ),
+  .test_mode_i       ( test_mode_i             ),
+  .busy_o            ( busy_o                  ),
+  .clear_o           ( clear                   ),
+  .evt_o             ( evt_o                   ),
+  .z_fill_o          ( z_buffer_fill           ),
+  .w_shift_o         ( w_shift                 ),
+  .z_buffer_clk_en_o ( ctrl_z_clk_en           ),
+  .reg_file_o        ( reg_file                ),
+  .reg_enable_i      ( reg_enable              ),
+  .flgs_z_buffer_i   ( z_buffer_flgs           ),
+  .flgs_engine_i     ( flgs_engine             ),
+  .w_loaded_i        ( flgs_scheduler.w_loaded ),
+  .flush_o           ( engine_flush            ),
+  .accumulate_o      ( accumulate              ),
+  .cntrl_scheduler_o ( cntrl_scheduler         ),
+  .periph            ( periph_local            )
 );
     
 

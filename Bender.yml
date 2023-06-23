@@ -11,35 +11,46 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# SPDX-License-Identifier: Apache-2.0
 #
 # Author: Yvan Tortorella (yvan.tortorella@unibo.it)
 #
-# RedMulE bender manifest
+# Bender manifest
 
 package:
-  name: RedMulE
+  name: redmule
   authors:
-    - "Yvan Tortorella <yvan.tortorella@unibo.it>"
+    - "Yvan Tortorella (yvan.tortorella@unibo.it)"
 
 dependencies:
-  hwpe-stream: { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.6                                    }
-  hci:         { git: "https://github.com/pulp-platform/hci.git"        , rev: "b2e6f391aa6c10c03f45b693d80a0aaddecf169b" }
-  hwpe-ctrl:   { git: "https://github.com/pulp-platform/hwpe-ctrl.git"  , version: 1.6                                    }
-  fpnew:       { git: "https://github.com/yvantor/cvfpu.git"            , rev: "stallable"                                }
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
+  hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: b2e6f391aa6c10c03f45b693d80a0aaddecf169b }
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 1.6                                  }
+  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.1"                            }
+  common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
+  tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
 
 sources:
-  - hw/rtl/redmule_pkg.sv
-  - hw/rtl/redmule_ctrl.sv
-  - hw/rtl/redmule_scheduler.sv
-  - hw/rtl/redmule_castin.sv
-  - hw/rtl/redmule_castout.sv
-  - hw/rtl/redmule_streamer.sv
-  - hw/rtl/redmule_x_buffer.sv
-  - hw/rtl/redmule_w_buffer.sv
-  - hw/rtl/redmule_z_buffer.sv
-  - hw/rtl/redmule_ce.sv
-  - hw/rtl/redmule_row.sv
-  - hw/rtl/redmule_engine.sv
-  - hw/rtl/redmule_top.sv
-  - hw/rtl/redmule_wrap.sv
+  files:
+  # RedMulE
+    - rtl/redmule_pkg.sv
+    - rtl/redmule_ctrl.sv
+    - rtl/redmule_scheduler.sv
+    - rtl/redmule_castin.sv
+    - rtl/redmule_castout.sv
+    - rtl/redmule_streamer.sv
+    - rtl/redmule_x_buffer.sv
+    - rtl/redmule_w_buffer.sv
+    - rtl/redmule_z_buffer.sv
+    - rtl/redmule_fma.sv
+    - rtl/redmule_noncomp.sv
+    - rtl/redmule_ce.sv
+    - rtl/redmule_row.sv
+    - rtl/redmule_engine.sv
+    - rtl/redmule_top.sv
+    - rtl/redmule_wrap.sv
+  # Testbench
+    - target: redmule_test
+      files:
+        - tb/tb_dummy_memory.sv
+        - tb/redmule_tb.sv

@@ -41,13 +41,13 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   output logic                    busy_o            ,
   output logic                    clear_o           ,
   output logic [N_CORES-1:0][1:0] evt_o             ,
-  output logic                    output_fill_o     ,
+  output logic                    z_fill_o          ,
   output logic                    w_shift_o         ,
-  output logic                    out_wrap_clk_en_o ,
+  output logic                    z_buffer_clk_en_o ,
   output ctrl_regfile_t           reg_file_o        ,
   input  logic                    reg_enable_i      ,
   // Flags coming from the wrap registers
-  input  z_buffer_flgs_t          flgs_output_wrap_i,
+  input  z_buffer_flgs_t          flgs_z_buffer_i   ,
   // Flags coming from the engine
   input  flgs_engine_t            flgs_engine_i     ,
   // Flags coming from the state machine
@@ -63,17 +63,14 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
 
   logic        clear;
   logic        accumulate_q;
-  logic        w_computed_en, w_computed_rst, count_weight_q, accumulate_en, accumulate_rst, storing_rst;
+  logic        w_computed_en, w_computed_rst, count_w_q, accumulate_en, accumulate_rst, storing_rst;
   logic        last_w_row, last_w_row_en, last_w_row_rst;
-  logic        in_feat_sub, weight_sub;
-  logic        out_wrap_clk_en;
+  logic        z_buffer_clk_en;
   logic        enable_depth_count, reset_depth_count;
   logic [4:0]  w_computed;
-  logic [15:0] in_rows, in_columns, w_rows, w_columns, out_rows, out_columns;
-  logic [31:0] /*in_base_add,*/ w_base_add, out_base_add;
-  logic [15:0] in_rows_iter, in_cols_iter, in_rows_lftovr, in_cols_lftovr;
-  logic [15:0] w_rows_iter, w_cols_iter, w_rows_lftovr, w_cols_lftovr, w_row_count_d, w_row_count_q;
-  logic [15:0] out_rows_iter, out_cols_iter, out_rows_lftovr, out_cols_lftovr, out_storings_d, out_storings_q, tot_stores;
+  logic [15:0] w_rows;
+  logic [15:0] w_rows_iter, w_row_count_d, w_row_count_q;
+  logic [15:0] z_storings_d, z_storings_q, tot_stores;
 
   typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
   redmule_ctrl_state current, next;
@@ -128,12 +125,12 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
 
   always_ff @(posedge clk_i or negedge rst_ni) begin 
     if(~rst_ni) begin
-      count_weight_q <= 1'b0;
+      count_w_q <= 1'b0;
     end else begin
       if (clear || w_computed_rst)
-          count_weight_q <= 1'b0;
+          count_w_q <= 1'b0;
       else if (w_computed_en)
-          count_weight_q <= 1'b1;
+          count_w_q <= 1'b1;
     end
   end
 
@@ -145,7 +142,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     end else begin
       if (w_computed_rst || clear)
         w_computed <= '0;
-      else if (count_weight_q && reg_enable_i)
+      else if (count_w_q && reg_enable_i)
         w_computed <= w_computed + 1;
     end
   end
@@ -192,28 +189,28 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   // the number of storage operations to see when the last one occurs
   always_ff @(posedge clk_i or negedge rst_ni) begin : out_storings_counter
     if(~rst_ni) begin
-      out_storings_q <= '0;
+      z_storings_q <= '0;
     end else begin
       if (clear || storing_rst) 
-        out_storings_q <= '0;
+        z_storings_q <= '0;
       else
-        out_storings_q <= out_storings_d;
+        z_storings_q <= z_storings_d;
     end
   end
 
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
-  assign w_rows_iter       = reg_file.hwpe_params [W_ITERS    ][31:16];
-  assign tot_stores        = reg_file.hwpe_params [LEFT_PARAMS][31:16];
+  assign w_rows_iter = reg_file.hwpe_params [W_ITERS    ][31:16];
+  assign tot_stores  = reg_file.hwpe_params [LEFT_PARAMS][31:16];
   assign reg_file_o = reg_file;
-  assign out_wrap_clk_en_o = out_wrap_clk_en;
+  assign z_buffer_clk_en_o = z_buffer_clk_en;
 
   /*---------------------------------------------------------------------------------------------*/
   /*                                        Controller FSM                                       */
   /*---------------------------------------------------------------------------------------------*/
   // This is a local FSM who's only work is to make the first 
-  // input load operation and to start the tensorcore_fsm
+  // input load operation and to start the redmule_scheduler
   always_comb begin : controller_fsm
     cntrl_scheduler_o  = '0;
     cntrl_slave        = '0;
@@ -221,18 +218,18 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     flush_o            = 1'b0;
     // Other local default signals
     w_shift_o          = 1'b1;
-    output_fill_o      = 1'b0;
+    z_fill_o           = 1'b0;
     busy_o             = 1'b1;
     w_computed_en      = 1'b0;
     w_computed_rst     = 1'b0;
     last_w_row_en      = 1'b0;
     last_w_row_rst     = 1'b0;
     w_row_count_d      = w_row_count_q;
-    out_storings_d     = out_storings_q;
+    z_storings_d       = z_storings_q;
     accumulate_en      = 1'b0;
     accumulate_rst     = 1'b0;
     storing_rst        = 1'b0;
-    out_wrap_clk_en    = '0;
+    z_buffer_clk_en    = '0;
     enable_depth_count = '0;
     reset_depth_count  = '0;
     next               = current;
@@ -241,10 +238,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
       REDMULE_IDLE: begin
         w_shift_o = 1'b0;
         busy_o    = 1'b0;
-        out_storings_d = '0;
+        z_storings_d = '0;
         w_row_count_d  = '0;
         if (clear)
-          out_wrap_clk_en = 1'b1;
+          z_buffer_clk_en = 1'b1;
         if (flgs_slave.start || test_mode_i)
           next = REDMULE_STARTING;
         else 
@@ -265,10 +262,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
         
-        if (w_row_count_d == Height && !count_weight_q)
+        if (w_row_count_d == Height && !count_w_q)
           w_computed_en = 1'b1;
         else if (w_row_count_q == w_rows_iter) begin
-          if (!count_weight_q)
+          if (!count_w_q)
             w_computed_en = 1'b1;
           if (!last_w_row)
             last_w_row_en = 1'b1;
@@ -279,7 +276,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
             if (w_computed == Height - 1) begin
               if (!accumulate_q)
                   accumulate_en = 1'b1;
-              if (count_weight_q)
+              if (count_w_q)
                   w_computed_rst = 1'b1;
             end
           end
@@ -290,7 +287,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
               next = REDMULE_BUFFERING;
               if (accumulate_q)
                 accumulate_rst = 1'b1;
-              if (count_weight_q)
+              if (count_w_q)
                 w_computed_rst = 1'b1;
             end else
               next = REDMULE_COMPUTING;
@@ -299,13 +296,13 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
       end
   
       REDMULE_BUFFERING: begin
-        out_wrap_clk_en = 1'b1;
+        z_buffer_clk_en = 1'b1;
         if (last_w_row)
           last_w_row_rst = 1'b1;
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
-        output_fill_o = reg_enable_i;
-        if (flgs_output_wrap_i.full) begin
+          z_fill_o = reg_enable_i;
+        if (flgs_z_buffer_i.full) begin
           accumulate_en = 1'b1;
           next = REDMULE_STORING;
         end
@@ -319,14 +316,14 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
 
-        if (flgs_output_wrap_i.empty) begin
-          out_storings_d = out_storings_q + 1;
-          if (out_storings_q == tot_stores - 1) begin
+        if (flgs_z_buffer_i.empty) begin
+          z_storings_d = z_storings_q + 1;
+          if (z_storings_q == tot_stores - 1) begin
             next = REDMULE_FINISHED;
             storing_rst = 1'b1;
             cntrl_scheduler_o.finished = 1'b1;
           end else
-          if (out_storings_q < tot_stores) begin
+          if (z_storings_q < tot_stores) begin
             next = REDMULE_COMPUTING;
           end
         end

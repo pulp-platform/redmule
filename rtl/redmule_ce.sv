@@ -249,19 +249,19 @@ end : stage_one_clock_gating_selector
 /*******************************************************************************/
 /* Instantiation of stage1 FMA and stage1 NONCOMP                              */
 /*******************************************************************************/
-cluster_clock_gating stage1_noncomp_clk_gating (
+tc_clk_gating stage1_noncomp_clk_gating (
   .clk_i      ( clk_i                 ),
   .en_i       ( stage1_noncomp_clk_en ),
   .test_en_i  ( '0                    ),
   .clk_o      ( stage1_noncomp_clk    )
 );
 
-fpnew_noncomp #(
-  .FpFormat    ( FpFormat    ),
-  .NumPipeRegs ( NumPipeRegs ),
-  .PipeConfig  ( PipeConfig  ),
-  .Stallable   ( Stallable   )
-) op1_minmax_i (
+redmule_noncomp #(
+  .FpFormat      ( FpFormat    ),
+  .NumPipeRegs   ( NumPipeRegs ),
+  .PipeConfig    ( PipeConfig  ),
+  .Stallable     ( Stallable   )
+) op1_minmax_i   (
   .clk_i           ( stage1_noncomp_clk           ),
   .rst_ni          ( rst_ni                       ),
   .operands_i      ( stage1_noncomp_operands      ),
@@ -288,14 +288,14 @@ fpnew_noncomp #(
 );
 
 
-cluster_clock_gating stage1_fma_clk_gating (
+tc_clk_gating stage1_fma_clk_gating (
   .clk_i      ( clk_i             ),
   .en_i       ( stage1_fma_clk_en ),
   .test_en_i  ( '0                ),
   .clk_o      ( stage1_fma_clk    )
 );
 
-fpnew_fma     #(
+redmule_fma   #(
   .FpFormat    ( FpFormat    ),
   .NumPipeRegs ( NumPipeRegs ),
   .PipeConfig  ( PipeConfig  ),
@@ -417,12 +417,12 @@ assign stage2_noncomp_operands[1] = noncomp_y ;
 /*******************************************************************************/
 /* Instantiation of stage2 NONCOMP                                             */
 /*******************************************************************************/
-fpnew_noncomp #(
-  .FpFormat    ( FpFormat    ),
-  .NumPipeRegs ( 0           ),
-  .PipeConfig  ( PipeConfig  ),
-  .Stallable   ( Stallable   )
-) op2_minmax_i (
+redmule_noncomp #(
+  .FpFormat      ( FpFormat    ),
+  .NumPipeRegs   ( 0           ),
+  .PipeConfig    ( PipeConfig  ),
+  .Stallable     ( Stallable   )
+) op2_minmax_i   (
   .clk_i                                           ,
   .rst_ni                                          ,
   .operands_i      ( stage2_noncomp_operands      ),

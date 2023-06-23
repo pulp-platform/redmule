@@ -61,8 +61,10 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
-      tfp_printf ("diff: 0x%08x\n", diff);
-      tfp_printf ("LSW: Error!\n");
+      #ifdef VERBOSE
+        tfp_printf ("diff: 0x%08x\n", diff);
+        tfp_printf ("LSW: Error!\n");
+      #endif
     }
 
     // Checking Most Significant Half-Word
@@ -74,19 +76,21 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
-      tfp_printf ("diff: 0x%08x\n", diff);
-      tfp_printf ("MSW: Error!\n");
+      #ifdef VERBOSE
+        tfp_printf ("diff: 0x%08x\n", diff);
+        tfp_printf ("MSW: Error!\n");
+      #endif
     }
     
     errors += error;
 
     // tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
-#ifndef NVERBOSE
-    if(error) {
-      if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-      tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
-    }
-#endif /* NVERBOSE */
+    #ifdef VERBOSE
+      if(error) {
+        if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
+        tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
+      }
+    #endif
   }
   return errors;
 }
@@ -172,12 +176,12 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     errors += error;
 
     // tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
-#ifndef NVERBOSE
-    if(error) {
-      if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-      tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
-    }
-#endif /* NVERBOSE */
+    #ifdef VERBOSE
+      if(error) {
+        if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
+        tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
+      }
+    #endif
   }
   return errors;
 }

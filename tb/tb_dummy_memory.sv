@@ -43,6 +43,7 @@ module tb_dummy_memory
 )
 (
   input  logic                clk_i,
+  input  logic                rst_ni,
   input  logic                clk_delayed_i,
   input  logic                randomize_i,
   input  logic                enable_i,
@@ -129,39 +130,43 @@ module tb_dummy_memory
         end
   endgenerate
 
-  always_ff @(posedge clk_i)
-  begin : dummy_proc
-    for (int i=0; i<MP; i++) begin
-      if ((tcdm_req[i] & enable_i) == 1'b0) begin
-        tcdm_r_data_int  [i] <= 'x;
-        tcdm_r_valid_int [i] <= 1'b0;
-      end
-      else begin
-        // read
-        if (tcdm_gnt[i] & tcdm_wen[i]) begin
-          tcdm_r_data_int  [i] <= memory[(tcdm_add[i]-BASE_ADDR) >> 2];
-          tcdm_r_valid_int [i] <= tcdm_gnt[i];
-        end
-        // write
-        else if (tcdm_gnt[i] & ~tcdm_wen[i]) begin
-          memory[(tcdm_add[i]-BASE_ADDR) >> 2] <= write_data [i];
-          tcdm_r_data_int  [i] <= write_data [i];
-          tcdm_r_valid_int [i] <= 1'b1;
-        end
-        // no-grant
-        else if (~tcdm_gnt[i]) begin
-          tcdm_r_data_int  [i] <= 'x;
+  always_ff @(posedge clk_i or negedge rst_ni) begin : dummy_proc
+    if (~rst_ni) begin
+      tcdm_r_data_int <= '0;
+      tcdm_r_valid_int <= '0;
+    end else begin
+      for (int i=0; i<MP; i++) begin
+        if ((tcdm_req[i] & enable_i) == 1'b0) begin
+          tcdm_r_data_int  [i] <= '0;
           tcdm_r_valid_int [i] <= 1'b0;
         end
         else begin
-          tcdm_r_data_int  [i] <= 'x;
-          tcdm_r_valid_int [i] <= 1'b0;
+          // read
+          if (tcdm_gnt[i] & tcdm_wen[i]) begin
+            tcdm_r_data_int  [i] <= memory[(tcdm_add[i]-BASE_ADDR) >> 2];
+            tcdm_r_valid_int [i] <= tcdm_gnt[i];
+          end
+          // write
+          else if (tcdm_gnt[i] & ~tcdm_wen[i]) begin
+            memory[(tcdm_add[i]-BASE_ADDR) >> 2] <= write_data [i];
+            tcdm_r_data_int  [i] <= write_data [i];
+            tcdm_r_valid_int [i] <= 1'b1;
+          end
+          // no-grant
+          else if (~tcdm_gnt[i]) begin
+            tcdm_r_data_int  [i] <= '0;
+            tcdm_r_valid_int [i] <= 1'b0;
+          end
+          else begin
+            tcdm_r_data_int  [i] <= '0;
+            tcdm_r_valid_int [i] <= 1'b0;
+          end
         end
       end
     end
   end
 
-`ifndef VERILATOR
+`ifdef VERILATOR
   always_ff @(posedge `clk_verilated)
   begin
     tcdm_r_data  <= tcdm_r_data_int;
@@ -172,7 +177,7 @@ module tb_dummy_memory
   assign tcdm_r_valid = tcdm_r_valid_int;
 `endif
 
-  generate;
+  generate
 
     for(genvar ii=0; ii<MP; ii++) begin
       initial begin
