@@ -200,4 +200,7 @@ package redmule_pkg;
     logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
 
+  typedef enum {
+    CV32, Ibex, Snitch, CVA6
+  } core_type_e;
 endpackage
