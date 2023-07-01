@@ -19,6 +19,9 @@
  * RedMulE Top-Level Module
  */
 
+`include "hci/typedef.svh"
+`include "hci/assign.svh"
+
 module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
@@ -26,26 +29,29 @@ module redmule_top
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned  ID_WIDTH    = 8                 ,
-parameter  int unsigned  N_CORES     = 8                 ,
-parameter  int unsigned  DW          = DATA_W            , // TCDM port dimension (in bits)
-localparam int unsigned  NumContext  = N_CONTEXT         , // Number of sequential jobs for the slave device
-localparam fp_format_e   FpFormat    = FPFORMAT          , // Data format (default is FP16)
-localparam int unsigned  Height      = ARRAY_HEIGHT      , // Number of PEs within a row
-localparam int unsigned  Width       = ARRAY_WIDTH       , // Number of parallel rows
-localparam int unsigned  NumPipeRegs = PIPE_REGS         , // Number of pipeline registers within each PE
-localparam pipe_config_t PipeConfig  = DISTRIBUTED       ,
-localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
+parameter  int unsigned  ID_WIDTH           = 8                 ,
+parameter  int unsigned  N_CORES            = 8                 ,
+parameter  int unsigned  DW                 = DATA_W            , // TCDM port dimension (in bits)
+parameter  int unsigned  UW                 = 1                 ,
+parameter  type          redmule_data_req_t = logic           ,
+parameter  type          redmule_data_rsp_t = logic           ,
+localparam int unsigned  NumContext         = N_CONTEXT         , // Number of sequential jobs for the slave device
+localparam fp_format_e   FpFormat           = FPFORMAT          , // Data format (default is FP16)
+localparam int unsigned  Height             = ARRAY_HEIGHT      , // Number of PEs within a row
+localparam int unsigned  Width              = ARRAY_WIDTH       , // Number of parallel rows
+localparam int unsigned  NumPipeRegs        = PIPE_REGS         , // Number of pipeline registers within each PE
+localparam pipe_config_t PipeConfig         = DISTRIBUTED       ,
+localparam int unsigned  BITW               = fp_width(FpFormat)  // Number of bits for the given format
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
   output logic [N_CORES-1:0][1:0] evt_o      ,
- 
-  // TCDM master ports for the memory sID_WIDTHe
-  hci_core_intf.master            tcdm       ,
-  // Periph slave port for the controller sID_WIDTHe
+  // TCDM interface towards the memory
+  output redmule_data_req_t       data_req_o ,
+  input  redmule_data_rsp_t       data_rsp_i ,
+  // Periph slave port for the controller side
   hwpe_ctrl_intf_periph.slave     periph
 );
 
@@ -65,6 +71,11 @@ logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
                             y_cols_lftovr;
 logic [$clog2(Height):0]    w_rows_lftovr;
 logic [$clog2(Width):0]     y_rows_lftovr;
+
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) tcdm ( .clk ( clk_i ) );
+
+`HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i)
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;

@@ -23,10 +23,10 @@ package:
 
 dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
-  snitch_cluster    : { git: "git@github.com:pulp-platform/snitch_cluster.git"        , rev: bd143bc16b94ef3bc79b9460263f54610f031e23 } # commit: init
+  snitch_cluster    : { git: "https://github.com/pulp-platform/snitch_cluster.git"    , rev: e3d6d75ae541072395e914899901ea0d5ab82c6f } # commit: init
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: b2e6f391aa6c10c03f45b693d80a0aaddecf169b }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 9d9fc44f6181e7d5357a1b31a0600630440b9586 }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 1.6                                  }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.1"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
@@ -50,9 +50,11 @@ sources:
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
+    - rtl/redmule_complex.sv
     - rtl/redmule_wrap.sv
   # Testbench
     - target: redmule_test
       files:
         - tb/tb_dummy_memory.sv
         - tb/redmule_tb.sv
+        - tb/redmule_complex_tb.sv

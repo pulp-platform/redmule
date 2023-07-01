@@ -102,7 +102,7 @@ ifeq ($(gui), 0)
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);      \
 	$(QUESTA) vsim vopt_tb             \
-	-do "add log -r sim:/redmule_tb/*" \
+	-do "add log -r sim:/redmule_complex_tb/*" \
 	-do "source $(WAVES)"              \
 	-gSTIM_INSTR=stim_instr.txt        \
 	-gSTIM_DATA=stim_data.txt          \
@@ -161,10 +161,10 @@ hw-clean-all:
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
+	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_complex_tb -floatparameters+redmule_complex_tb -work $(BUILD_DIR)
 
 hw-compile:
-	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit - code [source $(compile_script)]'
+	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
 	@touch modelsim.ini

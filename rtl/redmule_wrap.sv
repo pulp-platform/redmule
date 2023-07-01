@@ -26,16 +26,18 @@ module redmule_wrap
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned  ID_WIDTH    = 8                    ,
-parameter  int unsigned  N_CORES     = 8                    ,
-parameter  int unsigned  DW          = DATA_W               , // TCDM port dimension (in bits)
-parameter  int unsigned  MP          = DW/redmule_pkg::MemDw,
-localparam fp_format_e   FpFormat    = FPFORMAT             , // Data format (default is FP16)
-localparam int unsigned  Height      = ARRAY_HEIGHT         , // Number of PEs within a row
-localparam int unsigned  Width       = ARRAY_WIDTH          , // Number of parallel rows
-localparam int unsigned  NumPipeRegs = PIPE_REGS            , // Number of pipeline registers within each PE 
-localparam pipe_config_t PipeConfig  = DISTRIBUTED          ,
-localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
+parameter  int unsigned  ID_WIDTH           = 8                    ,
+parameter  int unsigned  N_CORES            = 8                    ,
+parameter  int unsigned  DW                 = DATA_W               , // TCDM port dimension (in bits)
+parameter  int unsigned  MP                 = DW/redmule_pkg::MemDw,
+parameter  type          redmule_data_req_t = logic                ,
+parameter  type          redmule_data_rsp_t = logic                ,
+localparam fp_format_e   FpFormat           = FPFORMAT             , // Data format (default is FP16)
+localparam int unsigned  Height             = ARRAY_HEIGHT         , // Number of PEs within a row
+localparam int unsigned  Width              = ARRAY_WIDTH          , // Number of parallel rows
+localparam int unsigned  NumPipeRegs        = PIPE_REGS            , // Number of pipeline registers within each PE
+localparam pipe_config_t PipeConfig         = DISTRIBUTED          ,
+localparam int unsigned  BITW               = fp_width(FpFormat)  // Number of bits for the given format
 ) (
   // global signals
   input  logic                      clk_i         ,
@@ -68,23 +70,25 @@ localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for
   output logic [ID_WIDTH-1:0]       periph_r_id_o
 );
 
-hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
+redmule_data_req_t data_req;
+redmule_data_rsp_t data_rsp;
+
+// hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
 hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
 
-// bindings
 generate
   for(genvar ii=0; ii<MP; ii++) begin: tcdm_binding
-    assign tcdm_req_o  [ii] = tcdm.req;
-    assign tcdm_add_o  [ii] = tcdm.add + ii*4;
-    assign tcdm_wen_o  [ii] = tcdm.wen;
-    assign tcdm_be_o   [ii] = tcdm.be[(ii+1)*4-1:ii*4];
-    assign tcdm_data_o [ii] = tcdm.data[(ii+1)*32-1:ii*32];
+    assign tcdm_req_o  [ii] = data_req.req;
+    assign tcdm_add_o  [ii] = data_req.add + ii*4;
+    assign tcdm_wen_o  [ii] = data_req.wen;
+    assign tcdm_be_o   [ii] = data_req.be[(ii+1)*4-1:ii*4];
+    assign tcdm_data_o [ii] = data_req.data[(ii+1)*32-1:ii*32];
   end
-  assign tcdm.gnt     = &(tcdm_gnt_i);
-  assign tcdm.r_valid = &(tcdm_r_valid_i);
-  assign tcdm.r_data  = { >> {tcdm_r_data_i} };
-  assign tcdm.r_opc   = tcdm_r_opc_i;
-  assign tcdm.r_user  = tcdm_r_user_i;
+  assign data_rsp.gnt     = &(tcdm_gnt_i);
+  assign data_rsp.r_valid = &(tcdm_r_valid_i);
+  assign data_rsp.r_data  = { >> {tcdm_r_data_i} };
+  assign data_rsp.r_opc   = tcdm_r_opc_i;
+  assign data_rsp.r_user  = tcdm_r_user_i;
 endgenerate
 
 always_comb begin
@@ -101,17 +105,20 @@ always_comb begin
 end
 
 redmule_top #(
-  .ID_WIDTH     ( ID_WIDTH     ),
-  .N_CORES      ( N_CORES      ),
-  .DW           ( DW           )
-) i_redmule_top (
-  .clk_i        ( clk_i        ),
-  .rst_ni       ( rst_ni       ),
-  .test_mode_i  ( test_mode_i  ),
-  .evt_o        ( evt_o        ),
-  .busy_o       ( busy_o       ),
-  .tcdm         ( tcdm         ),
-  .periph       ( periph       )
+  .ID_WIDTH           ( ID_WIDTH           ),
+  .N_CORES            ( N_CORES            ),
+  .DW                 ( DW                 ),
+  .redmule_data_req_t ( redmule_data_req_t ),
+  .redmule_data_rsp_t ( redmule_data_rsp_t )
+) i_redmule_top       (
+  .clk_i              ( clk_i              ),
+  .rst_ni             ( rst_ni             ),
+  .test_mode_i        ( test_mode_i        ),
+  .evt_o              ( evt_o              ),
+  .busy_o             ( busy_o             ),
+  .data_req_o         ( data_req           ),
+  .data_rsp_i         ( data_rsp           ),
+  .periph             ( periph             )
 );
 
 endmodule: redmule_wrap
