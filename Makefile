@@ -21,7 +21,8 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2019.3-kgf
+QUESTA         ?= questa-2022.3
+QUESTA_HOME    ?= /usr/pack/modelsim-10.7b-kgf/questasim
 BENDER_DIR     ?= .
 BENDER         ?= bender
 TEST_SRCS      ?= sw/redmule.c
@@ -29,7 +30,8 @@ WAVES          ?= $(mkfile_path)/wave.do
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imc
+# XTEN           ?= imc
+XTEN           ?= im
 
 compile_script ?= scripts/compile.tcl
 compile_flag   ?= -suppress 2583 -suppress 13314
@@ -114,12 +116,19 @@ bender:
 	curl --proto '=https'  \
 	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.24.0
 
+bender_defs += -D COREV_ASSERT_OFF
+
+bender_targs += -t rtl
+bender_targs += -t test
+bender_targs += -t cv32e40p_exclude_tracer
+bender_targs += -t redmule_test
+
 update-ips:
 	$(BENDER) update
-	$(BENDER) script vsim                                       \
-	--vlog-arg="$(compile_flag)"                                \
-	--vcom-arg="-pedanticerrors"                                \
-	-t rtl -t test -t cv32e40p_exclude_tracer -t redmule_test   \
+	$(BENDER) script vsim          \
+	--vlog-arg="$(compile_flag)"   \
+	--vcom-arg="-pedanticerrors"   \
+	$(bender_targs) $(bender_defs) \
 	> ${compile_script}
 
 build-hw: hw-all

@@ -306,7 +306,7 @@ module redmule_complex_tb;
   );
 
   redmule_complex #(
-    .CoreType           ( redmule_pkg::CV32   ), // CV32E40P, IBEX, SNITCH, CVA6
+    .CoreType           ( redmule_pkg::CV32X  ), // CV32E40P, CV32E40X, IBEX, SNITCH, CVA6
     .ID_WIDTH           ( ID                  ),
     .N_CORES            ( NC                  ),
     .DW                 ( DW                  ), // TCDM port dimension (in bits)

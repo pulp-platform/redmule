@@ -201,6 +201,10 @@ package redmule_pkg;
   } flgs_scheduler_t;
 
   typedef enum {
-    CV32, Ibex, Snitch, CVA6
+    CV32P ,
+    CV32X ,
+    Ibex  ,
+    Snitch,
+    CVA6
   } core_type_e;
 endpackage

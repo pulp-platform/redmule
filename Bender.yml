@@ -23,6 +23,7 @@ package:
 
 dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
+  cv32e40x          : { git: "https://github.com/TitaniaPlatform/cv32e40x.git"        , rev: "master"                                 }
   snitch_cluster    : { git: "https://github.com/pulp-platform/snitch_cluster.git"    , rev: e3d6d75ae541072395e914899901ea0d5ab82c6f } # commit: init
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }

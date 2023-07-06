@@ -131,20 +131,5 @@ SECTIONS
         _stack = . ;
     } > stack
 
-    .stab  0 (NOLOAD) :
-    {
-        [ .stab ]
-    }
-
-    .stabstr  0 (NOLOAD) :
-    {
-        [ .stabstr ]
-    }
-
-    .bss :
-    {
-        . = ALIGN(4);
-        _end = .;
-    } > dataram
 }
 

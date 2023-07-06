@@ -20,14 +20,15 @@
  */
 
 module redmule_complex
-  import snitch_pkg::*;
+  import cv32e40x_pkg::*;
+  // import snitch_pkg::*;
   import fpnew_pkg::*;
   import hci_package::*;
   import redmule_pkg::*;
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter  core_type_e   CoreType           = CV32                 , // CV32E40P, IBEX, SNITCH, CVA6
+  parameter  core_type_e   CoreType           = CV32P                , // CV32E40P, IBEX, SNITCH, CVA6
   parameter  int unsigned  ID_WIDTH           = 8                    ,
   parameter  int unsigned  N_CORES            = 8                    ,
   parameter  int unsigned  DW                 = DATA_W               , // TCDM port dimension (in bits)
@@ -117,23 +118,23 @@ redmule_top #(
 );
 
 generate
-  if (CoreType == CV32) begin: gen_cv32e40p
+  if (CoreType == CV32P) begin: gen_cv32e40p
     cv32e40p_core #(
       .PULP_XPULP     ( XPulp      ),
       .FPU            ( FpuPresent ),
       .PULP_ZFINX     ( Zfinx      )
     ) i_core          (
       // Clock and Reset
-      .clk_i               ( s_clk               ),
-      .rst_ni              ( rst_ni              ),
-      .pulp_clock_en_i     ( s_clk_en            ),  // PULP clock enable (only used if PULP_CLUSTER = 1)
-      .scan_cg_en_i        ( 1'b0                ),  // Enable all clock gates for testing
+      .clk_i               ( s_clk                 ),
+      .rst_ni              ( rst_ni                ),
+      .pulp_clock_en_i     ( s_clk_en              ),  // PULP clock enable (only used if PULP_CLUSTER = 1)
+      .scan_cg_en_i        ( 1'b0                  ),  // Enable all clock gates for testing
       // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
-      .boot_addr_i         ( boot_addr_i         ),
-      .mtvec_addr_i        ( '0                  ),
-      .dm_halt_addr_i      ( '0                  ),
-      .hart_id_i           ( '0                  ),
-      .dm_exception_addr_i ( '0                  ),
+      .boot_addr_i         ( boot_addr_i           ),
+      .mtvec_addr_i        ( '0                    ),
+      .dm_halt_addr_i      ( '0                    ),
+      .hart_id_i           ( '0                    ),
+      .dm_exception_addr_i ( '0                    ),
       // Instruction memory interface
       .instr_req_o         ( core_inst_req_o.req   ),
       .instr_addr_o        ( core_inst_req_o.addr  ),
@@ -174,81 +175,190 @@ generate
       .fetch_enable_i      ( fetch_enable_i    ),
       .core_sleep_o        ( core_sleep_o      )
     );
+  end else if (CoreType == CV32X) begin: gen_cv32e40x
+    localparam int unsigned NumRs = 4;
+    localparam int unsigned XifMemWidth = 32;
+    localparam int unsigned XifRFReadWidth = 32;
+    localparam int unsigned XifRFWriteWidth = 32;
+    localparam logic [31:0] XifMisa = '0;
+    localparam logic [ 1:0] XifEcsXs = '0;
+
+    cv32e40x_if_xif#(
+      .X_NUM_RS    ( NumRs           ),
+      .X_ID_WIDTH  ( ID_WIDTH        ),
+      .X_MEM_WIDTH ( XifMemWidth     ),
+      .X_RFR_WIDTH ( XifRFReadWidth  ),
+      .X_RFW_WIDTH ( XifRFWriteWidth ),
+      .X_MISA      ( XifMisa         ),
+      .X_ECS_XS    ( XifEcsXs        )
+    ) core_xif ();
+
+    /* Static binding */
+    assign core_xif.cpu_compressed.compressed_ready = '0;
+    assign core_xif.cpu_compressed.compressed_resp = '0;
+    assign core_xif.cpu_issue.issue_ready = '0;
+    assign core_xif.cpu_issue.issue_resp = '0;
+    assign core_xif.cpu_mem.mem_valid = '0;
+    assign core_xif.cpu_mem.mem_req = '0;
+    assign core_xif.cpu_result.result_valid = '0;
+    assign core_xif.cpu_result.result = '0;
+
+    cv32e40x_core #(
+      .M_EXT       ( cv32e40x_pkg::M ),
+      .X_EXT       ( 1               ),
+      .X_NUM_RS    ( NumRs           ),
+      .X_ID_WIDTH  ( ID_WIDTH        ),
+      .X_MEM_WIDTH ( XifMemWidth     ),
+      .X_RFR_WIDTH ( XifRFReadWidth  ),
+      .X_RFW_WIDTH ( XifRFWriteWidth ),
+      .X_MISA      ( XifMisa         ),
+      .X_ECS_XS    ( XifEcsXs        )
+    ) i_core       (
+      // Clock and Reset
+      .clk_i               ( s_clk                 ),
+      .rst_ni              ( rst_ni                ),
+      .scan_cg_en_i        ( 1'b0                  ),  // Enable all clock gates for testing
+      // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
+      .boot_addr_i         ( boot_addr_i           ),
+      .dm_exception_addr_i ( '0                    ),
+      .dm_halt_addr_i      ( '0                    ),
+      .mhartid_i           ( '0                    ),
+      .mimpid_patch_i      ( '0                    ),
+      .mtvec_addr_i        ( '0                    ),
+      // Instruction memory interface
+      .instr_req_o         ( core_inst_req_o.req   ),
+      .instr_gnt_i         ( core_inst_rsp_i.gnt   ),
+      .instr_rvalid_i      ( core_inst_rsp_i.valid ),
+      .instr_addr_o        ( core_inst_req_o.addr  ),
+      .instr_memtype_o     (                       ),
+      .instr_prot_o        (                       ),
+      .instr_dbg_o         (                       ),
+      .instr_rdata_i       ( core_inst_rsp_i.data  ),
+      .instr_err_i         ( '0                    ),
+      // Data memory interface
+      .data_req_o          ( core_data_req_o.req   ),
+      .data_gnt_i          ( core_data_rsp_i.gnt   ),
+      .data_rvalid_i       ( core_data_rsp_i.valid ),
+      .data_addr_o         ( core_data_req_o.addr  ),
+      .data_be_o           ( core_data_req_o.be    ),
+      .data_we_o           ( core_data_req_o.we    ),
+      .data_wdata_o        ( core_data_req_o.data  ),
+      .data_memtype_o      (                       ),
+      .data_prot_o         (                       ),
+      .data_dbg_o          (                       ),
+      .data_atop_o         (                       ),
+      .data_rdata_i        ( core_data_rsp_i.data  ),
+      .data_err_i          ( '0                    ),
+      .data_exokay_i       ( '1                    ),
+      // Cycle, Time
+      .mcycle_o            (                       ),
+      .time_i              ( '0                    ),
+      // eXtension interface
+      .xif_compressed_if   ( core_xif.cpu_compressed ),
+      .xif_issue_if        ( core_xif.cpu_issue      ),
+      .xif_commit_if       ( core_xif.cpu_commit     ),
+      .xif_mem_if          ( core_xif.cpu_mem        ),
+      .xif_mem_result_if   ( core_xif.cpu_mem_result ),
+      .xif_result_if       ( core_xif.cpu_result     ),
+      // Basic interrupt architecture
+      .irq_i               ( '0                    ),
+      // Event wakeup signals
+      .wu_wfe_i            ( evt[0]                ), // Wait-for-event wakeup
+      // CLIC interrupt architecture
+      .clic_irq_i          ( '0                    ),
+      .clic_irq_id_i       ( '0                    ),
+      .clic_irq_level_i    ( '0                    ),
+      .clic_irq_priv_i     ( '0                    ),
+      .clic_irq_shv_i      ( '0                    ),
+      // Fence.i flush handshake
+      .fencei_flush_req_o  (                       ),
+      .fencei_flush_ack_i  ( '0                    ),
+      // Debug Interface
+      .debug_req_i         ( '0                    ),
+      .debug_havereset_o   (                       ),
+      .debug_running_o     (                       ),
+      .debug_halted_o      (                       ),
+      .debug_pc_valid_o    (                       ),
+      .debug_pc_o          (                       ),
+      // CPU Control Signals
+      .fetch_enable_i      ( fetch_enable_i        ),
+      .core_sleep_o        ( core_sleep_o          )
+    );
   end else if (CoreType == Ibex) begin: gen_ibex
 
   end else if (CoreType == Snitch) begin: gen_snitch
-    snitch_pkg::interrupts_t irqs;
-    always_comb begin
-      irqs.debug = '0;
-      irqs.meip  = '0;
-      irqs.mtip  = '0;
-      irqs.msip  = '0;
-      irqs.mcip  = evt;
-    end
+    // snitch_pkg::interrupts_t irqs;
+    // always_comb begin
+    //   irqs.debug = '0;
+    //   irqs.meip  = '0;
+    //   irqs.mtip  = '0;
+    //   irqs.msip  = '0;
+    //   irqs.mcip  = evt;
+    // end
 
-    snitch #(
-      .BootAddr               ( 32'h1C000084       ),
-      .AddrWidth              ( 32                 ),
-      .DataWidth              ( 32                 ),
-      .RVE                    ( 0                  ),
-      .Xdma                   ( 0                  ),
-      .Xssr                   ( 0                  ),
-      .FP_EN                  ( 0                  ),
-      .RVF                    ( 0                  ),
-      .RVD                    ( 0                  ),
-      .XF16                   ( 0                  ),
-      .XF16ALT                ( 0                  ),
-      .XF8                    ( 0                  ),
-      .XF8ALT                 ( 0                  ),
-      .XDivSqrt               ( 0                  ),
-      .XFVEC                  ( 0                  ),
-      .XFDOTP                 ( 0                  ),
-      .XFAUX                  ( 0                  ),
-      .FLEN                   ( 0                  ),
-      .VMSupport              ( 0                  ),
-      .Xipu                   ( 0                  ),
-      .dreq_t                 ( core_data_req_t    ),
-      .drsp_t                 ( core_data_rsp_t    ),
-      .acc_req_t              ( redmule_ctrl_req_t ),
-      .acc_resp_t             ( redmule_ctrl_rsp_t ),
-      .pa_t                   (  '{0}              ),
-      .l0_pte_t               (  '{0}              ),
-      .NumIntOutstandingLoads (   0                ),
-      .NumIntOutstandingMem   (   0                ),
-      .NumDTLBEntries         (   0                ),
-      .NumITLBEntries         (   0                ),
-      .SnitchPMACfg           (  '{0}              )
-    ) i_core                  (
-      .clk_i                  ( s_clk               ),
-      .rst_i                  ( rst_ni              ),
-      .hart_id_i              ( 0                   ),
-      .irq_i                  ( irqs                ),
-      .flush_i_valid_o        (                     ),
-      .flush_i_ready_i        ( 0                   ),
-      .inst_valid_o           ( core_inst_req.req   ),
-      .inst_addr_o            ( core_inst_req.addr  ),
-      .inst_cacheable_o       (                     ),
-      .inst_ready_i           ( core_inst_rsp.valid ),
-      .inst_data_i            ( core_inst_rsp.data  ),
-      .acc_qreq_o             ( redmule_ctrl_req    ),
-      .acc_qvalid_o           (                     ),
-      .acc_qready_i           ( '1                  ),
-      .acc_prsp_i             ( redmule_ctrl_rsp    ),
-      .acc_pvalid_i           ( '1                  ),
-      .acc_pready_o           (                     ),
-      .data_req_o             ( core_data_req       ),
-      .data_rsp_i             ( core_data_rsp       ),
-      .ptw_valid_o            (                     ),
-      .ptw_ready_i            ( '0                  ),
-      .ptw_va_o               (                     ),
-      .ptw_ppn_o              (                     ),
-      .ptw_pte_i              ( '0                  ),
-      .ptw_is_4mega_i         ( '0                  ),
-      .fpu_rnd_mode_o         (                     ),
-      .fpu_fmt_mode_o         (                     ),
-      .fpu_status_i           ( '0                  ),
-      .core_events_o          (                     )
-    );
+    // snitch #(
+    //   .BootAddr               ( 32'h1C000084       ),
+    //   .AddrWidth              ( 32                 ),
+    //   .DataWidth              ( 32                 ),
+    //   .RVE                    ( 0                  ),
+    //   .Xdma                   ( 0                  ),
+    //   .Xssr                   ( 0                  ),
+    //   .FP_EN                  ( 0                  ),
+    //   .RVF                    ( 0                  ),
+    //   .RVD                    ( 0                  ),
+    //   .XF16                   ( 0                  ),
+    //   .XF16ALT                ( 0                  ),
+    //   .XF8                    ( 0                  ),
+    //   .XF8ALT                 ( 0                  ),
+    //   .XDivSqrt               ( 0                  ),
+    //   .XFVEC                  ( 0                  ),
+    //   .XFDOTP                 ( 0                  ),
+    //   .XFAUX                  ( 0                  ),
+    //   .FLEN                   ( 0                  ),
+    //   .VMSupport              ( 0                  ),
+    //   .Xipu                   ( 0                  ),
+    //   .dreq_t                 ( core_data_req_t    ),
+    //   .drsp_t                 ( core_data_rsp_t    ),
+    //   .acc_req_t              ( redmule_ctrl_req_t ),
+    //   .acc_resp_t             ( redmule_ctrl_rsp_t ),
+    //   .pa_t                   (  '{0}              ),
+    //   .l0_pte_t               (  '{0}              ),
+    //   .NumIntOutstandingLoads (   0                ),
+    //   .NumIntOutstandingMem   (   0                ),
+    //   .NumDTLBEntries         (   0                ),
+    //   .NumITLBEntries         (   0                ),
+    //   .SnitchPMACfg           (  '{0}              )
+    // ) i_core                  (
+    //   .clk_i                  ( s_clk               ),
+    //   .rst_i                  ( rst_ni              ),
+    //   .hart_id_i              ( 0                   ),
+    //   .irq_i                  ( irqs                ),
+    //   .flush_i_valid_o        (                     ),
+    //   .flush_i_ready_i        ( 0                   ),
+    //   .inst_valid_o           ( core_inst_req.req   ),
+    //   .inst_addr_o            ( core_inst_req.addr  ),
+    //   .inst_cacheable_o       (                     ),
+    //   .inst_ready_i           ( core_inst_rsp.valid ),
+    //   .inst_data_i            ( core_inst_rsp.data  ),
+    //   .acc_qreq_o             ( redmule_ctrl_req    ),
+    //   .acc_qvalid_o           (                     ),
+    //   .acc_qready_i           ( '1                  ),
+    //   .acc_prsp_i             ( redmule_ctrl_rsp    ),
+    //   .acc_pvalid_i           ( '1                  ),
+    //   .acc_pready_o           (                     ),
+    //   .data_req_o             ( core_data_req       ),
+    //   .data_rsp_i             ( core_data_rsp       ),
+    //   .ptw_valid_o            (                     ),
+    //   .ptw_ready_i            ( '0                  ),
+    //   .ptw_va_o               (                     ),
+    //   .ptw_ppn_o              (                     ),
+    //   .ptw_pte_i              ( '0                  ),
+    //   .ptw_is_4mega_i         ( '0                  ),
+    //   .fpu_rnd_mode_o         (                     ),
+    //   .fpu_fmt_mode_o         (                     ),
+    //   .fpu_status_i           ( '0                  ),
+    //   .core_events_o          (                     )
+    // );
   end else begin: gen_cva6
 
   end
