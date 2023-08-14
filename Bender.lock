@@ -1,14 +1,14 @@
 packages:
   cluster_interconnect:
-    revision: 89e1019d64a86425211be6200770576cbdf3e8b3
-    version: null
+    revision: 7d0a4f8acae71a583a6713cab5554e60b9bb8d27
+    version: 1.2.1
     source:
       Git: https://github.com/pulp-platform/cluster_interconnect.git
     dependencies:
     - common_cells
   common_cells:
-    revision: 4ac82b420e46fd0005513ca2283cb3c905e7599a
-    version: 1.29.0
+    revision: 53b0b58af2db5bd3c850a7038fae170ed78326bb
+    version: 1.31.1
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -54,8 +54,8 @@ packages:
     - hwpe-stream
     - l2_tcdm_hybrid_interco
   hwpe-ctrl:
-    revision: 4bf1487a463c262bf7d8ffee79d1cf392937daa2
-    version: 1.7.1
+    revision: b7857919ea14b586901ff4282ad7749a3d50501e
+    version: null
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
@@ -74,8 +74,8 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   tech_cells_generic:
-    revision: a9cae21902e75b1434328ecf36f85327ba5717de
-    version: 0.2.11
+    revision: 298b7297d220ba2601d0f24f684f97ff32f61123
+    version: 0.2.12
     source:
       Git: https://github.com/pulp-platform/tech_cells_generic.git
     dependencies:

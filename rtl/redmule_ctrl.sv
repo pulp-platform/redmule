@@ -81,6 +81,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
 
   // Control slave interface
   hwpe_ctrl_slave  #(
+    .RegfileScm     ( RegfileScm   ),
     .N_CORES        ( N_CORES      ),
     .N_CONTEXT      ( N_CONTEXT    ),
     .N_IO_REGS      ( REDMULE_REGS ),
