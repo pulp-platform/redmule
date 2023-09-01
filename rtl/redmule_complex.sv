@@ -19,6 +19,8 @@
  * RedMulE Complex Core
  */
 
+`include "hwpe-ctrl/typedef.svh"
+
 module redmule_complex
   import cv32e40x_pkg::*;
   // import snitch_pkg::*;
@@ -44,8 +46,6 @@ module redmule_complex
   parameter      type      core_inst_rsp_t    = logic                ,
   parameter      type      redmule_data_req_t = logic                ,
   parameter      type      redmule_data_rsp_t = logic                ,
-  parameter      type      redmule_ctrl_req_t = logic                ,
-  parameter      type      redmule_ctrl_rsp_t = logic                ,
   localparam fp_format_e   FpFormat    = FPFORMAT                    , // Data format (default is FP16)
   localparam int unsigned  Height      = ARRAY_HEIGHT                , // Number of PEs within a row
   localparam int unsigned  Width       = ARRAY_WIDTH                 , // Number of parallel rows
@@ -70,18 +70,21 @@ module redmule_complex
   output redmule_data_req_t            redmule_data_req_o
 );
 
+localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
+localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
+
 logic busy;
 logic s_clk, s_clk_en;
 logic [N_CORES-1:0][1:0] evt;
+
+`HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID_WIDTH-1:0])
+`HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [31:0], logic [ID_WIDTH-1:0])
 
 core_inst_req_t core_inst_req;
 core_inst_rsp_t core_inst_rsp;
 
 core_data_req_t core_data_req;
 core_data_rsp_t core_data_rsp;
-
-redmule_ctrl_req_t redmule_ctrl_req;
-redmule_ctrl_rsp_t redmule_ctrl_rsp;
 
 hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
 hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
@@ -100,22 +103,32 @@ tc_clk_gating sys_clock_gating (
   .clk_o     ( s_clk       )
 );
 
-redmule_top #(
-  .ID_WIDTH           ( ID_WIDTH           ),
-  .N_CORES            ( 1                  ),
-  .DW                 ( DW                 ),
-  .redmule_data_req_t ( redmule_data_req_t ),
-  .redmule_data_rsp_t ( redmule_data_rsp_t )
-) i_redmule_top       (
-  .clk_i              ( s_clk              ),
-  .rst_ni             ( rst_ni             ),
-  .test_mode_i        ( test_mode_i        ),
-  .evt_o              ( evt                ),
-  .busy_o             ( busy               ),
-  .data_rsp_i         ( redmule_data_rsp_i ),
-  .data_req_o         ( redmule_data_req_o ),
-  .periph             ( periph             )
-);
+localparam int unsigned NumRs = 3;
+localparam int unsigned XifMemWidth = 32;
+localparam int unsigned XifRFReadWidth = 32;
+localparam int unsigned XifRFWriteWidth = 32;
+localparam logic [31:0] XifMisa = '0;
+localparam logic [ 1:0] XifEcsXs = '0;
+
+cv32e40x_if_xif#(
+  .X_NUM_RS    ( NumRs           ),
+  .X_ID_WIDTH  ( ID_WIDTH        ),
+  .X_MEM_WIDTH ( XifMemWidth     ),
+  .X_RFR_WIDTH ( XifRFReadWidth  ),
+  .X_RFW_WIDTH ( XifRFWriteWidth ),
+  .X_MISA      ( XifMisa         ),
+  .X_ECS_XS    ( XifEcsXs        )
+) core_xif ();
+
+cv32e40x_if_xif#(
+  .X_NUM_RS    ( NumRs           ),
+  .X_ID_WIDTH  ( ID_WIDTH        ),
+  .X_MEM_WIDTH ( XifMemWidth     ),
+  .X_RFR_WIDTH ( XifRFReadWidth  ),
+  .X_RFW_WIDTH ( XifRFWriteWidth ),
+  .X_MISA      ( XifMisa         ),
+  .X_ECS_XS    ( XifEcsXs        )
+) redmule_xif ();
 
 generate
   if (CoreType == CV32P) begin: gen_cv32e40p
@@ -176,32 +189,11 @@ generate
       .core_sleep_o        ( core_sleep_o      )
     );
   end else if (CoreType == CV32X) begin: gen_cv32e40x
-    localparam int unsigned NumRs = 4;
-    localparam int unsigned XifMemWidth = 32;
-    localparam int unsigned XifRFReadWidth = 32;
-    localparam int unsigned XifRFWriteWidth = 32;
-    localparam logic [31:0] XifMisa = '0;
-    localparam logic [ 1:0] XifEcsXs = '0;
 
-    cv32e40x_if_xif#(
-      .X_NUM_RS    ( NumRs           ),
-      .X_ID_WIDTH  ( ID_WIDTH        ),
-      .X_MEM_WIDTH ( XifMemWidth     ),
-      .X_RFR_WIDTH ( XifRFReadWidth  ),
-      .X_RFW_WIDTH ( XifRFWriteWidth ),
-      .X_MISA      ( XifMisa         ),
-      .X_ECS_XS    ( XifEcsXs        )
-    ) core_xif ();
-
-    /* Static binding */
     assign core_xif.cpu_compressed.compressed_ready = '0;
     assign core_xif.cpu_compressed.compressed_resp = '0;
-    assign core_xif.cpu_issue.issue_ready = '0;
-    assign core_xif.cpu_issue.issue_resp = '0;
     assign core_xif.cpu_mem.mem_valid = '0;
     assign core_xif.cpu_mem.mem_req = '0;
-    assign core_xif.cpu_result.result_valid = '0;
-    assign core_xif.cpu_result.result = '0;
 
     cv32e40x_core #(
       .M_EXT       ( cv32e40x_pkg::M ),
@@ -254,16 +246,16 @@ generate
       .mcycle_o            (                       ),
       .time_i              ( '0                    ),
       // eXtension interface
-      .xif_compressed_if   ( core_xif.cpu_compressed ),
-      .xif_issue_if        ( core_xif.cpu_issue      ),
-      .xif_commit_if       ( core_xif.cpu_commit     ),
-      .xif_mem_if          ( core_xif.cpu_mem        ),
-      .xif_mem_result_if   ( core_xif.cpu_mem_result ),
-      .xif_result_if       ( core_xif.cpu_result     ),
+      .xif_compressed_if   ( core_xif.cpu_compressed    ),
+      .xif_issue_if        ( core_xif.cpu_issue         ),
+      .xif_commit_if       ( core_xif.cpu_commit        ),
+      .xif_mem_if          ( core_xif.cpu_mem           ),
+      .xif_mem_result_if   ( core_xif.cpu_mem_result    ),
+      .xif_result_if       ( core_xif.cpu_result        ),
       // Basic interrupt architecture
-      .irq_i               ( '0                    ),
+      .irq_i               ( {27'd0 ,evt, 3'd0}         ),
       // Event wakeup signals
-      .wu_wfe_i            ( evt[0]                ), // Wait-for-event wakeup
+      .wu_wfe_i            ( '0                    ), // Wait-for-event wakeup
       // CLIC interrupt architecture
       .clic_irq_i          ( '0                    ),
       .clic_irq_id_i       ( '0                    ),
@@ -286,82 +278,36 @@ generate
     );
   end else if (CoreType == Ibex) begin: gen_ibex
 
-  end else if (CoreType == Snitch) begin: gen_snitch
-    // snitch_pkg::interrupts_t irqs;
-    // always_comb begin
-    //   irqs.debug = '0;
-    //   irqs.meip  = '0;
-    //   irqs.mtip  = '0;
-    //   irqs.msip  = '0;
-    //   irqs.mcip  = evt;
-    // end
-
-    // snitch #(
-    //   .BootAddr               ( 32'h1C000084       ),
-    //   .AddrWidth              ( 32                 ),
-    //   .DataWidth              ( 32                 ),
-    //   .RVE                    ( 0                  ),
-    //   .Xdma                   ( 0                  ),
-    //   .Xssr                   ( 0                  ),
-    //   .FP_EN                  ( 0                  ),
-    //   .RVF                    ( 0                  ),
-    //   .RVD                    ( 0                  ),
-    //   .XF16                   ( 0                  ),
-    //   .XF16ALT                ( 0                  ),
-    //   .XF8                    ( 0                  ),
-    //   .XF8ALT                 ( 0                  ),
-    //   .XDivSqrt               ( 0                  ),
-    //   .XFVEC                  ( 0                  ),
-    //   .XFDOTP                 ( 0                  ),
-    //   .XFAUX                  ( 0                  ),
-    //   .FLEN                   ( 0                  ),
-    //   .VMSupport              ( 0                  ),
-    //   .Xipu                   ( 0                  ),
-    //   .dreq_t                 ( core_data_req_t    ),
-    //   .drsp_t                 ( core_data_rsp_t    ),
-    //   .acc_req_t              ( redmule_ctrl_req_t ),
-    //   .acc_resp_t             ( redmule_ctrl_rsp_t ),
-    //   .pa_t                   (  '{0}              ),
-    //   .l0_pte_t               (  '{0}              ),
-    //   .NumIntOutstandingLoads (   0                ),
-    //   .NumIntOutstandingMem   (   0                ),
-    //   .NumDTLBEntries         (   0                ),
-    //   .NumITLBEntries         (   0                ),
-    //   .SnitchPMACfg           (  '{0}              )
-    // ) i_core                  (
-    //   .clk_i                  ( s_clk               ),
-    //   .rst_i                  ( rst_ni              ),
-    //   .hart_id_i              ( 0                   ),
-    //   .irq_i                  ( irqs                ),
-    //   .flush_i_valid_o        (                     ),
-    //   .flush_i_ready_i        ( 0                   ),
-    //   .inst_valid_o           ( core_inst_req.req   ),
-    //   .inst_addr_o            ( core_inst_req.addr  ),
-    //   .inst_cacheable_o       (                     ),
-    //   .inst_ready_i           ( core_inst_rsp.valid ),
-    //   .inst_data_i            ( core_inst_rsp.data  ),
-    //   .acc_qreq_o             ( redmule_ctrl_req    ),
-    //   .acc_qvalid_o           (                     ),
-    //   .acc_qready_i           ( '1                  ),
-    //   .acc_prsp_i             ( redmule_ctrl_rsp    ),
-    //   .acc_pvalid_i           ( '1                  ),
-    //   .acc_pready_o           (                     ),
-    //   .data_req_o             ( core_data_req       ),
-    //   .data_rsp_i             ( core_data_rsp       ),
-    //   .ptw_valid_o            (                     ),
-    //   .ptw_ready_i            ( '0                  ),
-    //   .ptw_va_o               (                     ),
-    //   .ptw_ppn_o              (                     ),
-    //   .ptw_pte_i              ( '0                  ),
-    //   .ptw_is_4mega_i         ( '0                  ),
-    //   .fpu_rnd_mode_o         (                     ),
-    //   .fpu_fmt_mode_o         (                     ),
-    //   .fpu_status_i           ( '0                  ),
-    //   .core_events_o          (                     )
-    // );
   end else begin: gen_cva6
 
   end
 endgenerate
+
+localparam int unsigned XExt = (CoreType == CV32X) ? 1 : 0;
+
+redmule_top #(
+  .ID_WIDTH           ( ID_WIDTH              ),
+  .N_CORES            ( 1                     ),
+  .DW                 ( DW                    ),
+  .X_EXT              ( XExt                  ),
+  .SysInstWidth       ( SysInstWidth          ),
+  .SysDataWidth       ( SysDataWidth          ),
+  .redmule_data_req_t ( redmule_data_req_t    ),
+  .redmule_data_rsp_t ( redmule_data_rsp_t    ),
+  .redmule_ctrl_req_t ( redmule_ctrl_req_t    ),
+  .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t    )
+) i_redmule_top       (
+  .clk_i              ( s_clk                  ),
+  .rst_ni             ( rst_ni                 ),
+  .test_mode_i        ( test_mode_i            ),
+  .evt_o              ( evt                    ),
+  .busy_o             ( busy                   ),
+  .data_rsp_i         ( redmule_data_rsp_i     ),
+  .data_req_o         ( redmule_data_req_o     ),
+  .ctrl_req_i         ( '0                     ),
+  .ctrl_rsp_o         (                        ),
+  .xif_issue_if_i     ( core_xif.coproc_issue  ),
+  .xif_result_if_o    ( core_xif.coproc_result )
+);
 
 endmodule: redmule_complex

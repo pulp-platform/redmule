@@ -27,6 +27,7 @@ module redmule_ctrl
 parameter  int unsigned N_CORES       = 8                      ,
 parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
 parameter  int unsigned ID_WIDTH      = 8                      ,
+parameter  int unsigned SysDataWidth  = 32                     ,
 parameter  int unsigned N_CONTEXT     = 2                      ,
 parameter  int unsigned Height        = 4                      ,
 parameter  int unsigned Width         = 8                      ,
@@ -46,6 +47,8 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   output logic                    z_buffer_clk_en_o ,
   output ctrl_regfile_t           reg_file_o        ,
   input  logic                    reg_enable_i      ,
+  input  logic                    start_cfg_i       ,
+  output logic                    cfg_complete_o    ,
   // Flags coming from the wrap registers
   input  z_buffer_flgs_t          flgs_z_buffer_i   ,
   // Flags coming from the engine
@@ -67,6 +70,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic        last_w_row, last_w_row_en, last_w_row_rst;
   logic        z_buffer_clk_en;
   logic        enable_depth_count, reset_depth_count;
+  logic        tiler_setback, tiler_valid;
   logic [4:0]  w_computed;
   logic [15:0] w_rows;
   logic [15:0] w_rows_iter, w_row_count_d, w_row_count_q;
@@ -75,7 +79,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
   redmule_ctrl_state current, next;
 
-  hwpe_ctrl_package::ctrl_regfile_t reg_file;
+  hwpe_ctrl_package::ctrl_regfile_t reg_file_d, reg_file_q;
   hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
   hwpe_ctrl_package::flags_slave_t  flgs_slave;
 
@@ -85,7 +89,8 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .N_CONTEXT      ( N_CONTEXT    ),
     .N_IO_REGS      ( REDMULE_REGS ),
     .N_GENERIC_REGS ( 6            ),
-    .ID_WIDTH       ( ID_WIDTH     )
+    .ID_WIDTH       ( ID_WIDTH     ),
+    .DataWidth      ( SysDataWidth )
   ) i_slave         (
     .clk_i          ( clk_i        ),
     .rst_ni         ( rst_ni       ),
@@ -93,8 +98,21 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .cfg            ( periph       ),
     .ctrl_i         ( cntrl_slave  ),
     .flags_o        ( flgs_slave   ),
-    .reg_file       ( reg_file     )
+    .reg_file       ( reg_file_d   )
   );
+
+  redmule_tiler  i_cfg_tiler (
+    .clk_i       ( clk_i         ),
+    .rst_ni      ( rst_ni        ),
+    .clear_i     ( clear         ),
+    .setback_i   ( tiler_setback ),
+    .start_cfg_i ( start_cfg_i   ),
+    .reg_file_i  ( reg_file_d    ),
+    .valid_o     ( tiler_valid   ),
+    .reg_file_o  ( reg_file_q    )
+  );
+
+  assign cfg_complete_o = tiler_valid;
   /*---------------------------------------------------------------------------------------------*/
   /*                                       Register island                                       */
   /*---------------------------------------------------------------------------------------------*/
@@ -201,9 +219,9 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
-  assign w_rows_iter = reg_file.hwpe_params [W_ITERS    ][31:16];
-  assign tot_stores  = reg_file.hwpe_params [LEFT_PARAMS][31:16];
-  assign reg_file_o = reg_file;
+  assign w_rows_iter = reg_file_q.hwpe_params [W_ITERS    ][31:16];
+  assign tot_stores  = reg_file_q.hwpe_params [LEFT_PARAMS][31:16];
+  assign reg_file_o = reg_file_q;
   assign z_buffer_clk_en_o = z_buffer_clk_en;
 
   /*---------------------------------------------------------------------------------------------*/
@@ -212,6 +230,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   // This is a local FSM who's only work is to make the first 
   // input load operation and to start the redmule_scheduler
   always_comb begin : controller_fsm
+    tiler_setback      = 1'b0;
     cntrl_scheduler_o  = '0;
     cntrl_slave        = '0;
     // Engine default control signals assignment
@@ -242,8 +261,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         w_row_count_d  = '0;
         if (clear)
           z_buffer_clk_en = 1'b1;
-        if (flgs_slave.start || test_mode_i)
+        if ( (flgs_slave.start & tiler_valid) || test_mode_i) begin
+          tiler_setback = 1'b1;
           next = REDMULE_STARTING;
+        end
         else 
           next = REDMULE_IDLE;
       end

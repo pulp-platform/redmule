@@ -21,8 +21,6 @@
 timeunit 1ps;
 timeprecision 1ps;
 
-import snitch_pkg::*;
-
 module redmule_complex_tb;
 
   // parameters
@@ -145,21 +143,6 @@ module redmule_complex_tb;
     logic valid;
     logic [31:0] data;
   } core_data_rsp_t;
-
-  typedef struct packed {
-    snitch_pkg::acc_addr_e addr;
-    logic [4:0]  id;
-    logic [31:0] data_op;
-    logic [31:0] data_arga;
-    logic [31:0] data_argb;
-    logic [31:0] data_argc;
-  } redmule_ctrl_req_t;
-
-  typedef struct packed {
-    logic [4:0]  id;
-    logic        error;
-    logic [31:0] data;
-  } redmule_ctrl_rsp_t;
 
   `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [31:0], logic [DW-1:0], logic [DW/8-1:0], logic signed [DW/32-1:0][31:0], logic)
   `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW-1:0], logic)
@@ -318,9 +301,7 @@ module redmule_complex_tb;
     .core_inst_req_t    ( core_inst_req_t     ),
     .core_inst_rsp_t    ( core_inst_rsp_t     ),
     .redmule_data_req_t ( redmule_data_req_t  ),
-    .redmule_data_rsp_t ( redmule_data_rsp_t  ),
-    .redmule_ctrl_req_t ( redmule_ctrl_req_t  ),
-    .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t  )
+    .redmule_data_rsp_t ( redmule_data_rsp_t  )
   ) i_dut               (
     .clk_i              ( clk              ),
     .rst_ni             ( rst_n            ),
@@ -368,11 +349,13 @@ module redmule_complex_tb;
   int errors = -1;
   always_ff @(posedge clk)
   begin
-    if((data_addr == 32'h80000000 ) && (data_we & data_req == 1'b1)) begin
-      errors = data_wdata;
+    if((core_data_req.addr == 32'h80000000 ) &&
+       (core_data_req.we & core_data_req.req == 1'b1)) begin
+      errors = core_data_req.data;
     end
-    if((data_addr == 32'h80000004 ) && (data_we & data_req == 1'b1)) begin
-      $write("%c", data_wdata);
+    if((core_data_req.addr == 32'h80000004 ) &&
+       (core_data_req.we & core_data_req.req == 1'b1)) begin
+      $write("%c", core_data_req.data);
     end
   end
 

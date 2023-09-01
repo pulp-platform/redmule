@@ -23,12 +23,11 @@ package:
 
 dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
-  cv32e40x          : { git: "https://github.com/TitaniaPlatform/cv32e40x.git"        , rev: "master"                                 }
-  snitch_cluster    : { git: "https://github.com/pulp-platform/snitch_cluster.git"    , rev: e3d6d75ae541072395e914899901ea0d5ab82c6f } # commit: init
+  cv32e40x          : { git: "https://github.com/TitaniaPlatform/cv32e40x.git"        , rev: 7e7885854154dd07bd6cff937753c4a00a1856bd }
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 9d9fc44f6181e7d5357a1b31a0600630440b9586 }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 1.6                                  }
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: c5c5d40da2fb5ce6d05e2c47307eaa8867409bde }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.1"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
@@ -37,7 +36,9 @@ sources:
   files:
   # RedMulE
     - rtl/redmule_pkg.sv
+    - rtl/redmule_tiler.sv
     - rtl/redmule_ctrl.sv
+    - rtl/redmule_inst_decoder.sv
     - rtl/redmule_scheduler.sv
     - rtl/redmule_castin.sv
     - rtl/redmule_castout.sv
@@ -51,11 +52,23 @@ sources:
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
-    - rtl/redmule_complex.sv
-    - rtl/redmule_wrap.sv
-  # Testbench
-    - target: redmule_test
+
+    - target: redmule_hwpe
+      files:
+        - rtl/redmule_wrap.sv
+
+    - target: redmule_complex
+      files:
+        - rtl/redmule_complex.sv
+
+    - target: any(redmule_test_complex, redmule_test_hwpe)
       files:
         - tb/tb_dummy_memory.sv
-        - tb/redmule_tb.sv
+
+    - target: redmule_test_complex
+      files:
         - tb/redmule_complex_tb.sv
+
+    - target: redmule_test_hwpe
+      files:
+        - tb/redmule_tb.sv

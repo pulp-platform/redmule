@@ -21,11 +21,14 @@
 
 `include "hci/typedef.svh"
 `include "hci/assign.svh"
+`include "hwpe-ctrl/typedef.svh"
+`include "hwpe-ctrl/assign.svh"
 
 module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
   import hci_package::*;
+  import cv32e40x_pkg::*;
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
@@ -33,8 +36,13 @@ parameter  int unsigned  ID_WIDTH           = 8                 ,
 parameter  int unsigned  N_CORES            = 8                 ,
 parameter  int unsigned  DW                 = DATA_W            , // TCDM port dimension (in bits)
 parameter  int unsigned  UW                 = 1                 ,
-parameter  type          redmule_data_req_t = logic           ,
-parameter  type          redmule_data_rsp_t = logic           ,
+parameter  int unsigned  X_EXT              = 0                 ,
+parameter  int unsigned  SysInstWidth       = 32                ,
+parameter  int unsigned  SysDataWidth       = 32                ,
+parameter  type          redmule_data_req_t = logic             ,
+parameter  type          redmule_data_rsp_t = logic             ,
+parameter  type          redmule_ctrl_req_t = logic             ,
+parameter  type          redmule_ctrl_rsp_t = logic             ,
 localparam int unsigned  NumContext         = N_CONTEXT         , // Number of sequential jobs for the slave device
 localparam fp_format_e   FpFormat           = FPFORMAT          , // Data format (default is FP16)
 localparam int unsigned  Height             = ARRAY_HEIGHT      , // Number of PEs within a row
@@ -48,11 +56,16 @@ localparam int unsigned  BITW               = fp_width(FpFormat)  // Number of b
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
   output logic [N_CORES-1:0][1:0] evt_o      ,
+`ifdef TARGET_REDMULE_COMPLEX
+  cv32e40x_if_xif.coproc_issue    xif_issue_if_i,
+  cv32e40x_if_xif.coproc_result   xif_result_if_o,
+`endif
   // TCDM interface towards the memory
   output redmule_data_req_t       data_req_o ,
   input  redmule_data_rsp_t       data_rsp_i ,
   // Periph slave port for the controller side
-  hwpe_ctrl_intf_periph.slave     periph
+  input  redmule_ctrl_req_t       ctrl_req_i,
+  output redmule_ctrl_rsp_t       ctrl_rsp_o
 );
 
 localparam int unsigned DATAW_ALIGN = DATAW;
@@ -67,6 +80,7 @@ logic                       w_shift;
 logic                       w_load;
 logic                       reg_enable,
                             gate_en;
+logic                       start_cfg, cfg_complete;
 logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
                             y_cols_lftovr;
 logic [$clog2(Height):0]    w_rows_lftovr;
@@ -75,7 +89,49 @@ logic [$clog2(Width):0]     y_rows_lftovr;
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) tcdm ( .clk ( clk_i ) );
 
+hwpe_ctrl_intf_periph #( .AddrWidth ( 32 ),
+                         .DataWidth ( 32 ),
+                         .ID_WIDTH  (ID_WIDTH) ) periph ( .clk(clk_i) );
+
 `HCI_ASSIGN_FROM_INTF(tcdm, data_req_o, data_rsp_i)
+
+`ifdef TARGET_REDMULE_HWPE
+  /* If there is no Xif we directly plug the
+     control port into the hwpe-slave device */
+  `HWPE_CTRL_ASSIGN_TO_INTF(periph, ctrl_req_i, ctrl_rsp_o)
+
+`else
+  /* If there is the Xif, we pass through the
+     instruction decoder and then enter into
+     the hwpe slave device */
+
+  redmule_ctrl_req_t instr_req;
+  redmule_ctrl_rsp_t instr_rsp;
+  `HWPE_CTRL_ASSIGN_TO_INTF(periph, instr_req, instr_rsp)
+  logic [SysDataWidth-1:0] cfg_reg;
+  logic [SysDataWidth-1:0] sizem, sizen, sizek;
+  logic [SysDataWidth-1:0] x_addr, w_addr, y_addr, z_addr;
+
+  redmule_inst_decoder #(
+    .SysInstWidth       ( SysInstWidth       ),
+    .SysDataWidth       ( SysDataWidth       ),
+    .NumRfReadPrts      ( 3                  ), // FIXME: parametric
+    .redmule_ctrl_req_t ( redmule_ctrl_req_t ),
+    .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t )
+  ) i_inst_decoder      (
+    .clk_i           ( clk_i           ),
+    .rst_ni          ( rst_ni          ),
+    .clear_i         ( clear           ),
+    .xif_issue_if_i  ( xif_issue_if_i  ),
+    .xif_result_if_o ( xif_result_if_o ),
+    .cfg_req_o       ( instr_req       ),
+    .cfg_rsp_i       ( instr_rsp       ),
+    .cfg_complete_i  ( cfg_complete    ),
+    .start_cfg_o     ( start_cfg       )
+  );
+
+  assign ctrl_rsp_o = '0;
+`endif
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;
@@ -125,22 +181,6 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo ( .clk( c
 // Z streaming interface + Z FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q    ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo ( .clk( clk_i ) );
-
-hwpe_ctrl_intf_periph   #( .ID_WIDTH   ( ID_WIDTH    ) ) periph_local ( .clk( clk_i ) );
-
-// Periph port binding from local
-always_comb begin
-  periph_local.req  = periph.req;
-  periph_local.add  = periph.add;
-  periph_local.wen  = periph.wen;
-  periph_local.be   = periph.be;
-  periph_local.data = periph.data;
-  periph_local.id   = periph.id;
-  periph.gnt        = periph_local.gnt;
-  periph.r_data     = periph_local.r_data;
-  periph.r_valid    = periph_local.r_valid;
-  periph.r_id       = periph_local.r_id;
-end
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -407,6 +447,7 @@ redmule_ctrl        #(
   .IO_REGS           ( REDMULE_REGS            ),
   .ID_WIDTH          ( ID_WIDTH                ),
   .N_CONTEXT         ( NumContext              ),
+  .SysDataWidth      ( SysDataWidth            ),
   .Height            ( Height                  ),
   .Width             ( Width                   ),
   .NumPipeRegs       ( NumPipeRegs             )
@@ -422,13 +463,15 @@ redmule_ctrl        #(
   .z_buffer_clk_en_o ( ctrl_z_clk_en           ),
   .reg_file_o        ( reg_file                ),
   .reg_enable_i      ( reg_enable              ),
+  .start_cfg_i       ( start_cfg               ),
+  .cfg_complete_o    ( cfg_complete            ),
   .flgs_z_buffer_i   ( z_buffer_flgs           ),
   .flgs_engine_i     ( flgs_engine             ),
   .w_loaded_i        ( flgs_scheduler.w_loaded ),
   .flush_o           ( engine_flush            ),
   .accumulate_o      ( accumulate              ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
-  .periph            ( periph_local            )
+  .periph            ( periph                  )
 );
     
 

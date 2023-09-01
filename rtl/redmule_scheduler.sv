@@ -180,7 +180,7 @@ fpnew_pkg::fp_format_e input_cast_src_fmt ,
                        output_cast_dst_fmt;
 
 // JMP = 32 if streamer ports are 256 bit wide and parallelism is 32 bit
-localparam int unsigned JMP    = (4*DATA_W/ADDR_W) - 4;
+localparam int unsigned JMP    = NumByte*(DATA_W/MemDw - 1);
 localparam int unsigned NBYTES = BITW/8;
 
 typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} redmule_fsm_state;
@@ -209,7 +209,7 @@ always_comb begin : address_gen_signals
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
     // Here we initialize the streamer source signals
     // for the Y stream source
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Y_ADDR];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Z_ADDR];
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len       = reg_file_i.hwpe_params[Z_TOT_LEN];
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len        = W;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride     = reg_file_i.hwpe_params[Z_D0_STRIDE];

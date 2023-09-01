@@ -17,6 +17,7 @@
 
 `include "hci/typedef.svh"
 `include "hci/assign.svh"
+`include "hwpe-ctrl/typedef.svh"
 
 timeunit 1ps;
 timeprecision 1ps;
@@ -190,6 +191,8 @@ module redmule_tb;
 
 `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [31:0], logic [DW-1:0], logic [DW/8-1:0], logic signed [DW/32-1:0][31:0], logic)
 `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW-1:0], logic)
+`HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID-1:0])
+`HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [31:0], logic [ID-1:0])
 
   redmule_wrap #(
     .ID_WIDTH           ( ID                 ),
@@ -197,7 +200,9 @@ module redmule_tb;
     .DW                 ( DW                 ),
     .MP                 ( DW/32              ),
     .redmule_data_req_t ( redmule_data_req_t ),
-    .redmule_data_rsp_t ( redmule_data_rsp_t )
+    .redmule_data_rsp_t ( redmule_data_rsp_t ),
+    .redmule_ctrl_req_t ( redmule_ctrl_req_t ),
+    .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t )
   ) i_redmule_wrap      (
     .clk_i              ( clk                ),
     .rst_ni             ( rst_n              ),
@@ -324,13 +329,11 @@ module redmule_tb;
     .apu_result_i        ( '0           ),
     .apu_flags_i         ( '0           ),
     // Interrupt inputs
-    .irq_i               ({28'd0         ,
-                           evt[0][0]     ,
-                           3'd0}        ),  // CLINT interrupts + CLINT extension interrupts
+    .irq_i               ({28'd0, evt[0][0], 3'd0}),  // CLINT interrupts + CLINT extension interrupts
     .irq_ack_o           (              ),
     .irq_id_o            (              ),
     // Debug Interface
-    .debug_req_i         ( '0           ) ,
+    .debug_req_i         ( '0           ),
     .debug_havereset_o   (              ),
     .debug_running_o     (              ),
     .debug_halted_o      (              ),
