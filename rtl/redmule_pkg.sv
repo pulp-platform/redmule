@@ -53,29 +53,29 @@ package redmule_pkg;
   parameter int unsigned Z_ADDR    = 2; // 0x08
   // Number of iterations on X and W matrices
   // (15 bits for number of rows iterations, 15 bits for number of columns iterations)
-  parameter int unsigned X_ITERS   = 3; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
-  parameter int unsigned W_ITERS   = 4; // 0x14 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
+  parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
+  parameter int unsigned W_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   // Number of rows and columns leftovers (8 bits for each)
   // [31:24] -> X/Y ROWS LEFTOVERS 
   // [23:16] -> X COLUMNS LEFTOVERS
   // [15:8]  -> W ROWS LEFTOVERS 
   // [7:0]   -> W/Y COLUMNS LEFTOVERS
-  parameter int unsigned LEFTOVERS = 5; // 0x18
+  parameter int unsigned LEFTOVERS = 5; // 0x14
   // We keep a register for the remaining params
   // [31:16] -> TOT_NUMBER_OF_STORES
   // [14]    -> 1'b0: X cols/W rows >= ARRAY_HEIGHT; 1'b1: X cols/W rows < ARRAY_HEIGHT
   // [13]    -> 1'b0: W cols >= TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT ); 1'b1: W cols < TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT )
-  parameter int unsigned LEFT_PARAMS = 6;  // 0x1C
-  parameter int unsigned X_D1_STRIDE = 7;  // 0x20
-  parameter int unsigned W_TOT_LEN   = 8;  // 0x24
-  parameter int unsigned TOT_X_READ  = 9; // 0x28
-  parameter int unsigned W_D0_STRIDE = 10; // 0x2C
-  parameter int unsigned Z_TOT_LEN   = 11; // 0x30
-  parameter int unsigned Z_D0_STRIDE = 12; // 0x34
-  parameter int unsigned Z_D2_STRIDE = 13; // 0x38
-  parameter int unsigned X_ROWS_OFFS = 14; // 0x3C
-  parameter int unsigned X_SLOTS     = 15; // 0x40
-  parameter int unsigned IN_TOT_LEN  = 16; // 0x44
+  parameter int unsigned LEFT_PARAMS = 6;  // 0x18
+  parameter int unsigned X_D1_STRIDE = 7;  // 0x1C
+  parameter int unsigned W_TOT_LEN   = 8;  // 0x20
+  parameter int unsigned TOT_X_READ  = 9;  // 0x24
+  parameter int unsigned W_D0_STRIDE = 10; // 0x20
+  parameter int unsigned Z_TOT_LEN   = 11; // 0x2C
+  parameter int unsigned Z_D0_STRIDE = 12; // 0x30
+  parameter int unsigned Z_D2_STRIDE = 13; // 0x34
+  parameter int unsigned X_ROWS_OFFS = 14; // 0x38
+  parameter int unsigned X_SLOTS     = 15; // 0x3C
+  parameter int unsigned IN_TOT_LEN  = 16; // 0x40
   // One resgister is used for the round modes and operations of the Computing Elements.
   // [31:29] -> roundmode of the stage 1
   // [28:26] -> roundmode of the stage 2
@@ -84,7 +84,7 @@ package redmule_pkg;
   // [17:15] -> input/output format
   // [14:12] -> computing format
   // [0:0]   -> GEMM selection
-  parameter int unsigned OP_SELECTION = 17; // 0x48
+  parameter int unsigned OP_SELECTION = 17; // 0x44
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0001011
   parameter bit[6:0] MARITH = 7'b0101011; // 0101011
@@ -212,7 +212,6 @@ package redmule_pkg;
     logic [31:0] x_addr;
     logic [31:0] w_addr;
     logic [31:0] y_addr;
-    logic [31:0] z_addr;
     logic [15:0] m_size;
     logic [15:0] n_size;
     logic [15:0] k_size;

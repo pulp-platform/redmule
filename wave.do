@@ -2151,6 +2151,59 @@ add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_s
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/pre_ready_x_q
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/x_buffer_clk_en
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/z_buffer_clk_en
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/clk_i
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/rst_ni
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/clear_o
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/ctrl_i
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/flags_o
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/reg_file
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/regfile_in
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/regfile_out
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/running_state
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/context_state
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/regfile_flags
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/offloading_core
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/pointer_context
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/running_context
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/counter_pending
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/s_enable_after
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/s_clear
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/s_clear_regfile
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/clear_regfile
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/triggered_q
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/context_addr
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/ext_access
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/ext_id_n
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/cfg_id_d
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/cfg_id_q
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/cfg_req_d
+add wave -noupdate -group control -group slave /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_slave/cfg_req_q
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/clk_i
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/rst_ni
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/clear_i
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/setback_i
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/start_cfg_i
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/reg_file_i
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/valid_o
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/reg_file_o
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/clk_en
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/clk_int
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/config_d
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/config_q
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_iter_nolftovr
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_cols_iter_nolftovr
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/w_cols_iter_nolftovr
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_iter
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_iter_valid
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_iter_valid_d
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_iter_valid_q
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_iter_ready
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_x_cols_iter
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_x_cols_iter_valid
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_x_cols_iter_ready
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter_valid
+add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter_ready
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clk_i
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/rst_ni
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/test_mode_i
@@ -2162,6 +2215,8 @@ add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_con
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en_o
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_o
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_enable_i
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/start_cfg_i
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cfg_complete_o
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_z_buffer_i
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_engine_i
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_loaded_i
@@ -2182,6 +2237,8 @@ add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_con
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/enable_depth_count
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reset_depth_count
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_setback
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_valid
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows_iter
@@ -2192,12 +2249,14 @@ add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_con
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tot_stores
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/current
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/next
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_d
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_q
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cntrl_slave
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_slave
 add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_ctrl_q
+add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/slave_start
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {480056 ps} 0}
+WaveRestoreCursors {{Cursor 1} {162000 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -2213,4 +2272,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {12487650 ps}
+WaveRestoreZoom {134733 ps} {193267 ps}

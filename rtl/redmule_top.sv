@@ -28,7 +28,6 @@ module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
   import hci_package::*;
-  import cv32e40x_pkg::*;
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
@@ -99,6 +98,9 @@ hwpe_ctrl_intf_periph #( .AddrWidth ( 32 ),
   /* If there is no Xif we directly plug the
      control port into the hwpe-slave device */
   `HWPE_CTRL_ASSIGN_TO_INTF(periph, ctrl_req_i, ctrl_rsp_o)
+  assign start_cfg = ((periph.req) &&
+                      (periph.add[7:0] == 'h54) &&
+                      (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
 
 `else
   /* If there is the Xif, we pass through the

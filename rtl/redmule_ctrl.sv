@@ -216,6 +216,18 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     end
   end
 
+  logic slave_start;
+  always_ff @(posedge clk_i, negedge rst_ni) begin
+    if (~rst_ni) begin
+      slave_start <= 1'b0;
+    end else begin
+      if (clear || tiler_setback)
+        slave_start <= 1'b0;
+      else if (flgs_slave.start)
+        slave_start <= 1'b1;
+    end
+  end
+
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
@@ -261,7 +273,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         w_row_count_d  = '0;
         if (clear)
           z_buffer_clk_en = 1'b1;
-        if ( (flgs_slave.start & tiler_valid) || test_mode_i) begin
+        if ( (slave_start & tiler_valid) || test_mode_i) begin
           tiler_setback = 1'b1;
           next = REDMULE_STARTING;
         end

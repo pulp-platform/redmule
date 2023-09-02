@@ -110,7 +110,7 @@ redmule_top #(
   .redmule_data_req_t ( redmule_data_req_t ),
   .redmule_data_rsp_t ( redmule_data_rsp_t ),
   .redmule_ctrl_req_t ( redmule_ctrl_req_t ),
-  .redmule_ctrl_rsp_t ( redmule_ctrl_req_t )
+  .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t )
 ) i_redmule_top       (
   .clk_i              ( clk_i              ),
   .rst_ni             ( rst_ni             ),

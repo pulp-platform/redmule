@@ -21,7 +21,7 @@
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2022.3
+QUESTA         ?= questa-2020.1
 QUESTA_HOME    ?= /usr/pack/modelsim-10.7b-kgf/questasim
 BENDER_DIR     ?= .
 BENDER         ?= bender

@@ -38,7 +38,6 @@ sources:
     - rtl/redmule_pkg.sv
     - rtl/redmule_tiler.sv
     - rtl/redmule_ctrl.sv
-    - rtl/redmule_inst_decoder.sv
     - rtl/redmule_scheduler.sv
     - rtl/redmule_castin.sv
     - rtl/redmule_castout.sv
@@ -59,6 +58,7 @@ sources:
 
     - target: redmule_complex
       files:
+        - rtl/redmule_inst_decoder.sv
         - rtl/redmule_complex.sv
 
     - target: any(redmule_test_complex, redmule_test_hwpe)
