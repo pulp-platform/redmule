@@ -75,7 +75,8 @@ assign x_cols_iter_nolftovr = config_d.n_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
 
 // Calculating the number of iterations along the two dimensions of the W matrix
 logic [15:0] w_cols_iter_nolftovr;
-assign config_d.w_rows_iter = config_d.n_size;
+logic [15:0] w_rows_iter_nolftovr;
+assign w_rows_iter_nolftovr = config_d.n_size;
 assign w_cols_iter_nolftovr = config_d.k_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
 
 // Calculating the residuals along the input dimensions
@@ -88,6 +89,7 @@ assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(ARRAY_H
 
 // Calculate w_cols, x_cols, x_rows iterations
 assign config_d.w_cols_iter = config_d.w_cols_lftovr != '0 ? w_cols_iter_nolftovr + 1 : w_cols_iter_nolftovr;
+assign config_d.w_rows_iter = config_d.w_rows_lftovr != '0 ? w_rows_iter_nolftovr + 1 : w_rows_iter_nolftovr;
 assign config_d.x_cols_iter = config_d.x_cols_lftovr != '0 ? x_cols_iter_nolftovr + 1 : x_cols_iter_nolftovr;
 assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftovr + 1 : x_rows_iter_nolftovr;
 
