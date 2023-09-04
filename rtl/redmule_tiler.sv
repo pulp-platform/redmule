@@ -83,7 +83,7 @@ assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*ARRAY_WI
 assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(ARRAY_HEIGHT*(PIPE_REGS + 1)));
 
 // Calculating the residuals along the weight dimensions
-assign config_d.w_rows_lftovr = config_d.n_size - (ARRAY_HEIGHT*(config_d.k_size/ARRAY_HEIGHT));
+assign config_d.w_rows_lftovr = config_d.n_size - (ARRAY_HEIGHT*(config_d.n_size/ARRAY_HEIGHT));
 assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(ARRAY_HEIGHT*(PIPE_REGS + 1)));
 
 // Calculate w_cols, x_cols, x_rows iterations
@@ -234,7 +234,7 @@ end
 // re-encode in older RedMulE regfile map
 assign reg_file_o.generic_params = '0;
 assign reg_file_o.ext_data = '0;
-assign reg_file_o.hwpe_params[REGFILE_N_MAX_IO_REGS-1:19] = '0;
+assign reg_file_o.hwpe_params[REGFILE_N_MAX_IO_REGS-1:REDMULE_REGS] = '0;
 assign reg_file_o.hwpe_params[0]         = config_d.x_addr; // do not register (these are straight from regfile)
 assign reg_file_o.hwpe_params[1]         = config_d.w_addr; // do not register (these are straight from regfile)
 assign reg_file_o.hwpe_params[2]         = config_d.y_addr; // do not register (these are straight from regfile)

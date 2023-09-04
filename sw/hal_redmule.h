@@ -104,10 +104,12 @@ void redmule_cfg (unsigned int x,  unsigned int w,  unsigned int z,
   uint32_t mcfg_reg1 = 0;
   uint32_t arith_reg = 0;
 
-  mcfg_reg0 = (k_size << 16) | (m_size << 0);
+  mcfg_reg0 = (k_size << 16) |
+              (m_size <<  0);
   mcfg_reg1 = n_size << 0;
 
-  arith_reg = (gemm_op << 11) | (gemm_fmt << 8);
+  arith_reg = (gemm_op << 10) |
+              (gemm_fmt << 7);
 
   redmule_x_add_set ((unsigned int) x);
   redmule_w_add_set ((unsigned int) w);

@@ -61,7 +61,7 @@ module redmule_ce
 );
 
 // Internal logic binding
-logic [BITW-1:0] y_bias   ,
+logic [BITW-1:0] y_bias   , // not used
                  fma_y    ,
                  noncomp_y,
                  noncomp_y_d;

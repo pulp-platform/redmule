@@ -1,2 +1,2 @@
 overrides:
-  fpnew: { git: "https://github.com/pulp-platform/cvfpu.git", rev: "pulp-v0.1.1"     }
+  fpnew: { git: "https://github.com/pulp-platform/cvfpu.git", rev: "pulp-v0.1.3" }
