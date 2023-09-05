@@ -46,11 +46,22 @@ package redmule_pkg;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
   parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
 
-  // Register file index
-  // Matrix addresses
-  parameter int unsigned X_ADDR    = 0; // 0x00
-  parameter int unsigned W_ADDR    = 1; // 0x04
-  parameter int unsigned Z_ADDR    = 2; // 0x08
+  // Register File mapping
+  /**********************
+  ** Slave RF indexing **
+  **********************/
+  parameter int unsigned X_ADDR = 0; // 0x00 /* These do not change between slave and final */
+  parameter int unsigned W_ADDR = 1; // 0x04 /* These do not change between slave and final */
+  parameter int unsigned Z_ADDR = 2; // 0x08 /* These do not change between slave and final */
+  parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
+  parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
+  // Matrix arithmetic config register
+  // [12:10] -> Operation selection
+  // [ 9: 7] -> Input/Output format
+  parameter int unsigned MACFG = 5; // 0x14
+  /**********************
+  ** Final RF indexing **
+  **********************/
   // Number of iterations on X and W matrices
   // (15 bits for number of rows iterations, 15 bits for number of columns iterations)
   parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
@@ -79,10 +90,10 @@ package redmule_pkg;
   // One resgister is used for the round modes and operations of the Computing Elements.
   // [31:29] -> roundmode of the stage 1
   // [28:26] -> roundmode of the stage 2
-  // [25:22] -> operation of the stage 1
-  // [21:18] -> operation of the stage 2
-  // [17:15] -> input/output format
-  // [14:12] -> computing format
+  // [25:21] -> operation of the stage 1
+  // [20:16] -> operation of the stage 2
+  // [15:13] -> input/output format
+  // [12:10] -> computing format
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 17; // 0x44
 
@@ -211,7 +222,7 @@ package redmule_pkg;
   typedef struct packed {
     logic [31:0] x_addr;
     logic [31:0] w_addr;
-    logic [31:0] y_addr;
+    logic [31:0] z_addr;
     logic [15:0] m_size;
     logic [15:0] n_size;
     logic [15:0] k_size;

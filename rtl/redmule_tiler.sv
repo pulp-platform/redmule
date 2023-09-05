@@ -57,15 +57,15 @@ tc_clk_gating i_tiler_clockg (
   .clk_o      ( clk_int )
 );
 
-assign config_d.x_addr          = reg_file_i.hwpe_params[0];
-assign config_d.w_addr          = reg_file_i.hwpe_params[1];
-assign config_d.y_addr          = reg_file_i.hwpe_params[2];
-assign config_d.m_size          = reg_file_i.hwpe_params[3][15:0];
-assign config_d.k_size          = reg_file_i.hwpe_params[3][31:16];
-assign config_d.n_size          = reg_file_i.hwpe_params[4][15:0];
-assign config_d.gemm_ops        = gemm_op_e'(reg_file_i.hwpe_params[5][12:10]);
-assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[5][9:7]);
-assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[5][9:7]);
+assign config_d.x_addr          = reg_file_i.hwpe_params[X_ADDR];
+assign config_d.w_addr          = reg_file_i.hwpe_params[W_ADDR];
+assign config_d.z_addr          = reg_file_i.hwpe_params[Z_ADDR];
+assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15:0];
+assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
+assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15:0];
+assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
+assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][9:7]);
+assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][9:7]);
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
@@ -75,9 +75,11 @@ assign x_cols_iter_nolftovr = config_d.n_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
 
 // Calculating the number of iterations along the two dimensions of the W matrix
 logic [15:0] w_cols_iter_nolftovr;
-logic [15:0] w_rows_iter_nolftovr;
-assign w_rows_iter_nolftovr = config_d.n_size;
+logic [15:0] w_rows_iter_lftovr,
+             w_rows_iter_nolftovr;
 assign w_cols_iter_nolftovr = config_d.k_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
+assign w_rows_iter_lftovr = w_rows_iter_nolftovr + ARRAY_HEIGHT - config_d.w_rows_lftovr;
+assign w_rows_iter_nolftovr = config_d.n_size;
 
 // Calculating the residuals along the input dimensions
 assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*ARRAY_WIDTH);
@@ -89,7 +91,7 @@ assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(ARRAY_H
 
 // Calculate w_cols, x_cols, x_rows iterations
 assign config_d.w_cols_iter = config_d.w_cols_lftovr != '0 ? w_cols_iter_nolftovr + 1 : w_cols_iter_nolftovr;
-assign config_d.w_rows_iter = config_d.w_rows_lftovr != '0 ? w_rows_iter_nolftovr + 1 : w_rows_iter_nolftovr;
+assign config_d.w_rows_iter = config_d.w_rows_lftovr != '0 ? w_rows_iter_lftovr       : w_rows_iter_nolftovr;
 assign config_d.x_cols_iter = config_d.x_cols_lftovr != '0 ? x_cols_iter_nolftovr + 1 : x_cols_iter_nolftovr;
 assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftovr + 1 : x_rows_iter_nolftovr;
 
@@ -169,7 +171,7 @@ assign config_d.x_buffer_slots = config_d.x_cols_lftovr % (DATAW/(ARRAY_HEIGHT*B
 assign config_d.tot_stores = x_rows_by_w_cols_iter[15:0];
 
 assign config_d.stage_1_rnd_mode = config_d.gemm_ops == MATMUL ? RNE :
-                                   config_d.gemm_ops == GEMM   ? RNE : 
+                                   config_d.gemm_ops == GEMM   ? RNE :
                                    config_d.gemm_ops == ADDMAX ? RNE :
                                    config_d.gemm_ops == ADDMIN ? RNE :
                                    config_d.gemm_ops == MULMAX ? RNE :
@@ -177,7 +179,7 @@ assign config_d.stage_1_rnd_mode = config_d.gemm_ops == MATMUL ? RNE :
                                    config_d.gemm_ops == MAXMIN ? RTZ :
                                                                  RNE ;
 assign config_d.stage_2_rnd_mode = config_d.gemm_ops == MATMUL ? RNE :
-                                   config_d.gemm_ops == GEMM   ? RNE : 
+                                   config_d.gemm_ops == GEMM   ? RNE :
                                    config_d.gemm_ops == ADDMAX ? RTZ :
                                    config_d.gemm_ops == ADDMIN ? RNE :
                                    config_d.gemm_ops == MULMAX ? RTZ :
@@ -185,7 +187,7 @@ assign config_d.stage_2_rnd_mode = config_d.gemm_ops == MATMUL ? RNE :
                                    config_d.gemm_ops == MAXMIN ? RNE :
                                                                  RTZ;
 assign config_d.stage_1_op       = config_d.gemm_ops == MATMUL ? FPU_FMADD :
-                                   config_d.gemm_ops == GEMM   ? FPU_FMADD : 
+                                   config_d.gemm_ops == GEMM   ? FPU_FMADD :
                                    config_d.gemm_ops == ADDMAX ? FPU_ADD :
                                    config_d.gemm_ops == ADDMIN ? FPU_ADD :
                                    config_d.gemm_ops == MULMAX ? FPU_MUL :
@@ -194,11 +196,11 @@ assign config_d.stage_1_op       = config_d.gemm_ops == MATMUL ? FPU_FMADD :
                                                                  FPU_MINMAX;
 assign config_d.stage_2_op       = FPU_MINMAX;
 assign config_d.input_format     = config_d.gemm_input_fmt == Float16    ? FPU_FP16 :
-                                   config_d.gemm_input_fmt == Float8     ? FPU_FP8 : 
+                                   config_d.gemm_input_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_input_fmt == Float16Alt ? FPU_FP16ALT :
                                                                         FPU_FP8ALT;
 assign config_d.computing_format = config_d.gemm_output_fmt == Float16    ? FPU_FP16 :
-                                   config_d.gemm_output_fmt == Float8     ? FPU_FP8 : 
+                                   config_d.gemm_output_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_output_fmt == Float16Alt ? FPU_FP16ALT :
                                                                          FPU_FP8ALT;
 assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
@@ -237,38 +239,36 @@ end
 assign reg_file_o.generic_params = '0;
 assign reg_file_o.ext_data = '0;
 assign reg_file_o.hwpe_params[REGFILE_N_MAX_IO_REGS-1:REDMULE_REGS] = '0;
-assign reg_file_o.hwpe_params[0]         = config_d.x_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[1]         = config_d.w_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[2]         = config_d.y_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[3][31:16]  = config_q.x_rows_iter;
-assign reg_file_o.hwpe_params[3][15: 0]  = config_q.x_cols_iter;
-assign reg_file_o.hwpe_params[4][31:16]  = config_q.w_rows_iter;
-assign reg_file_o.hwpe_params[4][15: 0]  = config_q.w_cols_iter;
-assign reg_file_o.hwpe_params[5][31:24]  = config_q.x_rows_lftovr;
-assign reg_file_o.hwpe_params[5][23:16]  = config_q.x_cols_lftovr;
-assign reg_file_o.hwpe_params[5][15: 8]  = config_q.w_rows_lftovr;
-assign reg_file_o.hwpe_params[5][ 7: 0]  = config_q.w_cols_lftovr;
-assign reg_file_o.hwpe_params[6][31:16]  = config_q.tot_stores;
-assign reg_file_o.hwpe_params[6][15: 0]  = '0;
-assign reg_file_o.hwpe_params[7]         = config_q.x_d1_stride;
-assign reg_file_o.hwpe_params[8]         = config_q.w_tot_len;
-assign reg_file_o.hwpe_params[9]         = config_q.tot_x_read;
-assign reg_file_o.hwpe_params[10]        = config_q.w_d0_stride;
-assign reg_file_o.hwpe_params[11]        = config_q.yz_tot_len;
-assign reg_file_o.hwpe_params[12]        = config_q.yz_d0_stride;
-assign reg_file_o.hwpe_params[13]        = config_q.yz_d2_stride;
-assign reg_file_o.hwpe_params[14]        = config_q.x_rows_offs;
-assign reg_file_o.hwpe_params[15]        = config_q.x_buffer_slots;
-assign reg_file_o.hwpe_params[16]        = config_q.x_tot_len;
-assign reg_file_o.hwpe_params[17][31:29] = config_q.stage_1_rnd_mode;
-assign reg_file_o.hwpe_params[17][28:26] = config_q.stage_2_rnd_mode;
-assign reg_file_o.hwpe_params[17][   25] = '0;
-assign reg_file_o.hwpe_params[17][24:22] = config_q.stage_1_op;
-assign reg_file_o.hwpe_params[17][   21] = '0;
-assign reg_file_o.hwpe_params[17][20:18] = config_q.stage_2_op;
-assign reg_file_o.hwpe_params[17][17:15] = config_q.input_format;
-assign reg_file_o.hwpe_params[17][14:12] = config_q.computing_format;
-assign reg_file_o.hwpe_params[17][11: 1] = '0;
-assign reg_file_o.hwpe_params[17][0]     = config_q.gemm_selection;
+assign reg_file_o.hwpe_params[      X_ADDR]        = config_d.x_addr; // do not register (these are straight from regfile)
+assign reg_file_o.hwpe_params[      W_ADDR]        = config_d.w_addr; // do not register (these are straight from regfile)
+assign reg_file_o.hwpe_params[      Z_ADDR]        = config_d.z_addr; // do not register (these are straight from regfile)
+assign reg_file_o.hwpe_params[     X_ITERS][31:16] = config_q.x_rows_iter;
+assign reg_file_o.hwpe_params[     X_ITERS][15: 0] = config_q.x_cols_iter;
+assign reg_file_o.hwpe_params[     W_ITERS][31:16] = config_q.w_rows_iter;
+assign reg_file_o.hwpe_params[     W_ITERS][15: 0] = config_q.w_cols_iter;
+assign reg_file_o.hwpe_params[   LEFTOVERS][31:24] = config_q.x_rows_lftovr;
+assign reg_file_o.hwpe_params[   LEFTOVERS][23:16] = config_q.x_cols_lftovr;
+assign reg_file_o.hwpe_params[   LEFTOVERS][15: 8] = config_q.w_rows_lftovr;
+assign reg_file_o.hwpe_params[   LEFTOVERS][ 7: 0] = config_q.w_cols_lftovr;
+assign reg_file_o.hwpe_params[ LEFT_PARAMS][31:16] = config_q.tot_stores;
+assign reg_file_o.hwpe_params[ LEFT_PARAMS][15: 0] = '0;
+assign reg_file_o.hwpe_params[ X_D1_STRIDE]        = config_q.x_d1_stride;
+assign reg_file_o.hwpe_params[   W_TOT_LEN]        = config_q.w_tot_len;
+assign reg_file_o.hwpe_params[  TOT_X_READ]        = config_q.tot_x_read;
+assign reg_file_o.hwpe_params[ W_D0_STRIDE]        = config_q.w_d0_stride;
+assign reg_file_o.hwpe_params[   Z_TOT_LEN]        = config_q.yz_tot_len;
+assign reg_file_o.hwpe_params[ Z_D0_STRIDE]        = config_q.yz_d0_stride;
+assign reg_file_o.hwpe_params[ Z_D2_STRIDE]        = config_q.yz_d2_stride;
+assign reg_file_o.hwpe_params[ X_ROWS_OFFS]        = config_q.x_rows_offs;
+assign reg_file_o.hwpe_params[     X_SLOTS]        = config_q.x_buffer_slots;
+assign reg_file_o.hwpe_params[  IN_TOT_LEN]        = config_q.x_tot_len;
+assign reg_file_o.hwpe_params[OP_SELECTION][31:29] = config_q.stage_1_rnd_mode;
+assign reg_file_o.hwpe_params[OP_SELECTION][28:26] = config_q.stage_2_rnd_mode;
+assign reg_file_o.hwpe_params[OP_SELECTION][25:21] = config_q.stage_1_op;
+assign reg_file_o.hwpe_params[OP_SELECTION][20:16] = config_q.stage_2_op;
+assign reg_file_o.hwpe_params[OP_SELECTION][15:13] = config_q.input_format;
+assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
+assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
+assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
 
 endmodule: redmule_tiler
