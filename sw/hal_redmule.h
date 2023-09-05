@@ -112,4 +112,4 @@ void redmule_cfg (unsigned int x,  unsigned int w,  unsigned int z,
   
 }
 
-#endif /* __HAL_REDMULE_H__ */
+#endif
