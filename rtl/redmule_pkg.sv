@@ -262,7 +262,6 @@ package redmule_pkg;
     CV32P ,
     CV32X ,
     Ibex  ,
-    Snitch,
     CVA6
   } core_type_e;
 

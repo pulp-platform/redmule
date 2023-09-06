@@ -27,6 +27,8 @@ BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
 ARCH           ?= rv
+XLEN           ?= 32
+XTEN           ?= imc
 
 ifeq ($(REDMULE_COMPLEX),1)
 	TEST_SRCS := sw/redmule_complex.c
@@ -47,6 +49,10 @@ P_STALL  ?= 0.0
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
+endif
+
+ifeq ($(debug),1)
+	FLAGS += -DDEBUG
 endif
 
 # Include directories

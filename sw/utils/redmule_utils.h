@@ -75,12 +75,15 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     
     errors += error;
 
-    // tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    #ifdef DEBUG
+      tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    #endif
+
     #ifdef VERBOSE
-      if(error) {
+    if(error) {
         if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
         tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
-      }
+    }
     #endif
   }
   return errors;
@@ -166,7 +169,10 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     
     errors += error;
 
-    // tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    #ifdef DEBUG
+      tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    #endif
+
     #ifdef VERBOSE
       if(error) {
         if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
