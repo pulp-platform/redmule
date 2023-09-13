@@ -279,7 +279,6 @@ add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv3
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/alu_jmp_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/alu_jmpr_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/sys_mret_insn_o
-add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/csr_illegal_i
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/csr_en_raw_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/alu_en_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/sys_en_o

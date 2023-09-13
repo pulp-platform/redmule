@@ -91,7 +91,6 @@ always_comb begin: opcode_decoder
         xif_issue_if_i.issue_resp.accept = 1'b1;
         clk_en = 1'b1 | clear_i;
         if (xif_issue_if_i.issue_req.rs_valid) begin
-          xif_issue_if_i.issue_resp.dualread = '0;
           // HalfWord[0] of Rs1 contains M size
           cfg_reg_d[3][SizeLarge-1:0] = xif_issue_if_i.issue_req.rs[0][SizeLarge-1:0];
           // BalfWord[1] of Rs1 contains K size
@@ -108,10 +107,23 @@ always_comb begin: opcode_decoder
         cfg_reg_d[5] = xif_issue_if_i.issue_req.instr; // Arithmetic instruction
         if (xif_issue_if_i.issue_req.rs_valid) begin
           cfg_ready = 1'b1;
-          xif_issue_if_i.issue_resp.dualread = '0;
           cfg_reg_d[0] = xif_issue_if_i.issue_req.rs[0]; // Rs1 contains X start pointer
           cfg_reg_d[1] = xif_issue_if_i.issue_req.rs[1]; // Rs2 contains W start pointer
           cfg_reg_d[2] = xif_issue_if_i.issue_req.rs[2]; // Rs3 contains Z start pointer
+        end
+      end
+
+      /* The core will try to offload all CSR instructions to the coupled co-processor, so we need to
+         check if the offloaded CSR instruction tries to access one of the CSRs available in RedMulE or
+         not. If not, we need to raise the issue_ready to signal that we received the offload request,
+         but keep the issue_resp.accept low to signal that we are not accepting the instruction. */
+      RVCSR: begin
+      xif_issue_if_i.issue_ready = 1'b1;
+        if (xif_issue_if_i.issue_req.instr[31:20] <= CSR_REDMULE_MACFG &&
+            xif_issue_if_i.issue_req.instr[31:20] >= CSR_REDMULE_MACFG) begin
+          xif_issue_if_i.issue_resp.accept = 1'b1;
+        end else begin
+          xif_issue_if_i.issue_resp.accept = 1'b0;
         end
       end
     endcase

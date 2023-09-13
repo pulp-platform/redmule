@@ -97,8 +97,23 @@ package redmule_pkg;
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 17; // 0x44
 
-  parameter bit[6:0] MCNFIG = 7'b0001011; // 0001011
-  parameter bit[6:0] MARITH = 7'b0101011; // 0101011
+  parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
+  parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
+  parameter bit[6:0] RVCSR  = 7'b1110011; // 0x73 -> RISC-V CSR instruction opcode
+
+  /* The CSRs below are not really present in the current RedMulE version. The following
+     enum is here to allow future development where it might be useful to write the
+     configuration registers through standard `csrw` instructions coming from the core.
+     The CSRs values are chosen following the custom read/write already available in the
+     RISC-V specifications. */
+  typedef enum logic[11:0] {
+    CSR_REDMULE_X_ADDR = 12'h800,
+    CSR_REDMULE_W_ADDR = 12'h801,
+    CSR_REDMULE_Z_ADDR = 12'h802,
+    CSR_REDMULE_MCFIG0 = 12'h803,
+    CSR_REDMULE_MCFIG1 = 12'h804,
+    CSR_REDMULE_MACFG  = 12'h805
+  } redmule_csr_num_e;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
