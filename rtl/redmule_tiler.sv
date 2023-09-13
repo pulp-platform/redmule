@@ -15,6 +15,7 @@
  * SPDX-License-Identifier: SHL-0.51
  *
  * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
+ *           Francesco Conti <f.conti@unibo.it>
  * 
  * RedMulE Tiler
  */

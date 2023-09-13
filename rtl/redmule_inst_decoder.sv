@@ -116,7 +116,10 @@ always_comb begin: opcode_decoder
       /* The core will try to offload all CSR instructions to the coupled co-processor, so we need to
          check if the offloaded CSR instruction tries to access one of the CSRs available in RedMulE or
          not. If not, we need to raise the issue_ready to signal that we received the offload request,
-         but keep the issue_resp.accept low to signal that we are not accepting the instruction. */
+         but keep the issue_resp.accept low to signal that we are not accepting the instruction.
+         For furhter details, look at the CORE-V Extension Interface documentation
+         (https://docs.openhwgroup.org/projects/openhw-group-core-v-xif/en/latest/x_ext.html#issue-interface)
+         and at the following issue: https://github.com/openhwgroup/cv32e40x/issues/945. */
       RVCSR: begin
       xif_issue_if_i.issue_ready = 1'b1;
         if (xif_issue_if_i.issue_req.instr[31:20] <= CSR_REDMULE_MACFG &&
