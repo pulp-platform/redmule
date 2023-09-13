@@ -146,7 +146,6 @@ add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/sys_en_id
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/sys_mret_insn_id
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/csr_en_raw_id
-add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/csr_op_id
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/csr_illegal
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/xif_csr_error_ex
 add wave -noupdate -group core -group top /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/irq_req_ctrl
@@ -282,7 +281,6 @@ add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv3
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/sys_mret_insn_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/csr_illegal_i
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/csr_en_raw_o
-add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/csr_op_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/alu_en_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/sys_en_o
 add wave -noupdate -group core -group id_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/id_stage_i/first_op_o
@@ -399,8 +397,6 @@ add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/alu_cmp_result
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/mul_result
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_result
-add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/mul_en_gated
-add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_en_gated
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/lsu_en_gated
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_en
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_clz_en
@@ -409,7 +405,6 @@ add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_shift_en
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_shift_amt
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/div_op_b_shifted
-add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/previous_exception
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/first_op
 add wave -noupdate -group core -group exe_stage /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/ex_stage_i/csr_is_illegal
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/clk
@@ -474,7 +469,6 @@ add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/filter_trans
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/filter_resp_valid
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/filter_resp
-add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/filter_err
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/bus_trans_valid
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/bus_trans_ready
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/bus_trans
@@ -494,7 +488,6 @@ add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/be
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/wdata
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/split_q
-add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/misaligned_halfword
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/misaligned_access
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/filter_resp_busy
 add wave -noupdate -group core -group LSU /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/load_store_unit_i/rdata_q
@@ -679,9 +672,6 @@ add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mintthresh_n
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mintthresh_rdata
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mintthresh_we
-add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcsw_n
-add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcsw_rdata
-add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcsw_we
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcswl_n
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcswl_rdata
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcswl_we
@@ -714,7 +704,6 @@ add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/priv_lvl_q
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/priv_lvl_rdata
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/priv_lvl_we
-add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/priv_lvl_q_int
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/csr_wr_in_wb
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/jvt_wr_in_wb
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mcause_alias_we
@@ -734,7 +723,6 @@ add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mhpmcounter_write_lower
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mhpmcounter_write_upper
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mhpmcounter_write_increment
-add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcsw_in_wb
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mscratchcswl_in_wb
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/mnxti_in_wb
 add wave -noupdate -group core -group cs_registers /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/cs_registers_i/hpm_events_raw
@@ -756,7 +744,6 @@ add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_c
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/sys_en_id_i
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/sys_mret_id_i
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/csr_en_raw_id_i
-add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/csr_op_id_i
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/first_op_id_i
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/last_op_id_i
 add wave -noupdate -group core -group controller /redmule_complex_tb/i_dut/gen_cv32e40x/i_core/controller_i/abort_op_id_i

@@ -40,7 +40,7 @@ RedMulE is fully parametric and based on a 2-Dimensional array (*Engine*) of Com
 
 RedMulE's *Engine* features a parametric number of CEs, that can be decided throught the *ARRAY_WIDTH* and *ARRAY_HEIGHT* parameters, and a parametric number of Pipeline Registers (*PIPE_REGS*) within each CE. The value of the *ARRAY_WIDTH* parameter is upper-bounded as it depends on the *ARRAY_HEIGHT* and the *PIPE_REGS* values. Its maximum value equals **ARRAY_HEIGHTxPIPE_REGS**, while the bitwidth of RedMulE's memory interface can be calculated as **ARRAY_HEIGHTx(PIPE_REGS+1)xnumbits(FP_FORMAT)**. *FP_FORMAT* corresponds always to the internal precision (FP16). For example, the default RedMulE configuration provides *ARRAY_HEIGHT*=4 and *PIPE_REGS*=3, resulting in a 256-bits memory port and in *ARRAY_WIDTH* $\le$ 12. Each CE contains a Fused Multiply-Add (FMA) and two FP Non Computation Operators (FNCOMP) to support all the GEMM-Ops grouped under the table above. The FMA and FNCOMP modules are adapted from the open-source [Transprecision Floating-Point Unit](https://github.com/openhwgroup/cvfpu).
 RedMulE code is written in System Verilog and all its submodules are available under the `rtl` folder. The `rtl/redmule_pkg.sv` contains all the required parameters available to instantiate RedMulE.
-RedMulE's dependencies are handled through [bender](https://github.com/pulp-platform/bender), but can also be managed through IPstools.
+RedMulE's dependencies are handled through [bender](https://github.com/pulp-platform/bender), but can also be managed through other tools.
 
 ## RedMulE Golden Model
 
@@ -81,24 +81,24 @@ Each execution of the RedMulE Golden Model also generates data in `.txt` format 
 the generated matrices.
 
 ## RedMulE Testbench
-RedMulE offers a complete testing environment for under the `tb` folder, providing two different testbenches.
+RedMulE offers a complete testing environment under the `tb` folder, providing two different testbenches.
 
 ### HWPE memory-mapped interface
-The `tb/redmule_tb.sv` is based on the [hwpe-tb](https://github.com/pulp-platform/hwpe-tb) example, and features a RedMulE instance, a [CV32E40P](https://github.com/pulp-platform/cv32e40p/tree/pulpissimo-v4.1.0) core as a controller and programmer, and dummy memories to simulate software stack, data-memory and instruction memory, as shown in the picture below.
+The `tb/redmule_tb.sv` is based on the [hwpe-tb](https://github.com/pulp-platform/hwpe-tb) example, and features a RedMulE instance, a [CV32E40P](https://github.com/pulp-platform/cv32e40p/tree/pulpissimo-v4.1.0) controller core, and dummy memories used to simulate instruction and data memories, as shown in the picture below.
 
 ![](doc/redmule_testbench.png)
 
-In this configuration, RedMulE is connected to the core through a memory-mapped configuration interface based on the [hwpe-ctrl](https://github.com/pulp-platform/hwpe-ctrl). Through this interface, when the data request of the core is made to an address that corresponds to the accelerator register-file scope, the internal configuration registers of the accelerator are written to make it start an operation. This the most typical implementation used for integration of tightly-coupled accelerators within a [PULP cluster](https://github.com/pulp-platform/pulp_cluster).
+In this configuration, RedMulE is connected to the core through a memory-mapped configuration interface based on the [hwpe-ctrl](https://github.com/pulp-platform/hwpe-ctrl). Through this interface, when the data request of the core is made to an address that corresponds to the accelerator register-file scope, the internal configuration registers of the accelerator are written to make it start an operation. This is the most typical implementation used for integration of tightly-coupled accelerators within a [PULP cluster](https://github.com/pulp-platform/pulp_cluster).
 
 ### Tensor co-processor with ISA extension
-The `tb/redmule_complex_tb.sv` provides an implementatio of a complex core as an atomic unit. This unit features RedMulE as a tensor coprocessor of a [CV32E40X](https://github.com/openhwgroup/cv32e40x) core. In this configuration, the offloading of a matrix multiplication from the core to the accelerator is possible through the use of a general-purpose [eXtension Interface](https://github.com/openhwgroup/core-v-xif). Through such interface, it is possible to build a dedicated ISA instruction extension to offload an operation to an external co-processor without changing the core architecture to support it. The RedMulE complex core is depicted in the figure below.
+The `tb/redmule_complex_tb.sv` provides an implementatio of a complex core as an atomic unit. This unit features RedMulE as a tensor coprocessor of a [CV32E40X](https://github.com/openhwgroup/cv32e40x) core. In this configuration, the offloading of a matrix multiplication from the core to the accelerator is possible through the use of a general-purpose [eXtension Interface](https://github.com/openhwgroup/core-v-xif). Through such interface, it is possible to build a dedicated ISA instruction extension to offload an operation to an external co-processor without changing the core internal architecture. The RedMulE complex core is depicted in the figure below.
 
 ![](doc/redmule_complex_testbench.png)
 
 ## Programming model
-RedMulE is designed to reduce the effort required for the matrix multiplication tiling to the minimum. It features an internal hardware unit called "tiler" that needs very reduced input information (i.e. tesors dimensions, computing format, pointers to the input/output tensors and the operation to perform).
+RedMulE is designed to reduce the effort required for the matrix multiplication tiling to the minimum. It features an internal hardware unit called "tiler" that needs very reduced input information (i.e. tesors dimensions, computing format, pointers to the input/output tensors and the operation to perform). Then, it is in charge of autonomously calculate the tiling of the tensors.
 ### HWPE memory-mapped programming
-Then, it is in charge of autonomously calculate the tiling of the tensors. The offloading methods using the memory-mapped interface and the ISA extension work in the same way, meaning that offloading an operation to RedMulE only requires writing six configuration registers. These registers are listed below:
+The offloading methods through the memory-mapped interface and the ISA extension work in the same way, meaning that offloading an operation to RedMulE only requires writing six configuration registers. These registers are listed below:
 
 |  Register ID  |  Name                 | Offset |  Bits                           | Bitmask                                    | Content                                                   |
 | ------------- | --------------------- | ------ | ------------------------------- | ------------------------------------------ |---------------------------------------------------------- |
@@ -125,7 +125,7 @@ redmule_cfg ((unsigned int) x, (unsigned int) w, (unsigned int) y,
              (uint8_t) GEMM,
              (uint8_t) Float16);
 ```
-The `sw/hal_redmule.h` also contains other APIs useful for programming RedMulE, such as the `hwpe_soft_clear()` to provide a soft reset to all the internal accelerator state and configuration registers, or the `hwpe_trigger_job()` to trigger the accelerator operation after it is configured.
+The `sw/hal_redmule.h` also contains other useful APIs for programming RedMulE, such as the `hwpe_soft_clear()` to provide a soft reset to all the internal accelerator state and configuration registers, or the `hwpe_trigger_job()` to trigger the accelerator operation after it is configured.
 The `sw/redmule.c` provides an example of code for programming RedMulE through its memory-mapped interface.
 
 ### Tensor co-processor with ISA extension
@@ -178,7 +178,7 @@ The *marith* instruction features the opcode reserved in the `custom 1` encoding
 |------------|--------------|------------|------------|-------------|------------|--------------|------------|-------------------|
 | `rs3` idx  | Free Field   | `rs2` idx  | `rs1` idx  | CFMT Enable | Free Field | Op selection | FMT        | OpCode (**0x2B**) |
 
-An example of execution of the *marith* instruction and of the configuration of the `rs1`, `rs2`, and `rs3` registers is shown below:
+An example of execution of the *marith* instruction to offload a GEMM using FP16 tensors and of the configuration of the required `rs1`, `rs2`, and `rs3` registers is shown below:
 ```clike=
 uint8_t *x = x_inp;
 uint8_t *w = w_inp;
@@ -215,7 +215,7 @@ asm volatile(
             (0b001     <<  7) | \
             (0b0101011 <<  0)   \n");
 ```
-The `sw/redmule_complex.c` provides an example of code for programming RedMulE via a dedicate ISA extension.
+The `sw/redmule_complex.c` provides an example of code for programming RedMulE through a dedicate ISA extension.
 
 ### Getting Started
 If you are working on ETH Lagrev servers, sourcing one of the setup scripts located under the `scripts` folder suffice to export all the required environment variables. Otherwise, it ise recommanded to install a riscv [toolchain](https://github.com/pulp-platform/pulp-riscv-gnu-toolchain) and do the following:
