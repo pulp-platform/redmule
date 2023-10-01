@@ -1203,8 +1203,7 @@ clear_regs       = 1'b0;
         else if ( ((loading_y_q && !flgs_z_buffer_i.loaded)                                                                                                           ||
                   (y_preloaded_q && flgs_z_buffer_i.y_pushed && !(reg_file_i.hwpe_params[W_ITERS][15:0] == 16'b1 && reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1)) ||  //if only one iteration is needed to completely load Y, we skip the LOAD_Y state
                    (flgs_x_buffer_i.full && !y_loaded_q && y_fifo_valid_i))                                                                                           &&
-                   reg_file_i.hwpe_params[OP_SELECTION][0]                                                                                                            &&
-                   reg_file_i.hwpe_params[X_ITERS][15:0] > 1
+                   reg_file_i.hwpe_params[OP_SELECTION][0]
                 ) begin
           next = LOAD_Y;
           if (y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0] - 1) begin
@@ -1460,6 +1459,7 @@ clear_regs       = 1'b0;
             x_cols_offs_d = '0;
             if (w_cols_q == reg_file_i.hwpe_params[W_ITERS][15:0]) begin
               if (x_rows_iter_d < reg_file_i.hwpe_params[X_ITERS][31:16] - 1) begin
+                cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
                 x_rows_offs_d = x_rows_offs_q + reg_file_i.hwpe_params[X_ROWS_OFFS];
                 x_rows_iter_d = x_rows_iter_q + 1;
                 w_cols_d = 16'd0;
