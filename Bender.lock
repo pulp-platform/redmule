@@ -7,8 +7,8 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: 4ac82b420e46fd0005513ca2283cb3c905e7599a
-    version: 1.29.0
+    revision: 2bd027cb87eaa9bf7d17196ec5f69864b35b630f
+    version: 1.32.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -20,17 +20,8 @@ packages:
     source:
       Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
-  cv32e40p:
-    revision: 800a09d97a1e9418e127e8bbf1763c1d1097c92f
-    version: null
-    source:
-      Git: https://github.com/pulp-platform/cv32e40p.git
-    dependencies:
-    - common_cells
-    - fpnew
-    - tech_cells_generic
   fpnew:
-    revision: f231041c610f270ffc03cbdac38739ddb6426572
+    revision: a8e0cba6dd50f357ece73c2c955d96efc3c6c315
     version: null
     source:
       Git: https://github.com/pulp-platform/cvfpu.git
@@ -54,8 +45,8 @@ packages:
     - hwpe-stream
     - l2_tcdm_hybrid_interco
   hwpe-ctrl:
-    revision: 4bf1487a463c262bf7d8ffee79d1cf392937daa2
-    version: 1.7.1
+    revision: 3d9b9bea7b98df24e6b235408364521a1a27d561
+    version: 1.7.2
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
@@ -74,8 +65,8 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   tech_cells_generic:
-    revision: a9cae21902e75b1434328ecf36f85327ba5717de
-    version: 0.2.11
+    revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
+    version: 0.2.13
     source:
       Git: https://github.com/pulp-platform/tech_cells_generic.git
     dependencies:
