@@ -18,6 +18,9 @@
  * 
  * RedMulE Package
  */
+`include "hci/typedef.svh"
+`include "hci/assign.svh"
+`include "hwpe-ctrl/typedef.svh"
 
 import fpnew_pkg::*;
 import hci_package::*;
@@ -279,5 +282,38 @@ package redmule_pkg;
     Ibex  ,
     CVA6
   } core_type_e;
+
+  // Default buses
+  localparam int unsigned ID = 10;
+  typedef struct packed {
+    logic        req;
+    logic [31:0] addr;
+  } core_default_inst_req_t;
+
+  typedef struct packed {
+    logic        gnt;
+    logic        valid;
+    logic [31:0] data;
+  } core_default_inst_rsp_t;
+
+  typedef struct packed {
+    logic req;
+    logic we;
+    logic [3:0] be;
+    logic [31:0] addr;
+    logic [31:0] data;
+  } core_default_data_req_t;
+
+  typedef struct packed {
+    logic gnt;
+    logic valid;
+    logic [31:0] data;
+  } core_default_data_rsp_t;
+
+  `HCI_TYPEDEF_REQ_T(redmule_default_data_req_t, logic [31:0], logic [DATA_W-1:0], logic [DATA_W/8-1:0], logic signed [DATA_W/32-1:0][31:0], logic)
+  `HCI_TYPEDEF_RSP_T(redmule_default_data_rsp_t, logic [DATA_W-1:0], logic)
+
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_default_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_default_ctrl_rsp_t, logic [31:0], logic [ID-1:0])
 
 endpackage

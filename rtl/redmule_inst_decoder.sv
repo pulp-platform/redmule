@@ -40,6 +40,8 @@ module redmule_inst_decoder
   input  logic                     clear_i        ,
   cv32e40x_if_xif.coproc_issue     xif_issue_if_i ,
   cv32e40x_if_xif.coproc_result    xif_result_if_o,
+  cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
+  cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
   output redmule_ctrl_req_t        cfg_req_o      ,
   input  redmule_ctrl_rsp_t        cfg_rsp_i      ,
   input  logic                     cfg_complete_i ,
@@ -60,6 +62,13 @@ logic [NumCfgRegs-1:0] reg_offs;
 
 typedef enum logic [1:0] {Idle, WriteCfg, Trigger} redmule_instr_cfg_state;
 redmule_instr_cfg_state current, next;
+
+// Xif static binding
+assign xif_compressed_if_i.compressed_ready = 1'b0;
+assign xif_compressed_if_i.compressed_resp  = '0;
+
+assign xif_mem_if_o.mem_valid = 1'b0;
+assign xif_mem_if_o.mem_req   = '0;
 
 tc_clk_gating i_arith_clock_gating (
   .clk_i     ( clk_i   ),

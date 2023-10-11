@@ -189,20 +189,11 @@ module redmule_tb;
                        tcdm[MP].r_valid |
                        other_r_valid    ;
 
-`HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [31:0], logic [DW-1:0], logic [DW/8-1:0], logic signed [DW/32-1:0][31:0], logic)
-`HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW-1:0], logic)
-`HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID-1:0])
-`HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [31:0], logic [ID-1:0])
-
   redmule_wrap #(
     .ID_WIDTH           ( ID                 ),
     .N_CORES            ( NC                 ),
     .DW                 ( DW                 ),
-    .MP                 ( DW/32              ),
-    .redmule_data_req_t ( redmule_data_req_t ),
-    .redmule_data_rsp_t ( redmule_data_rsp_t ),
-    .redmule_ctrl_req_t ( redmule_ctrl_req_t ),
-    .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t )
+    .MP                 ( DW/32              )
   ) i_redmule_wrap      (
     .clk_i              ( clk                ),
     .rst_ni             ( rst_n              ),

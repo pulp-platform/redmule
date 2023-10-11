@@ -58,6 +58,8 @@ localparam int unsigned  BITW               = fp_width(FpFormat)  // Number of b
 `ifdef TARGET_REDMULE_COMPLEX
   cv32e40x_if_xif.coproc_issue    xif_issue_if_i,
   cv32e40x_if_xif.coproc_result   xif_result_if_o,
+  cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
+  cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
 `endif
   // TCDM interface towards the memory
   output redmule_data_req_t       data_req_o ,
@@ -121,15 +123,17 @@ hwpe_ctrl_intf_periph #( .AddrWidth ( 32 ),
     .redmule_ctrl_req_t ( redmule_ctrl_req_t ),
     .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t )
   ) i_inst_decoder      (
-    .clk_i           ( clk_i           ),
-    .rst_ni          ( rst_ni          ),
-    .clear_i         ( clear           ),
-    .xif_issue_if_i  ( xif_issue_if_i  ),
-    .xif_result_if_o ( xif_result_if_o ),
-    .cfg_req_o       ( instr_req       ),
-    .cfg_rsp_i       ( instr_rsp       ),
-    .cfg_complete_i  ( cfg_complete    ),
-    .start_cfg_o     ( start_cfg       )
+    .clk_i               ( clk_i               ),
+    .rst_ni              ( rst_ni              ),
+    .clear_i             ( clear               ),
+    .xif_issue_if_i      ( xif_issue_if_i      ),
+    .xif_result_if_o     ( xif_result_if_o     ),
+    .xif_compressed_if_i ( xif_compressed_if_i ),
+    .xif_mem_if_o        ( xif_mem_if_o        ),
+    .cfg_req_o           ( instr_req           ),
+    .cfg_rsp_i           ( instr_rsp           ),
+    .cfg_complete_i      ( cfg_complete        ),
+    .start_cfg_o         ( start_cfg           )
   );
 
   assign ctrl_rsp_o = '0;

@@ -7,8 +7,8 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: 53b0b58af2db5bd3c850a7038fae170ed78326bb
-    version: 1.31.1
+    revision: 2bd027cb87eaa9bf7d17196ec5f69864b35b630f
+    version: 1.32.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -60,7 +60,7 @@ packages:
     - hwpe-stream
     - l2_tcdm_hybrid_interco
   hwpe-ctrl:
-    revision: c5c5d40da2fb5ce6d05e2c47307eaa8867409bde
+    revision: 1340c81da679b3860d47e0f137cf26b15e8156f1
     version: null
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
@@ -87,8 +87,8 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   tech_cells_generic:
-    revision: 298b7297d220ba2601d0f24f684f97ff32f61123
-    version: 0.2.12
+    revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
+    version: 0.2.13
     source:
       Git: https://github.com/pulp-platform/tech_cells_generic.git
     dependencies:

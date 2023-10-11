@@ -37,6 +37,7 @@ else
 endif
 
 compile_script ?= scripts/compile.tcl
+compile_script_synth ?= scripts/synth_compile.tcl
 compile_flag   ?= -suppress 2583 -suppress 13314
 
 INI_PATH  = $(mkfile_path)/modelsim.ini
@@ -130,6 +131,10 @@ bender:
 	curl --proto '=https'  \
 	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.24.0
 
+include bender_common.mk
+include bender_sim.mk
+include bender_synth.mk
+
 bender_defs += -D COREV_ASSERT_OFF
 
 bender_targs += -t rtl
@@ -139,13 +144,13 @@ bender_targs += -t cv32e40p_exclude_tracer
 ifeq ($(REDMULE_COMPLEX),1)
 	tb := redmule_complex_tb
 	WAVES := $(mkfile_path)/wave_complex_xif.do
-	bender_targs += -t redmule_complex
-	bender_targs += -t redmule_test_complex
+	# bender_targs += -t redmule_complex
+	# bender_targs += -t redmule_test_complex
 else
 	tb := redmule_tb
 	WAVES := $(mkfile_path)/wave.do
-	bender_targs += -t redmule_hwpe
-	bender_targs += -t redmule_test_hwpe
+	# bender_targs += -t redmule_hwpe
+	# bender_targs += -t redmule_test_hwpe
 endif
 
 update-ips:
@@ -155,6 +160,13 @@ update-ips:
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
 	> ${compile_script}
+
+synth-ips:
+	$(BENDER) update
+	$(BENDER) script synopsys      \
+	$(common_targs) $(common_defs) \
+	$(synth_targs) $(synth_defs)   \
+	> ${compile_script_synth}
 
 build-hw: hw-all
 
