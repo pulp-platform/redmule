@@ -267,9 +267,9 @@ generate
       .core_sleep_o        ( core_sleep_o               )
     );
   end else if (CoreType == Ibex) begin: gen_ibex
-
+    $error("Ibex connection not yet implemented");
   end else begin: gen_cva6
-
+    $error("CVA6 connection not yet implemented");
   end
 endgenerate
 
