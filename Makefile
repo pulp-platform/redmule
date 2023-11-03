@@ -22,7 +22,6 @@ mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(mkfile_path)/work
 QUESTA         ?= questa-2020.1
-QUESTA_HOME    ?= /usr/pack/modelsim-10.7b-kgf/questasim
 BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
@@ -144,13 +143,11 @@ bender_targs += -t cv32e40p_exclude_tracer
 ifeq ($(REDMULE_COMPLEX),1)
 	tb := redmule_complex_tb
 	WAVES := $(mkfile_path)/wave_complex_xif.do
-	# bender_targs += -t redmule_complex
-	# bender_targs += -t redmule_test_complex
+	bender_targs += -t redmule_complex
 else
 	tb := redmule_tb
 	WAVES := $(mkfile_path)/wave.do
-	# bender_targs += -t redmule_hwpe
-	# bender_targs += -t redmule_test_hwpe
+	bender_targs += -t redmule_hwpe
 endif
 
 update-ips:
@@ -159,6 +156,7 @@ update-ips:
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(bender_targs) $(bender_defs) \
+	$(sim_targs)    $(sim_deps)    \
 	> ${compile_script}
 
 synth-ips:

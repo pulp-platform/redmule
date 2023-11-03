@@ -17,7 +17,7 @@ sim_targs += -t rtl
 sim_targs += -t test
 
 ifeq ($(REDMULE_COMPLEX),1)
-	sim_targs += redmule_test_complex
+	sim_targs += -t redmule_test_complex
 else
-	sim_targs += redmule_test_hwpe
+	sim_targs += -t redmule_test_hwpe
 endif
