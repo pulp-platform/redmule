@@ -26,7 +26,7 @@ _start:
 
   # Cluster PEs will also starts here to avoid aligning another entry point
   # Just re-route them to the right entry
-  csrr    a0, 0xF14
+  csrr    a0, mhartid
   andi    a1, a0, 0x1f
   srli    a0, a0, 5
   # Enabling CV32E40P mstatus.MIE
@@ -40,7 +40,7 @@ _start:
   la      t0, _bss_start
   la      t1, _bss_end
 1:
-  sw      zero,0(t0)
+  sw      zero, 0(t0)
   addi    t0, t0, 4
   bltu    t0, t1, 1b
 

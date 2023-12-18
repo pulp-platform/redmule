@@ -7,8 +7,8 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: 4ac82b420e46fd0005513ca2283cb3c905e7599a
-    version: 1.29.0
+    revision: 2bd027cb87eaa9bf7d17196ec5f69864b35b630f
+    version: 1.32.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -29,8 +29,14 @@ packages:
     - common_cells
     - fpnew
     - tech_cells_generic
+  cv32e40x:
+    revision: baba1eeb3b845306c45be714f677ff786753f136
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/cv32e40x.git
+    dependencies: []
   fpnew:
-    revision: f231041c610f270ffc03cbdac38739ddb6426572
+    revision: a8e0cba6dd50f357ece73c2c955d96efc3c6c315
     version: null
     source:
       Git: https://github.com/pulp-platform/cvfpu.git
@@ -45,7 +51,7 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: b2e6f391aa6c10c03f45b693d80a0aaddecf169b
+    revision: 9d9fc44f6181e7d5357a1b31a0600630440b9586
     version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
@@ -54,8 +60,8 @@ packages:
     - hwpe-stream
     - l2_tcdm_hybrid_interco
   hwpe-ctrl:
-    revision: 4bf1487a463c262bf7d8ffee79d1cf392937daa2
-    version: 1.7.1
+    revision: b8b393575f40aea4dbd22cc7fc6077aaff2e3ed1
+    version: null
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
@@ -67,6 +73,13 @@ packages:
       Git: https://github.com/pulp-platform/hwpe-stream.git
     dependencies:
     - tech_cells_generic
+  ibex:
+    revision: b18f7ef178ed07f5085051f96042c670a919fd5c
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/ibex.git
+    dependencies:
+    - tech_cells_generic
   l2_tcdm_hybrid_interco:
     revision: fa55e72859dcfb117a2788a77352193bef94ff2b
     version: 1.0.0
@@ -74,8 +87,8 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   tech_cells_generic:
-    revision: a9cae21902e75b1434328ecf36f85327ba5717de
-    version: 0.2.11
+    revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
+    version: 0.2.13
     source:
       Git: https://github.com/pulp-platform/tech_cells_generic.git
     dependencies:

@@ -1,4 +1,7 @@
 #!/bin/bash
+Red="\e[31m"
+Green="\e[32m"
+EndColor="\e[0m"
 
 BASE_TIMEOUT=100
 
@@ -45,9 +48,9 @@ do
             
     if [[ $? -eq 124 ]]
     then
-        echo "ERROR : M=$M N=$N K=$K"
+        echo -e "${Red}ERROR ${EndColor}: M=$M N=$N K=$K"
     else
-        echo "OK    : M=$M N=$N K=$K"
+        echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
     fi
     
 done

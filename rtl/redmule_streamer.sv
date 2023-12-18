@@ -25,10 +25,10 @@ module redmule_streamer
   import hci_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned DW      = 288   ,
-parameter  int unsigned UW      = 1     ,
-parameter  int unsigned AW      = ADDR_W,
-localparam int unsigned REALIGN = 1
+  parameter  int unsigned DW      = 288   ,
+  parameter  int unsigned UW      = 1     ,
+  parameter  int unsigned AW      = ADDR_W,
+  localparam int unsigned REALIGN = 1
 )(
   input logic                    clk_i,
   input logic                    rst_ni,

@@ -180,7 +180,7 @@ fpnew_pkg::fp_format_e input_cast_src_fmt ,
                        output_cast_dst_fmt;
 
 // JMP = 32 if streamer ports are 256 bit wide and parallelism is 32 bit
-localparam int unsigned JMP    = (4*DATA_W/ADDR_W) - 4;
+localparam int unsigned JMP    = NumByte*(DATA_W/MemDw - 1);
 localparam int unsigned NBYTES = BITW/8;
 
 typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} redmule_fsm_state;
@@ -209,7 +209,7 @@ always_comb begin : address_gen_signals
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
     // Here we initialize the streamer source signals
     // for the Y stream source
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Y_ADDR];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Z_ADDR];
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len       = reg_file_i.hwpe_params[Z_TOT_LEN];
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len        = W;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride     = reg_file_i.hwpe_params[Z_D0_STRIDE];
@@ -835,16 +835,16 @@ assign cntrl_engine_o.fma_is_boxed     = 3'b111;
 assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
 assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(reg_file_i.hwpe_params[OP_SELECTION][31:29]);
 assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(reg_file_i.hwpe_params[OP_SELECTION][28:26]);
-assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(reg_file_i.hwpe_params[OP_SELECTION][25:22]);
-assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(reg_file_i.hwpe_params[OP_SELECTION][21:18]);
+assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(reg_file_i.hwpe_params[OP_SELECTION][25:21]);
+assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(reg_file_i.hwpe_params[OP_SELECTION][20:16]);
 assign cntrl_engine_o.op_mod           = 1'b0;
 assign cntrl_engine_o.in_valid         = 1'b1;
 assign cntrl_engine_o.flush            = engine_flush_i;
 assign cntrl_engine_o.out_ready        = 1'b1;
-assign input_cast_src_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
-assign input_cast_dst_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
-assign output_cast_src_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
-assign output_cast_dst_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
+assign input_cast_src_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
+assign input_cast_dst_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
+assign output_cast_src_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
+assign output_cast_dst_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
 
 assign gate_en_o    = gate_comb;
 assign w_load_o     = w_loaded;

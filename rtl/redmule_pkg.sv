@@ -18,6 +18,9 @@
  * 
  * RedMulE Package
  */
+`include "hci/typedef.svh"
+`include "hci/assign.svh"
+`include "hwpe-ctrl/typedef.svh"
 
 import fpnew_pkg::*;
 import hci_package::*;
@@ -27,9 +30,10 @@ package redmule_pkg;
 
   parameter int unsigned            DATA_W       = 288; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
+  parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W - MemDw;
-  parameter int unsigned            REDMULE_REGS = 19;
+  parameter int unsigned            REDMULE_REGS = 18;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
@@ -45,47 +49,74 @@ package redmule_pkg;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
   parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
 
-  // Register file index
-  // Matrix addresses
-  parameter int unsigned X_ADDR    = 0; // 0x00
-  parameter int unsigned W_ADDR    = 1; // 0x04
-  parameter int unsigned Y_ADDR    = 2; // 0x08
-  parameter int unsigned Z_ADDR    = 3; // 0x0C
+  // Register File mapping
+  /**********************
+  ** Slave RF indexing **
+  **********************/
+  parameter int unsigned X_ADDR = 0; // 0x00 /* These do not change between slave and final */
+  parameter int unsigned W_ADDR = 1; // 0x04 /* These do not change between slave and final */
+  parameter int unsigned Z_ADDR = 2; // 0x08 /* These do not change between slave and final */
+  parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
+  parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
+  // Matrix arithmetic config register
+  // [12:10] -> Operation selection
+  // [ 9: 7] -> Input/Output format
+  parameter int unsigned MACFG = 5; // 0x14
+  /**********************
+  ** Final RF indexing **
+  **********************/
   // Number of iterations on X and W matrices
   // (15 bits for number of rows iterations, 15 bits for number of columns iterations)
-  parameter int unsigned X_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
-  parameter int unsigned W_ITERS   = 5; // 0x14 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
+  parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
+  parameter int unsigned W_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   // Number of rows and columns leftovers (8 bits for each)
   // [31:24] -> X/Y ROWS LEFTOVERS 
   // [23:16] -> X COLUMNS LEFTOVERS
   // [15:8]  -> W ROWS LEFTOVERS 
   // [7:0]   -> W/Y COLUMNS LEFTOVERS
-  parameter int unsigned LEFTOVERS = 6; // 0x18
+  parameter int unsigned LEFTOVERS = 5; // 0x14
   // We keep a register for the remaining params
   // [31:16] -> TOT_NUMBER_OF_STORES
   // [14]    -> 1'b0: X cols/W rows >= ARRAY_HEIGHT; 1'b1: X cols/W rows < ARRAY_HEIGHT
   // [13]    -> 1'b0: W cols >= TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT ); 1'b1: W cols < TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT )
-  parameter int unsigned LEFT_PARAMS = 7;  // 0x1C
-  parameter int unsigned X_D1_STRIDE = 8;  // 0x20
-  parameter int unsigned W_TOT_LEN   = 9;  // 0x24
-  parameter int unsigned TOT_X_READ  = 10; // 0x28
-  parameter int unsigned W_D0_STRIDE = 11; // 0x2C
-  parameter int unsigned Z_TOT_LEN   = 12; // 0x30
-  parameter int unsigned Z_D0_STRIDE = 13; // 0x34
-  parameter int unsigned Z_D2_STRIDE = 14; // 0x38
-  parameter int unsigned X_ROWS_OFFS = 15; // 0x3C
-  parameter int unsigned X_SLOTS     = 16; // 0x40
-  parameter int unsigned IN_TOT_LEN  = 17; // 0x44
+  parameter int unsigned LEFT_PARAMS = 6;  // 0x18
+  parameter int unsigned X_D1_STRIDE = 7;  // 0x1C
+  parameter int unsigned W_TOT_LEN   = 8;  // 0x20
+  parameter int unsigned TOT_X_READ  = 9;  // 0x24
+  parameter int unsigned W_D0_STRIDE = 10; // 0x20
+  parameter int unsigned Z_TOT_LEN   = 11; // 0x2C
+  parameter int unsigned Z_D0_STRIDE = 12; // 0x30
+  parameter int unsigned Z_D2_STRIDE = 13; // 0x34
+  parameter int unsigned X_ROWS_OFFS = 14; // 0x38
+  parameter int unsigned X_SLOTS     = 15; // 0x3C
+  parameter int unsigned IN_TOT_LEN  = 16; // 0x40
   // One resgister is used for the round modes and operations of the Computing Elements.
   // [31:29] -> roundmode of the stage 1
   // [28:26] -> roundmode of the stage 2
-  // [25:22] -> operation of the stage 1
-  // [21:18] -> operation of the stage 2
-  // [17:15] -> input/output format
-  // [14:12] -> computing format
+  // [25:21] -> operation of the stage 1
+  // [20:16] -> operation of the stage 2
+  // [15:13] -> input/output format
+  // [12:10] -> computing format
   // [0:0]   -> GEMM selection
-  parameter int unsigned OP_SELECTION = 18; // 0x48
-  
+  parameter int unsigned OP_SELECTION = 17; // 0x44
+
+  parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
+  parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
+  parameter bit[6:0] RVCSR  = 7'b1110011; // 0x73 -> RISC-V CSR instruction opcode
+
+  /* The CSRs below are not really present in the current RedMulE version. The following
+     enum is here to allow future development where it might be useful to write the
+     configuration registers through standard `csrw` instructions coming from the core.
+     The CSRs values are chosen following the custom read/write already available in the
+     RISC-V specifications. */
+  typedef enum logic[11:0] {
+    CSR_REDMULE_X_ADDR = 12'h800,
+    CSR_REDMULE_W_ADDR = 12'h801,
+    CSR_REDMULE_Z_ADDR = 12'h802,
+    CSR_REDMULE_MCFIG0 = 12'h803,
+    CSR_REDMULE_MCFIG1 = 12'h804,
+    CSR_REDMULE_MACFG  = 12'h805
+  } redmule_csr_num_e;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
@@ -199,5 +230,90 @@ package redmule_pkg;
     logic            stored;
     logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
+
+  typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;
+  typedef enum logic [1:0] { Float8=2'h0, Float16=2'h1, Float8Alt=2'h2, Float16Alt=2'h3 } gemm_fmt_e;
+  typedef enum logic       { RNE=1'h0, RTZ=1'h1 } rnd_mode_e;
+  typedef enum logic [2:0] { FPU_FMADD=3'h0, FPU_ADD=3'h2, FPU_MUL=3'h3, FPU_MINMAX=3'h7 }    fpu_op_e;
+  typedef enum logic [2:0] { FPU_FP16=3'h2, FPU_FP8=3'h3, FPU_FP16ALT=3'h4, FPU_FP8ALT=3'h5 } fpu_fmt_e;
+
+  typedef struct packed {
+    logic [31:0] x_addr;
+    logic [31:0] w_addr;
+    logic [31:0] z_addr;
+    logic [15:0] m_size;
+    logic [15:0] n_size;
+    logic [15:0] k_size;
+    gemm_op_e gemm_ops;
+    gemm_fmt_e gemm_input_fmt;
+    gemm_fmt_e gemm_output_fmt;
+
+    logic [15:0] x_cols_iter;
+    logic [15:0] x_rows_iter;
+    logic [15:0] w_cols_iter;
+    logic [15:0] w_rows_iter;
+    logic [ 7:0] x_cols_lftovr;
+    logic [ 7:0] x_rows_lftovr;
+    logic [ 7:0] w_cols_lftovr;
+    logic [ 7:0] w_rows_lftovr;
+    logic [15:0] tot_stores;
+    logic [31:0] x_d1_stride;
+    logic [31:0] w_tot_len;
+    logic [31:0] tot_x_read;
+    logic [31:0] w_d0_stride;
+    logic [31:0] yz_tot_len;
+    logic [31:0] yz_d0_stride;
+    logic [31:0] yz_d2_stride;
+    logic [31:0] x_rows_offs;
+    logic [31:0] x_buffer_slots;
+    logic [31:0] x_tot_len;
+    rnd_mode_e stage_1_rnd_mode;
+    rnd_mode_e stage_2_rnd_mode;
+    fpu_op_e stage_1_op;
+    fpu_op_e stage_2_op;
+    fpu_fmt_e input_format;
+    fpu_fmt_e computing_format;
+    logic        gemm_selection;
+  } redmule_config_t;
+
+  typedef enum {
+    CV32P ,
+    CV32X ,
+    Ibex  ,
+    CVA6
+  } core_type_e;
+
+  // Default buses
+  localparam int unsigned ID = 10;
+  typedef struct packed {
+    logic        req;
+    logic [31:0] addr;
+  } core_default_inst_req_t;
+
+  typedef struct packed {
+    logic        gnt;
+    logic        valid;
+    logic [31:0] data;
+  } core_default_inst_rsp_t;
+
+  typedef struct packed {
+    logic req;
+    logic we;
+    logic [3:0] be;
+    logic [31:0] addr;
+    logic [31:0] data;
+  } core_default_data_req_t;
+
+  typedef struct packed {
+    logic gnt;
+    logic valid;
+    logic [31:0] data;
+  } core_default_data_rsp_t;
+
+  `HCI_TYPEDEF_REQ_T(redmule_default_data_req_t, logic [31:0], logic [DATA_W-1:0], logic [DATA_W/8-1:0], logic signed [DATA_W/32-1:0][31:0], logic)
+  `HCI_TYPEDEF_RSP_T(redmule_default_data_rsp_t, logic [DATA_W-1:0], logic)
+
+  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_default_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID-1:0])
+  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_default_ctrl_rsp_t, logic [31:0], logic [ID-1:0])
 
 endpackage
