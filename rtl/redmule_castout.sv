@@ -94,7 +94,7 @@ generate
   
     assign  res [i*MIN_FMT+:MIN_FMT] = result[i][WIDTH-MIN_FMT-1:0];
   
-  end // block: generate_cast_units
+  end
   
 endgenerate
 

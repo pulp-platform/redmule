@@ -24,7 +24,7 @@ package:
 dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: b2e6f391aa6c10c03f45b693d80a0aaddecf169b }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 78fb8fc8a6f2c376554562c47755b4d0febaba25 } # branch: dynmux-arbitration
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: b7857919ea14b586901ff4282ad7749a3d50501e } # branch: ff-regfile
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
