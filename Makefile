@@ -164,7 +164,7 @@ hw-opt:
 	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
 
 hw-compile:
-	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit - code [source $(compile_script)]'
+	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
 	@touch modelsim.ini
