@@ -22,7 +22,7 @@ package:
     - "Yvan Tortorella (yvan.tortorella@unibo.it)"
 
 dependencies:
-  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: e863f576699815b38cc9d80dbdede8ed5efd5991 } # `michaero/safety-island-clic` branch
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: b2e6f391aa6c10c03f45b693d80a0aaddecf169b }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: b7857919ea14b586901ff4282ad7749a3d50501e } # branch: ff-regfile

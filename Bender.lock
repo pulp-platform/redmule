@@ -1,7 +1,7 @@
 packages:
   cluster_interconnect:
-    revision: 89e1019d64a86425211be6200770576cbdf3e8b3
-    version: null
+    revision: 7d0a4f8acae71a583a6713cab5554e60b9bb8d27
+    version: 1.2.1
     source:
       Git: https://github.com/pulp-platform/cluster_interconnect.git
     dependencies:
@@ -21,7 +21,7 @@ packages:
       Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
   cv32e40p:
-    revision: 9b77611a1d0c681f4819798d95422b0b895528a2
+    revision: 800a09d97a1e9418e127e8bbf1763c1d1097c92f
     version: null
     source:
       Git: https://github.com/pulp-platform/cv32e40p.git
