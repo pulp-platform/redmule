@@ -68,11 +68,11 @@
 
 // RedMulE architecture
 #define ADDR_WIDTH   32
-#define DATA_WIDTH   256
+#define DATA_WIDTH   512
 #define REDMULE_FMT  16
-#define ARRAY_HEIGHT 4
+#define ARRAY_HEIGHT 8
 #define PIPE_REGS    3
-#define ARRAY_WIDTH  12 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
+#define ARRAY_WIDTH  24 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
 
 // Base address
 #define REDMULE_BASE_ADD 0x00100000
