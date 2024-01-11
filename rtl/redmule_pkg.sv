@@ -118,6 +118,11 @@ package redmule_pkg;
     CSR_REDMULE_MACFG  = 12'h805
   } redmule_csr_num_e;
 
+  parameter int unsigned NumStreamSources = 3; // X, W, Y
+  parameter int unsigned XsourceStreamId  = 0;
+  parameter int unsigned WsourceStreamId  = 1;
+  parameter int unsigned YsourceStreamId  = 2;
+
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
 
