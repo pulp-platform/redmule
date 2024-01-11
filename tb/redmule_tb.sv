@@ -23,12 +23,13 @@ timeunit 1ps;
 timeprecision 1ps;
 
 module redmule_tb;
+import redmule_pkg::*;
 
   // parameters
   parameter int unsigned PROB_STALL = 0;
   parameter int unsigned NC = 1;
   parameter int unsigned ID = 10;
-  parameter int unsigned DW = 288;
+  parameter int unsigned DW = redmule_pkg::DATA_W;
   parameter int unsigned MP = DW/32;
   parameter int unsigned MEMORY_SIZE = 192*1024;
   parameter int unsigned STACK_MEMORY_SIZE = 192*1024;

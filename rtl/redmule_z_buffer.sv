@@ -66,11 +66,11 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : z_buffer
       z_buffer_q <= '0;
     else if (ctrl_i.fill || ctrl_i.y_push_enable) begin
         if (reg_enable_i) begin
-          for (int d = 0; d < D; d++) begin    
+          for (int d = 0; d < D; d++) begin
             for (int w = 0; w < W; w++)
               z_buffer_q[d][w] <= (d == 0) ? z_buffer_i[w] : z_buffer_q[d-1][w];
           end
-        end else 
+        end else
           z_buffer_q <= z_buffer_q;
     end else if (ctrl_i.store && ctrl_i.ready) begin
       for (int w = 0; w < W; w++) begin
