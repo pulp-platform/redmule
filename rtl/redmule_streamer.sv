@@ -53,191 +53,239 @@ module redmule_streamer
 
 // Here the dynamic mux for virtual_tcdm interfaces
 // coming/going from/to the accelerator to/from the memory
-hci_core_intf #( .DW ( DW ), 
-                 .UW ( UW ) ) load_st_tcdm [0:0] ( .clk ( clk_i ) );
-
-hci_core_assign i_ld_st_assign ( .tcdm_slave (load_st_tcdm [0]), .tcdm_master (tcdm) );
-
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) virt_tcdm    [1:0] ( .clk ( clk_i ) );
+                 .UW ( UW ) ) ldst_tcdm [0:0] ( .clk ( clk_i ) );
+
+hci_core_assign i_ldst_assign ( .tcdm_slave (ldst_tcdm [0]), .tcdm_master (tcdm) );
+
+// Virtual internal TCDM interface splitting the upstream TCDM into two channels:
+// * Channel 0 - load channel (from TCDM to stream).
+// * Channel 1 - store channel (from stream to TCDM).
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) virt_tcdm [1:0] ( .clk ( clk_i ) );
 
 hci_core_mux_dynamic #(
-  .NB_IN_CHAN         ( 2            ),
-  .UW                 ( UW           ),
-  .DW                 ( DW           )
-) i_ld_store_mux      (
-  .clk_i              ( clk_i        ),
-  .rst_ni             ( rst_ni       ),
-  .clear_i            ( clear_i      ),
-  .in                 ( virt_tcdm    ),
-  .out                ( load_st_tcdm )
+  .NB_IN_CHAN         ( 2         ),
+  .UW                 ( UW        ),
+  .DW                 ( DW        )
+) i_ldst_mux          (
+  .clk_i              ( clk_i     ),
+  .rst_ni             ( rst_ni    ),
+  .clear_i            ( clear_i   ),
+  .in                 ( virt_tcdm ),
+  .out                ( ldst_tcdm )
 );
 
+/************************************ Store Channel *************************************/
+/* The store channel of the streamer connects the incoming stream interface (Z stream)  *
+ * to an HCI core sink module that translates the stream into a TCDM protocol. This     *
+ * sink module then connects to a cast unit to cast data from one FP format to another. *
+ * The result of the cast unit enters a TCDM FIFO that eventually connects to the store *
+ * side (virt_tcdm[1]) of the LD/ST multiplexer.                                        */
+
+// Sink module that turns the incoming Z stream into TCDM.
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) z_to_cast [0:0] ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) z_to_tcdm [0:0] ( .clk ( clk_i ) );
-// Sink module that turns the incoming Z matrix stream into virtual TCDM interface
+                 .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
 hci_core_sink         #(
   .DATA_WIDTH          ( DW                          ),
   .MISALIGNED_ACCESSES ( REALIGN                     )
-) i_z_stream_sink      (                             
+) i_stream_sink      (                             
   .clk_i               ( clk_i                       ),
   .rst_ni              ( rst_ni                      ),
   .test_mode_i         ( test_mode_i                 ),
   .clear_i             ( clear_i                     ),
   .enable_i            ( enable_i                    ),
-  .tcdm                ( z_to_cast [0]               ),
+  .tcdm                ( zstream2cast                ),
   .stream              ( z_stream_i                  ),
   .ctrl_i              ( ctrl_i.z_stream_sink_ctrl   ),
   .flags_o             ( flags_o.z_stream_sink_flags )
 );
 
+// Store interface FIFO buses.
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) z_fifo_d ( .clk ( clk_i ) );
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
+
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 
+// Store cast unit
+// This unit uses only the data bus of the TCDM interface. The other buses
+// are assigned manually.
 redmule_castout #(
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
   .src_format    ( FPFORMAT     )
-) i_output_cast  (
+) i_store_cast   (
   .clk_i                                     ,
   .rst_ni                                    ,
   .clear_i                                   ,
   .cast_i       ( cast                      ),
-  .src_i        (z_to_cast[0].data          ),
+  .src_i        (zstream2cast.data          ),
   .dst_fmt_i    (ctrl_i.output_cast_dst_fmt ),
-  .dst_o        (virt_tcdm[1].data          )
+  .dst_o        (z_fifo_d.data              )
 );
 
-assign virt_tcdm[1].req     = z_to_cast[0].req;
-assign z_to_cast[0].gnt     = virt_tcdm[1].gnt;
-assign virt_tcdm[1].add     = z_to_cast[0].add;
-assign virt_tcdm[1].wen     = z_to_cast[0].wen;
-assign virt_tcdm[1].be      = z_to_cast[0].be;
-assign virt_tcdm[1].boffs   = z_to_cast[0].boffs;
-assign virt_tcdm[1].lrdy    = z_to_cast[0].lrdy;
-assign virt_tcdm[1].user    = z_to_cast[0].user;
-assign z_to_cast[0].r_data  = virt_tcdm[1].r_data;
-assign z_to_cast[0].r_valid = virt_tcdm[1].r_valid;
-assign z_to_cast[0].r_opc   = virt_tcdm[1].r_opc;
-assign z_to_cast[0].r_user  = virt_tcdm[1].r_user;
+// Left TCDM buses assignment.
+assign z_fifo_d.req         = zstream2cast.req;
+assign zstream2cast.gnt     = z_fifo_d.gnt;
+assign z_fifo_d.add         = zstream2cast.add;
+assign z_fifo_d.wen         = zstream2cast.wen;
+assign z_fifo_d.be          = zstream2cast.be;
+assign z_fifo_d.boffs       = zstream2cast.boffs;
+assign z_fifo_d.lrdy        = zstream2cast.lrdy;
+assign z_fifo_d.user        = zstream2cast.user;
+assign zstream2cast.r_data  = z_fifo_d.r_data;
+assign zstream2cast.r_valid = z_fifo_d.r_valid;
+assign zstream2cast.r_opc   = z_fifo_d.r_opc;
+assign zstream2cast.r_user  = z_fifo_d.r_user;
 
-// hci_core_assign i_z_assign ( .tcdm_slave (virt_tcdm [1]), .tcdm_master (z_to_tcdm [0]) );
+// HCI store fifo.
+hci_core_fifo #(
+  .FIFO_DEPTH  ( 2  ),
+  .DW          ( DW )
+) i_store_fifo (
+  .clk_i       ( clk_i    ),
+  .rst_ni      ( rst_ni   ),
+  .clear_i     ( clear_i  ),
+  .flags_o     (          ),
+  .tcdm_slave  ( z_fifo_d ),
+  .tcdm_master ( z_fifo_q )
+);
+
+// Assigning the store FIFO output to the store side of the LD/ST multiplexer.
+hci_core_assign i_store_assign ( .tcdm_slave (z_fifo_q), .tcdm_master (virt_tcdm[1]) );
+
+/**************************************** Load Channel ****************************************/
+/* The load channel of the streamer connects the incoming TCDM interface to three different   *
+ * stream interfaces: X stream (ID: 0), W stream (ID: 1), and Y stream (ID: 2). The load side *
+ * (virt_tcdm[0]) of the LD/ST multiplexer connects to another multiplexer that splits the    *
+ * icoming TCDM bus into three TCDM interfaces (X, W, and Y). Each interface connects to its  *
+ * own FIFO, and then to a cas unit that casts the data from one FP format to another. Then,  *
+ * the output of the cast connects to a dedicated HCI core source unit used to translate the  *
+ * incoming TCDM protocls into stream.                                                        */
 
 // Virtual TCDM interfaces (source type) for input matrices
-// X matrix -> source[0]
-// W matrix -> source[1]
-// Y matrix -> source[2]
-// source[3] is fake because the hci_core_mux_dynamic does not work with three sources
+// X -> source[0]
+// W -> source[1]
+// Y -> source[2]
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) source       [3:0] ( .clk ( clk_i ) );
+                 .UW ( UW ) ) source [NumStreamSources-1:0] ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) mux_tcdm     [0:0] ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) tcdm_cast    [0:0] ( .clk ( clk_i ) );
+                 .UW ( UW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
 
-redmule_castin #(
-  .FpFmtConfig  ( FpFmtConfig  ),
-  .IntFmtConfig ( IntFmtConfig ),
-  .dst_format   ( FPFORMAT     )
-) i_input_cast  (
-  .clk_i                                    ,
-  .rst_ni                                   ,
-  .clear_i                                  ,
-  .cast_i       ( cast                     ),
-  .src_i        (virt_tcdm[0].r_data       ),
-  .src_fmt_i    (ctrl_i.input_cast_src_fmt ),
-  .dst_o        (mux_tcdm[0].r_data        )
-);
-
-assign virt_tcdm[0].req    = mux_tcdm[0].req;
-assign mux_tcdm[0].gnt     = virt_tcdm[0].gnt;
-assign virt_tcdm[0].add    = mux_tcdm[0].add;
-assign virt_tcdm[0].wen    = mux_tcdm[0].wen;
-assign virt_tcdm[0].data   = mux_tcdm[0].data;
-assign virt_tcdm[0].be     = mux_tcdm[0].be;
-assign virt_tcdm[0].boffs  = mux_tcdm[0].boffs;
-assign virt_tcdm[0].lrdy   = mux_tcdm[0].lrdy;
-assign virt_tcdm[0].user   = mux_tcdm[0].user;
-assign mux_tcdm[0].r_valid = virt_tcdm[0].r_valid;
-assign mux_tcdm[0].r_opc   = virt_tcdm[0].r_opc;
-assign mux_tcdm[0].r_user  = virt_tcdm[0].r_user;
-
-// hci_core_assign i_input_assign ( .tcdm_slave (mux_tcdm [0]), .tcdm_master (tcdm_cast [0]) );
-
-// Here we instantiate the dynamic mux that turns the tcdm stream into
-// source [0], source[1] or source[2] depending on the scheduling
+// Dynamic multiplexer splitting the TCDM-side interface into
+// X, W, and Y interfaces
 hci_core_mux_dynamic #(
-  .NB_IN_CHAN         ( 4              ),
-  .UW                 ( UW             ),
-  .DW                 ( DW             )
+  .NB_IN_CHAN         ( NumStreamSources ),
+  .UW                 ( UW               ),
+  .DW                 ( DW               )
 ) i_source_mux        (
-  .clk_i              ( clk_i          ),
-  .rst_ni             ( rst_ni         ),
-  .clear_i            ( clear_i        ),
-  .in                 ( source         ),
-  .out                ( mux_tcdm [0:0] )
+  .clk_i              ( clk_i            ),
+  .rst_ni             ( rst_ni           ),
+  .clear_i            ( clear_i          ),
+  .in                 ( source           ),
+  .out                ( virt_tcdm[0:0]   )
 );
 
-// Here we implement the source module to convert virt_tcdm [0] interface to
-// all source streams.
-// Source module for X input matrix
-hci_core_source       #(
-  .DATA_WIDTH          ( DW                            ),
-  .MISALIGNED_ACCESSES ( REALIGN                       )
-) i_x_stream_source    (                               
-  .clk_i               ( clk_i                         ),
-  .rst_ni              ( rst_ni                        ),
-  .test_mode_i         ( test_mode_i                   ),
-  .clear_i             ( clear_i                       ),
-  .enable_i            ( enable_i                      ),
-  .tcdm                ( source [0]                    ),
-  .stream              ( x_stream_o                    ),
-  .ctrl_i              ( ctrl_i.x_stream_source_ctrl   ),
-  .flags_o             ( flags_o.x_stream_source_flags )
-);
+// One TCDM FIFO and one HCI core source unit per stream channel.
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) load_fifo_d [NumStreamSources-1:0] ( .clk ( clk_i ) );
 
-// Source module for W input matrix
-hci_core_source       #(
-  .DATA_WIDTH          ( DW                            ),
-  .MISALIGNED_ACCESSES ( REALIGN                       )
-) i_w_stream_source    (
-  .clk_i               ( clk_i                         ),
-  .rst_ni              ( rst_ni                        ),
-  .test_mode_i         ( test_mode_i                   ),
-  .clear_i             ( clear_i                       ),
-  .enable_i            ( enable_i                      ),
-  .tcdm                ( source [1]                    ),
-  .stream              ( w_stream_o                    ),
-  .ctrl_i              ( ctrl_i.w_stream_source_ctrl   ),
-  .flags_o             ( flags_o.w_stream_source_flags )
-);
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) load_fifo_q [NumStreamSources-1:0] ( .clk ( clk_i ) );
 
-// Source module for Y input matrix
-hci_core_source       #(
-  .DATA_WIDTH          ( DW                            ),
-  .MISALIGNED_ACCESSES ( REALIGN                       )
-) i_y_stream_source    (
-  .clk_i               ( clk_i                         ),
-  .rst_ni              ( rst_ni                        ),
-  .test_mode_i         ( test_mode_i                   ),
-  .clear_i             ( clear_i                       ),
-  .enable_i            ( enable_i                      ),
-  .tcdm                ( source[2]                     ),
-  .stream              ( y_stream_o                    ),
-  .ctrl_i              ( ctrl_i.y_stream_source_ctrl   ),
-  .flags_o             ( flags_o.y_stream_source_flags )
-);
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) tcdm_cast [NumStreamSources-1:0] ( .clk ( clk_i ) );
 
-// Binding source[3] to '0 to solve hci_core_mux_dynamic issues
-assign source[3].req   =  0;
-assign source[3].add   = '0;
-assign source[3].wen   =  0;
-assign source[3].data  =  0;
-assign source[3].be    =  0;
-assign source[3].boffs =  0;
-assign source[3].lrdy  =  0;
-assign source[3].user  = '0;
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
+
+hci_package::hci_streamer_ctrl_t  [NumStreamSources-1:0] source_ctrl;
+hci_package::hci_streamer_flags_t [NumStreamSources-1:0] source_flags;
+
+// Assign input control buses to the relative ID in the vector.
+assign source_ctrl[XsourceStreamId] = ctrl_i.x_stream_source_ctrl;
+assign source_ctrl[WsourceStreamId] = ctrl_i.w_stream_source_ctrl;
+assign source_ctrl[YsourceStreamId] = ctrl_i.y_stream_source_ctrl;
+
+for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
+
+  hci_core_assign i_load_assign ( .tcdm_slave (load_fifo_d[i]), .tcdm_master (source[i]) );
+
+  hci_core_fifo #(
+    .FIFO_DEPTH  ( 2  ),
+    .DW          ( DW )
+  ) i_load_tcdm_fifo (
+    .clk_i       ( clk_i          ),
+    .rst_ni      ( rst_ni         ),
+    .clear_i     ( clear_i        ),
+    .flags_o     (                ),
+    .tcdm_slave  ( load_fifo_q[i] ),
+    .tcdm_master ( load_fifo_d[i] )
+  );
+
+  // Load cast unit
+  // This unit uses only the data bus of the TCDM interface. The other buses
+  // are assigned manually.
+  redmule_castin #(
+    .FpFmtConfig  ( FpFmtConfig  ),
+    .IntFmtConfig ( IntFmtConfig ),
+    .dst_format   ( FPFORMAT     )
+  ) i_load_cast   (
+    .clk_i                                     ,
+    .rst_ni                                    ,
+    .clear_i                                   ,
+    .cast_i       ( cast                      ),
+    .src_i        ( load_fifo_q[i].r_data     ),
+    .src_fmt_i    ( ctrl_i.input_cast_src_fmt ),
+    .dst_o        ( tcdm_cast[i].r_data       )
+  );
+
+  // Left TCDM buses assignment.
+  assign load_fifo_q[i].req   = tcdm_cast[i].req;
+  assign tcdm_cast[i].gnt     = load_fifo_q[i].gnt;
+  assign load_fifo_q[i].add   = tcdm_cast[i].add;
+  assign load_fifo_q[i].wen   = tcdm_cast[i].wen;
+  assign load_fifo_q[i].data  = tcdm_cast[i].data;
+  assign load_fifo_q[i].be    = tcdm_cast[i].be;
+  assign load_fifo_q[i].boffs = tcdm_cast[i].boffs;
+  assign load_fifo_q[i].lrdy  = tcdm_cast[i].lrdy;
+  assign load_fifo_q[i].user  = tcdm_cast[i].user;
+  assign tcdm_cast[i].r_valid = load_fifo_q[i].r_valid;
+  assign tcdm_cast[i].r_opc   = load_fifo_q[i].r_opc;
+  assign tcdm_cast[i].r_user  = load_fifo_q[i].r_user;
+
+  hci_core_source       #(
+    .DATA_WIDTH          ( DW              ),
+    .MISALIGNED_ACCESSES ( REALIGN         )
+  ) i_stream_source      (
+    .clk_i               ( clk_i           ),
+    .rst_ni              ( rst_ni          ),
+    .test_mode_i         ( test_mode_i     ),
+    .clear_i             ( clear_i         ),
+    .enable_i            ( enable_i        ),
+    .tcdm                ( tcdm_cast[i]    ),
+    .stream              ( out_stream[i]   ),
+    .ctrl_i              ( source_ctrl[i]  ),
+    .flags_o             ( source_flags[i] )
+  );
+  
+end
+
+// Assign flags in the vector to the relative output buses.
+assign flags_o.x_stream_source_flags = source_flags[XsourceStreamId];
+assign flags_o.w_stream_source_flags = source_flags[WsourceStreamId];
+assign flags_o.y_stream_source_flags = source_flags[YsourceStreamId];
+
+// Assign resulting streams.
+hwpe_stream_assign i_xstream_assign ( .push_i( out_stream[XsourceStreamId] ) ,
+                                      .pop_o ( x_stream_o                  ) );
+
+hwpe_stream_assign i_wstream_assign ( .push_i( out_stream[WsourceStreamId] ) ,
+                                      .pop_o ( w_stream_o                  ) );
+
+hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
+                                      .pop_o ( y_stream_o                  ) );
 
 endmodule : redmule_streamer
