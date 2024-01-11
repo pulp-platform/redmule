@@ -717,6 +717,18 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_stores_counter
   end
 end
 
+logic [15:0] consumed_y_d, consumed_y_q;
+always_ff @(posedge clk_i or negedge rst_ni) begin : y_consumed_counter
+  if(~rst_ni) begin
+    consumed_y_q <= '0;
+  end else begin
+    if (clear_i || clear_regs)
+      consumed_y_q <= '0;
+    else
+      consumed_y_q <= consumed_y_d;
+  end
+end
+
 always_comb begin
   if (store_rows_lftovr_q == '0 || tot_z_stored_q < store_rows_lftovr_q) begin
     if (store_cols_lftovr_q) begin
@@ -989,6 +1001,7 @@ transfer_count_d = transfer_count_q;
 gate_count_d     = gate_count_q;
 store_count_d    = store_count_q;
 tot_store_d      = tot_store_q;
+consumed_y_d     = consumed_y_q;
 y_rows_iter_d    = y_rows_iter_q;
 y_cols_iter_d    = y_cols_iter_q;
 
@@ -1116,6 +1129,7 @@ clear_regs       = 1'b0;
       if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
         y_push_rst = (flgs_z_buffer_i.y_pushed) ?  1'b1 : 1'b0;
         consume_y_rst = (flgs_z_buffer_i.y_pushed && consume_y_q) ? 1'b1 : 1'b0;
+        consumed_y_d = consume_y_rst ? consumed_y_q + 'd1 : consumed_y_q;
         if (!accumulate_i && consume_y_q && !skip_w_q) begin
           flgs_scheduler_o.y_push_enable = 1'b1;
           z_buffer_clk_en          = 1'b1;
@@ -1183,7 +1197,8 @@ clear_regs       = 1'b0;
       if (w_valid_i == 1'b1 && w_strb_i == '1) begin
         w_loaded = 1'b1;
         count_w_cycles_en = (!count_w_cycles_q & x_preloaded_q) ? 1'b1 : 1'b0;
-        if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
+        if (reg_file_i.hwpe_params[OP_SELECTION][0] &&
+            consumed_y_q < reg_file_i.hwpe_params[LEFT_PARAMS][31:16]) begin
           y_push_en = (!y_push_q) ? 1'b1 : 1'b0;
           consume_y_en = (!consume_y_q) ? 1'b1 : 1'b0;
         end
@@ -1210,9 +1225,9 @@ clear_regs       = 1'b0;
             if ((reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0) && (y_cols_lftovr_q == '0))
               y_cols_lftovr_en = 1'b1;
           end
-        end else if (d_shift_d == H && !flgs_streamer_i.x_stream_source_flags.ready_start) begin
+        end else if ((d_shift_d == NumPipeRegs + 'd1) && !flgs_streamer_i.x_stream_source_flags.ready_start) begin
           load_x_en = 1'b1;
-            d_shift_d = '0;
+          d_shift_d = '0;
           next = LOAD_X;
           if (x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]) begin
             if ( (reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0) && (x_cols_lftovr_q == '0) )
@@ -1245,7 +1260,7 @@ clear_regs       = 1'b0;
       x_buffer_clk_en = 1'b1;
       if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
         if (!accumulate_i & !skip_w_q) begin
-          flgs_scheduler_o.y_push_enable = 1'b1;
+          flgs_scheduler_o.y_push_enable = consume_y_q ? 1'b1 : 1'b0;
           z_buffer_clk_en          = 1'b1;
         end
         consume_y_rst = (flgs_z_buffer_i.y_pushed && consume_y_q) ? 1'b1 : 1'b0;
@@ -1340,7 +1355,7 @@ clear_regs       = 1'b0;
       gate_count_d = '0;
 
       if (!accumulate_i && reg_file_i.hwpe_params[OP_SELECTION][0] && !skip_w_q) begin
-        flgs_scheduler_o.y_push_enable = 1'b1;
+        flgs_scheduler_o.y_push_enable = consume_y_q ? 1'b1 : 1'b0;
         z_buffer_clk_en          = 1'b1;
       end
 

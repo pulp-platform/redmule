@@ -74,7 +74,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic [4:0]  w_computed;
   logic [15:0] w_rows;
   logic [15:0] w_rows_iter, w_row_count_d, w_row_count_q;
-  logic [15:0] z_storings_d, z_storings_q, tot_stores;
+  logic [15:0] z_storings_d, z_storings_q, tot_stores, issued_store_d, issued_store_q;
 
   typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
   redmule_ctrl_state current, next;
@@ -191,6 +191,18 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   end
   assign accumulate_o =  accumulate_q & !accumulate_ctrl_q;
 
+  logic finish_d, finish_q;
+  always_ff @(posedge clk_i or negedge rst_ni) begin : finish_sampler
+    if(~rst_ni) begin
+      finish_q <= 1'b0;
+    end else begin
+      if (clear)
+        finish_q <= 1'b0;
+      else
+        finish_q <= finish_d;
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : last_w_row_reg
     if(~rst_ni) begin
       last_w_row <= 1'b0;
@@ -199,6 +211,17 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         last_w_row <= 1'b0;
       else if (last_w_row_en) 
         last_w_row <= 1'b1;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : issued_store
+    if(~rst_ni) begin
+      issued_store_q <= '0;
+    end else begin
+      if (clear)
+        issued_store_q <= '0;
+      else
+        issued_store_q <= issued_store_d;
     end
   end
 
@@ -258,6 +281,8 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     last_w_row_rst     = 1'b0;
     w_row_count_d      = w_row_count_q;
     z_storings_d       = z_storings_q;
+    issued_store_d     = issued_store_q;
+    finish_d           = finish_q;
     accumulate_en      = 1'b0;
     accumulate_rst     = 1'b0;
     storing_rst        = 1'b0;
@@ -276,6 +301,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           z_buffer_clk_en = 1'b1;
         if ( (slave_start & tiler_valid) || test_mode_i) begin
           tiler_setback = 1'b1;
+          finish_d = 1'b0;
           next = REDMULE_STARTING;
         end
         else 
@@ -307,8 +333,8 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         
         case (last_w_row)
           1'b0: begin
-            if (w_computed == Height - 1) begin
-              if (!accumulate_q)
+            if (w_computed == NumPipeRegs) begin
+              if (!accumulate_q && !finish_q)
                   accumulate_en = 1'b1;
               if (count_w_q)
                   w_computed_rst = 1'b1;
@@ -316,11 +342,14 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           end
 
           1'b1: begin
-            if (w_computed == Height - 2 && reg_enable_i) begin
+            if (w_computed == NumPipeRegs - 1 && reg_enable_i) begin
               w_row_count_d = 16'd1;
+              issued_store_d = issued_store_q + 'd1;
               next = REDMULE_BUFFERING;
-              if (accumulate_q)
+              if (accumulate_q) begin
                 accumulate_rst = 1'b1;
+                finish_d = (issued_store_q == tot_stores - 1) ? 1'b1 : 1'b0;
+              end
               if (count_w_q)
                 w_computed_rst = 1'b1;
             end else
@@ -337,7 +366,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           w_row_count_d = w_row_count_q + 1;
           z_fill_o = reg_enable_i;
         if (flgs_z_buffer_i.full) begin
-          accumulate_en = 1'b1;
+          accumulate_en = finish_q ? 1'b0 : 1'b1;
           next = REDMULE_STORING;
         end
         else

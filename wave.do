@@ -394,10 +394,10 @@ add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/rst_w_load
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/rst_d_count
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/buffer_clock
-add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/fill_shift
-add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/d_index
+add wave -noupdate -group z_buffer -radix unsigned -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/fill_shift
+add wave -noupdate -group z_buffer -radix unsigned -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/d_index
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/depth
-add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/store_shift
+add wave -noupdate -group z_buffer -radix unsigned -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/store_shift
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/w_index
 add wave -noupdate -group z_buffer /redmule_tb/i_redmule_wrap/i_redmule_top/i_z_buffer/z_buffer_q
 add wave -noupdate -group y_buffer_fifo -group fifo_interface /redmule_tb/i_redmule_wrap/i_redmule_top/y_buffer_fifo/clk
@@ -664,7 +664,6 @@ add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_0 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[0]/i_computing_element/noncomp_y_d}
@@ -781,7 +780,6 @@ add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_0 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[1]/i_computing_element/noncomp_y_d}
@@ -898,7 +896,6 @@ add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_0 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[2]/i_computing_element/noncomp_y_d}
@@ -1015,7 +1012,6 @@ add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_0 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[3]/i_computing_element/noncomp_y_d}
@@ -1132,7 +1128,6 @@ add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_1 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[0]/i_computing_element/noncomp_y_d}
@@ -1249,7 +1244,6 @@ add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_1 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[1]/i_computing_element/noncomp_y_d}
@@ -1366,7 +1360,6 @@ add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_1 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[2]/i_computing_element/noncomp_y_d}
@@ -1483,7 +1476,6 @@ add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_1 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[1]/i_row/computing_element[3]/i_computing_element/noncomp_y_d}
@@ -1600,7 +1592,6 @@ add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmul
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_11 -group CE_0 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[0]/i_computing_element/noncomp_y_d}
@@ -1717,7 +1708,6 @@ add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmul
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_11 -group CE_1 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[1]/i_computing_element/noncomp_y_d}
@@ -1834,7 +1824,6 @@ add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmul
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_11 -group CE_2 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[2]/i_computing_element/noncomp_y_d}
@@ -1951,7 +1940,6 @@ add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmul
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/out_valid_o}
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/out_ready_i}
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/busy_o}
-add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/y_bias}
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/fma_y}
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/noncomp_y}
 add wave -noupdate -group engine -group row_11 -group CE_3 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[11]/i_row/computing_element[3]/i_computing_element/noncomp_y_d}
@@ -2204,6 +2192,8 @@ add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_s
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/store_count_q
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/tot_store_d
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/tot_store_q
+add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/consumed_y_d
+add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/consumed_y_q
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/count_w_q
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/shift_count_q
 add wave -noupdate -group scheduler /redmule_tb/i_redmule_wrap/i_redmule_top/i_scheduler/counter_index
@@ -2272,61 +2262,177 @@ add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redm
 add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter
 add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter_valid
 add wave -noupdate -group control -group tiler /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/i_cfg_tiler/x_rows_by_w_cols_by_w_rows_iter_ready
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clk_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/rst_ni
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/test_mode_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/busy_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clear_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/evt_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_fill_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_shift_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_enable_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/start_cfg_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cfg_complete_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_z_buffer_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_engine_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_loaded_i
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flush_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cntrl_scheduler_o
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clear
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed_en
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed_rst
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/count_w_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_en
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_rst
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/storing_rst
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row_en
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row_rst
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/enable_depth_count
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reset_depth_count
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_setback
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_valid
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows_iter
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_row_count_d
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_row_count_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_storings_d
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_storings_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tot_stores
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/current
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/next
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_d
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cntrl_slave
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_slave
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_ctrl_q
-add wave -noupdate -group control /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/slave_start
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clk_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/rst_ni
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/test_mode_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/busy_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clear_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/evt_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_fill_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_shift_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_enable_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/start_cfg_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cfg_complete_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_z_buffer_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_engine_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_loaded_i
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flush_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cntrl_scheduler_o
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/clear
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed_en
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed_rst
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/count_w_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_en
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_rst
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/storing_rst
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row_en
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/last_w_row_rst
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_buffer_clk_en
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/enable_depth_count
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reset_depth_count
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_setback
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tiler_valid
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_computed
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_rows_iter
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_row_count_d
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/w_row_count_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_storings_d
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/z_storings_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/tot_stores
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/current
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/next
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_d
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/reg_file_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/cntrl_slave
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/flgs_slave
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/accumulate_ctrl_q
+add wave -noupdate -group control -radix hexadecimal -radixshowbase 1 /redmule_tb/i_redmule_wrap/i_redmule_top/i_control/slave_start
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/clk_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/rst_ni}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/x_input_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/w_input_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/y_bias_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/fma_is_boxed_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/noncomp_is_boxed_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_rnd_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_rnd_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/op1_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/op2_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/op_mod_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/tag_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/aux_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/in_valid_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/in_ready_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/reg_enable_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/flush_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/z_output_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/status_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/extension_bit_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/class_mask_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/is_class_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/tag_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/aux_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/out_valid_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/out_ready_i}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/busy_o}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/fma_y}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/noncomp_y}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/noncomp_y_d}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/op1_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_clk_en}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_input_pipe_clk}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/noncomp_y_q}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/fma_is_boxed_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/noncomp_is_boxed_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_rnd_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_rnd_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/op2_int}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_op_mod}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_op_mod}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_input_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_input_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_input_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_input_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_in_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_in_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_in_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_in_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_in_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_reg_enable}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_reg_enable}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_flush}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_flush}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_status}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_status}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_status}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_extension_bit}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_extension_bit}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_extension_bit}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_class_mask}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_is_class}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_output_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_output_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_output_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_output_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_output_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_output_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_out_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_out_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_out_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_out_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_out_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_busy}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_busy}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_busy}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/x_input}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/w_input}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_res}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_res}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_res}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_clk}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_clk_en}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_clk}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_clk_en}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_fma_operands}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage1_noncomp_operands}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_op_mod}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_input_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_input_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_in_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_in_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_in_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_reg_enable}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_flush}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_status}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_status}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_extension_bit}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_extension_bit}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_class_mask}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_class_mask}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_is_class}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_is_class}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_output_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_output_tag}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_output_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_output_aux}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_out_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_out_valid}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_out_ready}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_busy}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_busy}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_operands}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_res}
+add wave -noupdate -group CE7 {/redmule_tb/i_redmule_wrap/i_redmule_top/i_redmule_engine/genblk1[0]/i_row/computing_element[7]/i_computing_element/stage2_noncomp_res}
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {0 ps} 0}
 quietly wave cursor active 1
-configure wave -namecolwidth 150
+configure wave -namecolwidth 209
 configure wave -valuecolwidth 100
 configure wave -justifyvalue left
 configure wave -signalnamewidth 1
@@ -2340,4 +2446,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {1045800 ps}
+WaveRestoreZoom {0 ps} {129865050 ps}
