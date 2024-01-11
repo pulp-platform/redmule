@@ -91,7 +91,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .N_IO_REGS      ( REDMULE_REGS ),
     .N_GENERIC_REGS ( 6            ),
     .ID_WIDTH       ( ID_WIDTH     ),
-    .DataWidth      ( SysDataWidth )
+    .DATA_WIDTH     ( SysDataWidth )
   ) i_slave         (
     .clk_i          ( clk_i        ),
     .rst_ni         ( rst_ni       ),
