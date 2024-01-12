@@ -776,6 +776,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
+logic [2:0] piperegs; // We are never going to have more than 3/4 pipe
+                      // regs per unit, so 3-bits should be far enough
 logic shift_comb;
 logic wlq;
 logic shift_comb_n;
@@ -801,12 +803,12 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     end
   end
 end
-assign shift_count_en = ((shift_count_q[0][1:0] == '1 && !end_computation && !skip_w_q) ? w_loaded : 1'b1);
+assign piperegs = NumPipeRegs;
+assign shift_count_en = ((shift_count_q[0][1:0] == piperegs[1:0] && !end_computation && !skip_w_q) ? w_loaded : 1'b1);
 
 assign reg_enable   = (shift_count_en | (flgs_streamer_i.w_stream_source_flags.ready_start & fifo_flgs_i.empty)) & !reg_disable;
 assign reg_enable_o = reg_enable;
 assign count_w_q    = shift_count_q;
-
 
 logic pre_ready_en, pre_ready_rst, pre_ready_x_q, x_buffer_clk_en, z_buffer_clk_en;
 always_ff @(posedge clk_i or negedge rst_ni) begin : pre_ready_x_sampler
@@ -1377,6 +1379,7 @@ clear_regs       = 1'b0;
         if ( (reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0) && (w_cols_lftovr == '0) )
           w_cols_lftovr_en = 1'b1;
       end
+
       if (tot_w_loaded_d == reg_file_i.hwpe_params[W_ITERS][31:16]) begin
         if (w_cols_lftovr != '0) begin
           w_cols_lftovr_rst = 1'b1;
@@ -1386,11 +1389,11 @@ clear_regs       = 1'b0;
           w_cols_d = w_cols_q + 1;
       end
 
-        if ( (w_cycles_q == D - PIPE_REGS + 1) & reg_enable & x_preloaded_q) begin
-          hold_rst = (hold_q) ? 1'b1 : 1'b0;
-          count_w_cycles_rst = 1'b1;
-          x_preloaded_rst = 1'b1;
-        end
+      if ( (w_cycles_q == D - (PIPE_REGS + 1)) & reg_enable & x_preloaded_q) begin
+        hold_rst = (hold_q) ? 1'b1 : 1'b0;
+        count_w_cycles_rst = 1'b1;
+        x_preloaded_rst = 1'b1;
+      end
 
       if (x_cols_lftovr_q != '0 && (flgs_x_buffer_i.full) )
         x_cols_lftovr_rst = 1'b1;

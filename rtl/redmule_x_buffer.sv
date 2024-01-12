@@ -31,7 +31,7 @@ localparam int unsigned          BITW      = fpnew_pkg::fp_width(FpFormat), // N
 localparam int unsigned          H         = Height,
 localparam int unsigned          W         = Width,
 localparam int unsigned          D         = DW/(H*BITW),
-localparam int unsigned          HALF_D    = D/2,
+localparam int unsigned          HALF_D    = (D%2) ? D/2 + 1 : D/2,
 localparam int unsigned          TOT_DEPTH = H*D
 )(
   input  logic                                               clk_i     ,
@@ -49,7 +49,7 @@ logic [$clog2(H)-1:0]       h_index;
 logic [$clog2(D):0]         d_shift, empty_count, empty_count_q;
 logic [$clog2(TOT_DEPTH):0] depth;
 logic [D-1:0][W-1:0][H-1:0][BITW-1:0]     x_pad_q;
-logic [(D/2)-1:0][W-1:0][H-1:0][BITW-1:0] x_buffer_q;
+logic [HALF_D-1:0][W-1:0][H-1:0][BITW-1:0] x_buffer_q;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
   if(~rst_ni) begin
@@ -81,7 +81,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
       for (int w = 0; w < W; w++) begin
         for (int h = 0; h < H; h++) begin
           for (int d = 0; d < D; d++)
-    	    x_pad_q[d][w][h] <= (d < HALF_D) ? x_pad_q[d+2][w][h] : '0;
+    	    x_pad_q[d][w][h] <= (d < HALF_D - 1) ? x_pad_q[d+2][w][h] : '0;
           for (int dd = 0; dd < HALF_D; dd++)
     	    x_buffer_q[dd][w][h] <= x_pad_q[dd][w][h];
         end
