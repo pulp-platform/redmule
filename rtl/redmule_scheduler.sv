@@ -174,10 +174,10 @@ logic [$clog2(D):0] w_cycles_q,
 logic [$clog2(H):0] w_rows_lftovr;
 logic [STRB-1:0] strb;
 logic [$clog2(D)-1:0] x_slots_q;
-fpnew_pkg::fp_format_e input_cast_src_fmt ,
-                       input_cast_dst_fmt ,
-                       output_cast_src_fmt,
-                       output_cast_dst_fmt;
+fpnew_pkg::fp_format_e input_cast_src_fmt , input_cast_src_fmt_q,
+                       input_cast_dst_fmt , input_cast_dst_fmt_q,
+                       output_cast_src_fmt, output_cast_src_fmt_q,
+                       output_cast_dst_fmt, output_cast_dst_fmt_q;
 
 // JMP = 32 if streamer ports are 256 bit wide and parallelism is 32 bit
 localparam int unsigned JMP    = (4*DATA_W/ADDR_W) - 4;
@@ -830,6 +830,27 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : y_loaded
   end
 end
 
+always_ff @(posedge clk_i or negedge rst_ni) begin : cast_registers
+  if (~rst_ni) begin
+    input_cast_src_fmt_q  <= redmule_pkg::FPFORMAT;
+    input_cast_dst_fmt_q  <= redmule_pkg::FPFORMAT;
+    output_cast_src_fmt_q <= redmule_pkg::FPFORMAT;
+    output_cast_dst_fmt_q <= redmule_pkg::FPFORMAT;
+  end else begin
+    if (clear_i || clear_regs) begin
+      input_cast_src_fmt_q  <= redmule_pkg::FPFORMAT;
+      input_cast_dst_fmt_q  <= redmule_pkg::FPFORMAT;
+      output_cast_src_fmt_q <= redmule_pkg::FPFORMAT;
+      output_cast_dst_fmt_q <= redmule_pkg::FPFORMAT;
+    end else begin
+      input_cast_src_fmt_q  <= fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
+      input_cast_dst_fmt_q  <= fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
+      output_cast_src_fmt_q <= fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
+      output_cast_dst_fmt_q <= fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
+    end
+  end
+end
+
 /* Engine control singals binding */
 assign cntrl_engine_o.fma_is_boxed     = 3'b111;
 assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
@@ -841,10 +862,10 @@ assign cntrl_engine_o.op_mod           = 1'b0;
 assign cntrl_engine_o.in_valid         = 1'b1;
 assign cntrl_engine_o.flush            = engine_flush_i;
 assign cntrl_engine_o.out_ready        = 1'b1;
-assign input_cast_src_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
-assign input_cast_dst_fmt              = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
-assign output_cast_src_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][14:12]);
-assign output_cast_dst_fmt             = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][17:15]);
+assign input_cast_src_fmt              = input_cast_src_fmt_q;
+assign input_cast_dst_fmt              = input_cast_dst_fmt_q;
+assign output_cast_src_fmt             = output_cast_src_fmt_q;
+assign output_cast_dst_fmt             = output_cast_dst_fmt_q;
 
 assign gate_en_o    = gate_comb;
 assign w_load_o     = w_loaded;
