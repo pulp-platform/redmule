@@ -45,7 +45,7 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 78fb8fc8a6f2c376554562c47755b4d0febaba25
+    revision: 4823e503851eb7e8cc765a58621d767a01d6a77b
     version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
@@ -61,8 +61,8 @@ packages:
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: ddc154424187dff42a8fcec946c768ceb13f13de
-    version: 1.6.4
+    revision: 389bd7fb1975d2df1546910c5f220c668122e646
+    version: 1.6.5
     source:
       Git: https://github.com/pulp-platform/hwpe-stream.git
     dependencies:
