@@ -110,7 +110,7 @@
 #define REDMULE_FMT  16
 #define ARRAY_HEIGHT 4
 #define PIPE_REGS    3
-#define ARRAY_WIDTH  12 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
+#define ARRAY_WIDTH  8 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
 
 // Base address
 #define REDMULE_BASE_ADD 0x00100000

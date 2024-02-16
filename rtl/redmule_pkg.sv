@@ -35,7 +35,7 @@ package redmule_pkg;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
   parameter int unsigned            ARRAY_HEIGHT = 4;
   parameter int unsigned            PIPE_REGS    = 3;
-  parameter int unsigned            ARRAY_WIDTH  = 12; /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
+  parameter int unsigned            ARRAY_WIDTH  = 8; /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
   parameter int unsigned            TOT_DEPTH    = DATAW/BITW;
   parameter int unsigned            DEPTH        = TOT_DEPTH/ARRAY_HEIGHT;
   parameter int unsigned            STRB         = DATA_W/8;
