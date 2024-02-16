@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Scheduler
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_scheduler
   import fpnew_pkg::*;
@@ -26,12 +12,12 @@ module redmule_scheduler
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned Height      = ARRAY_HEIGHT,
-parameter  int unsigned Width       = ARRAY_WIDTH ,
-parameter  int unsigned NumPipeRegs = PIPE_REGS   ,
-localparam int unsigned D           = TOT_DEPTH   ,
-localparam int unsigned H           = Height      ,
-localparam int unsigned W           = Width
+  parameter  int unsigned Height      = ARRAY_HEIGHT,
+  parameter  int unsigned Width       = ARRAY_WIDTH ,
+  parameter  int unsigned NumPipeRegs = PIPE_REGS   ,
+  localparam int unsigned D           = TOT_DEPTH   ,
+  localparam int unsigned H           = Height      ,
+  localparam int unsigned W           = Width
 )(
   /********************************************************/
   /*                        Inputs                        */
@@ -148,7 +134,7 @@ logic [1:0] transfer_count_d,
 logic [31:0] x_rows_offs_d,
              x_rows_offs_q,
              x_cols_offs_d,
-             x_cols_offs_q; 
+             x_cols_offs_q;
 logic [15:0] w_loaded_d, w_loaded_q,
              w_iters_d, w_iters_q,
              tot_w_loaded_d, tot_w_loaded_q,
@@ -164,7 +150,7 @@ logic [$clog2(H):0] h_shift_d,
                     d_shift_d,
                     d_shift_q;
 logic w_cols_lftovr_en,
-      w_cols_lftovr_rst, 
+      w_cols_lftovr_rst,
       x_cols_lftovr_en,
       x_cols_lftovr_rst;
 logic [$clog2(D):0] w_cycles_q,
@@ -183,49 +169,67 @@ fpnew_pkg::fp_format_e input_cast_src_fmt ,
 localparam int unsigned JMP    = NumByte*(DATA_W/MemDw - 1);
 localparam int unsigned NBYTES = BITW/8;
 
-typedef enum logic [3:0] {ENGINE_IDLE, PRELOAD_Y, LOAD_Y, X_REQ, W_REQ, STORE_REQ, FIRST_LOAD, WAIT, WAIT_ONE, WAIT_TWO, LOAD_X, LOAD_W, STORE, SKIP_W} redmule_fsm_state;
-redmule_fsm_state current, next;
+typedef enum logic [3:0] {
+  ENGINE_IDLE,
+  PRELOAD_Y,
+  LOAD_Y,
+  X_REQ,
+  W_REQ,
+  STORE_REQ,
+  FIRST_LOAD,
+  WAIT,
+  WAIT_ONE,
+  WAIT_TWO,
+  LOAD_X,
+  LOAD_W,
+  STORE,
+  SKIP_W
+} redmule_fsm_state_e;
+
+redmule_fsm_state_e current, next;
 
 always_comb begin : address_gen_signals
-  // Here we initialize the streamer source signals 
+  // Here we initialize the streamer source signals
   // for the X stream source
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[X_ADDR] + x_rows_offs_q + x_cols_offs_q;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len       = (x_rows_lftovr_q == 0) ? W : x_rows_lftovr_q;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len        = 32'd1;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride     = 32'd0;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len        = W;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride     = reg_file_i.hwpe_params[X_D1_STRIDE];
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride     = '0;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
+                                                                      + x_rows_offs_q + x_cols_offs_q;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = (x_rows_lftovr_q == 0) ?
+                                                                    W : x_rows_lftovr_q;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = 'd1;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = 'd0;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
     // Here we initialize the streamer source signals
     // for the W stream source
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[W_ADDR];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len       = reg_file_i.hwpe_params[W_TOT_LEN];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len        = reg_file_i.hwpe_params[W_ITERS][31:16];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride     = reg_file_i.hwpe_params[W_D0_STRIDE];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len        = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride     = JMP;
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride     = 32'd0;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[W_D0_STRIDE];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
     // Here we initialize the streamer source signals
     // for the Y stream source
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len       = reg_file_i.hwpe_params[Z_TOT_LEN];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len        = W;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride     = reg_file_i.hwpe_params[Z_D0_STRIDE];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len        = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_stride     = JMP; 
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d2_stride     = reg_file_i.hwpe_params[Z_D2_STRIDE];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[Z_TOT_LEN];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[Z_D0_STRIDE];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
     // Here we initialize the streamer sink signals for
     // the Z stream sink
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr     = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len       = reg_file_i.hwpe_params[Z_TOT_LEN];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len        = W;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride     = reg_file_i.hwpe_params[Z_D0_STRIDE];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len        = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride     = JMP;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_stride     = reg_file_i.hwpe_params[Z_D2_STRIDE];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[Z_TOT_LEN];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = W;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[Z_D0_STRIDE];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
 end
 
@@ -237,7 +241,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
   if(~rst_ni) begin
     current <= ENGINE_IDLE;
   end else begin
-    if (clear_i || clear_regs || cntrl_scheduler_i.rst) 
+    if (clear_i || clear_regs || cntrl_scheduler_i.rst)
       current <= ENGINE_IDLE;
     else
       current <= next;
@@ -248,7 +252,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_weights_loaded
   if(~rst_ni) begin
     tot_w_loaded_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       tot_w_loaded_q <= '0;
     else
       tot_w_loaded_q <= tot_w_loaded_d;
@@ -259,7 +263,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_x_loaded
   if(~rst_ni) begin
     tot_x_loaded_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       tot_x_loaded_q <= '0;
     else
       tot_x_loaded_q <= tot_x_loaded_d;
@@ -270,7 +274,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_y_loaded
   if(~rst_ni) begin
     tot_y_loaded_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       tot_y_loaded_q <= '0;
     else
       tot_y_loaded_q <= tot_y_loaded_d;
@@ -281,7 +285,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : tot_z_stored
   if(~rst_ni) begin
     tot_z_stored_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       tot_z_stored_q <= '0;
     else
       tot_z_stored_q <= tot_z_stored_d;
@@ -292,7 +296,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : w_load_counter
   if(~rst_ni) begin
     w_loaded_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       w_loaded_q <= '0;
     else
       w_loaded_q <= w_loaded_d;
@@ -316,7 +320,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : transfer_counter
   if(~rst_ni) begin
     transfer_count_q <= '0;
   end else begin
-    if (clear_i || clear_regs || transfer_rst) 
+    if (clear_i || clear_regs || transfer_rst)
       transfer_count_q <= '0;
     else
       transfer_count_q <= transfer_count_d;
@@ -464,13 +468,13 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : y_rows_leftover_flag
 end
 assign y_rows_lftovr_o = y_rows_lftovr_q;
 
-always_ff @(posedge clk_i or negedge rst_ni) begin 
+always_ff @(posedge clk_i or negedge rst_ni) begin
   if(~rst_ni) begin
     tot_x_read_q <= '0;
   end else begin
     if (clear_i || clear_regs)
       tot_x_read_q <= '0;
-    else 
+    else
       tot_x_read_q <= tot_x_read_d;
   end
 end
@@ -479,7 +483,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : wait_states_counter
   if(~rst_ni) begin
     n_waits_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       n_waits_q <= '0;
     else
       n_waits_q <= n_waits_d;
@@ -505,7 +509,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : new_weight_reg
   if(~rst_ni) begin
     new_w_q <= '0;
   end else begin
-    if (clear_i || clear_regs) 
+    if (clear_i || clear_regs)
       new_w_q <= '0;
     else
       new_w_q <= new_w_d;
@@ -750,7 +754,7 @@ logic [H-1:0][$clog2(D)-1:0] shift_count_q;
 logic [$clog2(H)-1:0] counter_index;
 logic [H-1:0] en_w, w_rst;
 
-always_ff @(posedge clk_i or negedge rst_ni) begin 
+always_ff @(posedge clk_i or negedge rst_ni) begin
   if(~rst_ni) begin
     en_w <= '0;
   end else begin
@@ -873,7 +877,7 @@ assign x_rows_clk_gate_en = (reg_file_i.hwpe_params[X_ITERS][31:16] > 'd1) ?    
                                                                            : 1'b1; // If M < L we need to clock gate the whole computation
 
 assign x_rows_lftovr_en = ((x_rows_iter_d == reg_file_i.hwpe_params[X_ITERS][31:16] - 1 && w_cols_d == '0)
-                           || (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && current == X_REQ))
+                           || (reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1 && current == X_REQ))
                           && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0
                           && x_rows_lftovr_q == '0;
 
@@ -927,7 +931,7 @@ cntrl_streamer_o.output_cast_dst_fmt            = output_cast_dst_fmt;
 x_rows_rst      = 1'b0;
 x_cols_rst      = 1'b0;
 
-// Other default signals 
+// Other default signals
 load_x_en          = 1'b0;
 load_x_rst         = 1'b0;
 load_y_en          = 1'b0;
@@ -1018,7 +1022,7 @@ clear_regs       = 1'b0;
         if (reg_file_i.hwpe_params[OP_SELECTION][0]) begin
           next = PRELOAD_Y;
           z_buffer_clk_en = 1'b1;
-          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0)
+          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0)
             y_rows_lftovr_en = 1'b1;
         end else
           next = X_REQ;
@@ -1033,7 +1037,7 @@ clear_regs       = 1'b0;
       if (y_fifo_valid_i && y_fifo_strb_i == '1 && !flgs_z_buffer_i.loaded) begin
         y_buffer_load_o = 1'b1;
         z_buffer_clk_en = 1'b1;
-      end 
+      end
       if (flgs_z_buffer_i.loaded) begin
         next = X_REQ;
         y_preloaded_en = 1'b1;
@@ -1068,7 +1072,7 @@ clear_regs       = 1'b0;
     FIRST_LOAD: begin
       hold_en = 1'b1;
       flgs_scheduler_o.x_ready = 1'b1;
-      if (x_valid_i && x_strb_i == '1) begin 
+      if (x_valid_i && x_strb_i == '1) begin
         cntrl_x_buffer_o.load = 1'b1;
         x_buffer_clk_en = 1'b1;
       end
@@ -1093,14 +1097,14 @@ clear_regs       = 1'b0;
            else
              next = W_REQ;
         end
-        0: begin 
+        0: begin
            next = LOAD_W;
         end
       endcase
       if (!cntrl_scheduler_i.first_load) begin
         x_cols_offs_d = '0;
         x_rows_offs_d = x_rows_offs_q + reg_file_i.hwpe_params[X_ROWS_OFFS];
-      end 
+      end
     end
 
     SKIP_W: begin
@@ -1193,7 +1197,7 @@ clear_regs       = 1'b0;
 
       if (skip_w_q)
         skip_w_rst = 1'b1;
-        
+
       if (w_valid_i == 1'b1 && w_strb_i == '1) begin
         w_loaded = 1'b1;
         count_w_cycles_en = (!count_w_cycles_q & x_preloaded_q) ? 1'b1 : 1'b0;
@@ -1215,9 +1219,12 @@ clear_regs       = 1'b0;
 
         if (loading_x_q)
           next = LOAD_X;
-        else if ( ((loading_y_q && !flgs_z_buffer_i.loaded)                                                                                                           ||
-                  (y_preloaded_q && flgs_z_buffer_i.y_pushed && !(reg_file_i.hwpe_params[W_ITERS][15:0] == 16'b1 && reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1)) ||  //if only one iteration is needed to completely load Y, we skip the LOAD_Y state
-                   (flgs_x_buffer_i.full && !y_loaded_q && y_fifo_valid_i))                                                                                           &&
+        else if ( ((loading_y_q && !flgs_z_buffer_i.loaded) ||
+                  (y_preloaded_q && flgs_z_buffer_i.y_pushed &&
+                  !(reg_file_i.hwpe_params[W_ITERS][15:0] == 'd1 &&
+                    // if only one iteration is needed to completely load Y, we skip the LOAD_Y state
+                    reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1)) ||
+                   (flgs_x_buffer_i.full && !y_loaded_q && y_fifo_valid_i)) &&
                    reg_file_i.hwpe_params[OP_SELECTION][0]
                 ) begin
           next = LOAD_Y;
@@ -1238,11 +1245,13 @@ clear_regs       = 1'b0;
           next = STORE;
           n_waits_d = '0;
           store_count_d = '0;
-          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 && store_rows_lftovr_q == '0)
+          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1 &&
+              reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 &&
+              store_rows_lftovr_q == '0)
             store_rows_lftovr_en = 1'b1;
         end else begin
           next = WAIT;
-          
+
           if (cntrl_scheduler_i.first_load) begin
             x_buffer_clk_en = 1'b1;
             cntrl_x_buffer_o.blck_shift = 1'b1;
@@ -1268,7 +1277,7 @@ clear_regs       = 1'b0;
 
       if (!shift_lock_q)
         shift_lock_en = 1'b1;
-      
+
       if (flgs_x_buffer_i.full || tot_x_loaded_q == W) begin
         load_x_rst = 1'b1;
       end
@@ -1278,7 +1287,7 @@ clear_regs       = 1'b0;
         transfer_count_d = transfer_count_q + 1;
         tot_x_loaded_d = tot_x_loaded_q + 1;
       end
-      
+
       if (tot_x_loaded_d == ((x_rows_lftovr_q == '0) ? W : x_rows_lftovr_q)) begin
         tot_x_loaded_d = '0;
         load_x_rst = 1'b1;
@@ -1297,7 +1306,7 @@ clear_regs       = 1'b0;
           n_waits_d = '0;
         end
       end
-    
+
       if (flgs_streamer_i.w_stream_source_flags.ready_start) begin
           if (x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16])
               cntrl_streamer_o.w_stream_source_ctrl.req_start = 1'b0;
@@ -1310,16 +1319,15 @@ clear_regs       = 1'b0;
       n_waits_d = n_waits_q + 1;
       flgs_scheduler_o.y_ready = 1'b1;
       load_y_en = (loading_y_q) ? 1'b0 : 1'b1;
-      
+
       if (!shift_lock_q)
         shift_lock_en = 1'b1;
-      
+
       if (flgs_z_buffer_i.loaded || tot_y_loaded_q == W - 1) begin
         load_y_rst = (loading_y_q) ? 1'b1 : 1'b0;
         y_preloaded_rst = (y_preloaded_q) ? 1'b1 : 1'b0;
         y_cols_iter_d = y_cols_iter_q + 1;
         y_cols_lftovr_rst = (y_cols_lftovr_q != '0) ? 1'b1 : 1'b0;
-
 
         if (y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0] - 1)
           y_rows_iter_d = y_rows_iter_q + 1;
@@ -1346,8 +1354,8 @@ clear_regs       = 1'b0;
         end else if (n_waits_q > 1 || flgs_z_buffer_i.loaded) begin
           next = LOAD_W;
           n_waits_d = '0;
-        end 
-      end            
+        end
+      end
     end
 
     WAIT: begin
@@ -1372,7 +1380,7 @@ clear_regs       = 1'b0;
       end
 
       n_waits_d = n_waits_q + 1;
-        
+
       if (w_cols_q == reg_file_i.hwpe_params[W_ITERS][15:0]) begin
         if ( (reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0) && (w_cols_lftovr == '0) )
           w_cols_lftovr_en = 1'b1;
@@ -1395,11 +1403,11 @@ clear_regs       = 1'b0;
       if (x_cols_lftovr_q != '0 && (flgs_x_buffer_i.full) )
         x_cols_lftovr_rst = 1'b1;
 
-      if (reg_file_i.hwpe_params[X_ITERS][15:0] > 16'd1) begin // X Matrix N dimension is larger than the number of elements we read through the streamer port
+      if (reg_file_i.hwpe_params[X_ITERS][15:0] > 'd1) begin // X Matrix N dimension is larger than the number of elements we read through the streamer port
 
         if (flgs_streamer_i.x_stream_source_flags.ready_start) begin
 
-          if (flgs_streamer_i.w_stream_source_flags.ready_start) 
+          if (flgs_streamer_i.w_stream_source_flags.ready_start)
             cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b0;
           else begin
 
@@ -1414,11 +1422,11 @@ clear_regs       = 1'b0;
               if (x_cols_lftovr_q != '0 && !loading_x_q)
                 x_cols_lftovr_rst = 1'b1;
             end else if (tot_store_q == reg_file_i.hwpe_params[LEFT_PARAMS][31:16] - 1) begin
-              if (x_cols_iter_q < reg_file_i.hwpe_params[X_ITERS][15:0] && tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1 || reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin
+              if (x_cols_iter_q < reg_file_i.hwpe_params[X_ITERS][15:0] && tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1 || reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1) begin
                 cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
                 tot_x_read_d = tot_x_read_q + 1;
               end
-            end else if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1) begin
+            end else if (reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1) begin
               cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
               tot_x_read_d = tot_x_read_q + 1;
             end
@@ -1452,8 +1460,10 @@ clear_regs       = 1'b0;
               w_iters_d = '0;
           end
         end
-      end else begin // X Matrix N channel is equal or smaller than the number of elements we read from the streamer port
-        if (flgs_streamer_i.w_stream_source_flags.ready_start) 
+      end else begin
+        // X Matrix N channel is equal or smaller than the number
+        // of elements we read from the streamer port
+        if (flgs_streamer_i.w_stream_source_flags.ready_start)
           cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b0;
         else begin
 
@@ -1497,12 +1507,12 @@ clear_regs       = 1'b0;
         if (y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0])
           y_cols_iter_d = 16'd0;
       end
-                                                                 
+
       if (tot_w_loaded_q == reg_file_i.hwpe_params[W_ITERS][31:16] && !loading_x_q) begin
         tot_w_loaded_d = '0;
         w_iters_d = w_iters_q + 1;
       end
-      if (n_waits_q == (NumPipeRegs - 1) && !(flgs_streamer_i.w_stream_source_flags.ready_start & fifo_flgs_i.empty)) begin 
+      if (n_waits_q == (NumPipeRegs - 1) && !(flgs_streamer_i.w_stream_source_flags.ready_start & fifo_flgs_i.empty)) begin
         n_waits_d = '0;
         next = LOAD_W;
         if (last_store) begin
@@ -1513,7 +1523,7 @@ clear_regs       = 1'b0;
         end_computation = 1'b1;
         if (cntrl_scheduler_i.storing) begin
           next = STORE;
-          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 16'b1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 && store_rows_lftovr_q == '0)
+          if (reg_file_i.hwpe_params[X_ITERS][31:16] == 'd1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 && store_rows_lftovr_q == '0)
             store_rows_lftovr_en = 1'b1;
         end else
           next = WAIT;
@@ -1523,14 +1533,13 @@ clear_regs       = 1'b0;
         d_shift_d = '0;
 
         //This handles the case where the number of iterations on X rows is 2 but we have a leftover <= H
-        if (x_cols_iter_d == reg_file_i.hwpe_params[X_ITERS][15:0] - 1 && 
+        if (x_cols_iter_d == reg_file_i.hwpe_params[X_ITERS][15:0] - 1 &&
             !(x_rows_iter_d == '0 && w_iters_d == '0) &&
-            reg_file_i.hwpe_params[X_ITERS][15:0] == 16'd2 && 
-            reg_file_i.hwpe_params[LEFTOVERS][23:16] <= H && 
+            reg_file_i.hwpe_params[X_ITERS][15:0] == 'd2 &&
+            reg_file_i.hwpe_params[LEFTOVERS][23:16] <= H &&
             reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 &&
             tot_x_read_d != reg_file_i.hwpe_params[TOT_X_READ])
           skip_w_en = 1'b1;
-
       end
     end
 
@@ -1569,7 +1578,7 @@ clear_regs       = 1'b0;
             n_waits_d = (W == H*NumPipeRegs) ? (NumPipeRegs - 1) : n_waits_q;
             store_count_d = '0;
             tot_z_stored_d = '0;
-            
+
             if (x_rows_lftovr_q != '0 && store_rows_lftovr_q == '0)
               store_rows_lftovr_en = 1'b1;
 

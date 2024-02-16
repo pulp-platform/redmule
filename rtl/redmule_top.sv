@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Top-Level Module
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 `include "hci/typedef.svh"
 `include "hci/assign.svh"
@@ -190,7 +176,7 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo ( .clk( c
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW             ) 
+  .DW             ( DW             )
 ) i_streamer      (
   .clk_i          ( clk_i          ),
   .rst_ni         ( rst_ni         ),
@@ -213,11 +199,11 @@ redmule_streamer #(
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DATAW_ALIGN   ),
   .FIFO_DEPTH     ( 4             )
-) i_x_buffer_fifo (               
+) i_x_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        (               ),             
+  .flags_o        (               ),
   .push_i         ( x_buffer_d    ),
   .pop_o          ( x_buffer_fifo )
 );
@@ -229,7 +215,7 @@ hwpe_stream_fifo #(
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        ( w_fifo_flgs   ),             
+  .flags_o        ( w_fifo_flgs   ),
   .push_i         ( w_buffer_d    ),
   .pop_o          ( w_buffer_fifo )
 );
@@ -241,7 +227,7 @@ hwpe_stream_fifo #(
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        (               ),             
+  .flags_o        (               ),
   .push_i         ( y_buffer_d    ),
   .pop_o          ( y_buffer_fifo )
 );
@@ -249,11 +235,11 @@ hwpe_stream_fifo #(
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DATAW_ALIGN   ),
   .FIFO_DEPTH     ( 2             )
-) i_z_buffer_fifo (               
+) i_z_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        (               ),             
+  .flags_o        (               ),
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
 );
@@ -356,7 +342,7 @@ logic                               accumulate, engine_flush;
 logic                         [2:0] fma_is_boxed;
 logic                         [1:0] noncomp_is_boxed;
 roundmode_e                         stage1_rnd,
-                                    stage2_rnd; 
+                                    stage2_rnd;
 operation_e                         op1, op2;
 logic                               op_mod;
 logic                               in_tag;
@@ -373,7 +359,7 @@ classmask_e [Width-1:0][Height-1:0] class_mask;
 logic       [Width-1:0][Height-1:0] is_class;
 logic       [Width-1:0][Height-1:0] out_tag;
 logic       [Width-1:0][Height-1:0] out_aux;
-// fpnew_fma Output handshake   
+// fpnew_fma Output handshake
 logic       [Width-1:0][Height-1:0] out_valid;
 logic                               out_ready;
 // fpnew_fma Indication of valid data in flight
@@ -457,7 +443,7 @@ redmule_ctrl        #(
   .Height            ( Height                  ),
   .Width             ( Width                   ),
   .NumPipeRegs       ( NumPipeRegs             )
-) i_control          (                         
+) i_control          (
   .clk_i             ( clk_i                   ),
   .rst_ni            ( rst_ni                  ),
   .test_mode_i       ( test_mode_i             ),
@@ -479,7 +465,7 @@ redmule_ctrl        #(
   .cntrl_scheduler_o ( cntrl_scheduler         ),
   .periph            ( periph                  )
 );
-    
+
 
 /*---------------------------------------------------------------*/
 /* |                        Local FSM                          | */
@@ -489,7 +475,7 @@ redmule_scheduler    #(
   .Height             ( Height              ),
   .Width              ( Width               ),
   .NumPipeRegs        ( NumPipeRegs         )
-) i_scheduler         (                     
+) i_scheduler         (
   .clk_i              ( clk_i               ),
   .rst_ni             ( rst_ni              ),
   .test_mode_i        ( test_mode_i         ),

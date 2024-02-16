@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Input Cast Unit
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 import fpnew_pkg::*;
 import hci_package::*;
@@ -26,7 +12,7 @@ import redmule_pkg::*;
 module redmule_castin #(
   parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
   parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
-  parameter fpnew_pkg::fp_format_e   dst_format   = FPFORMAT,
+  parameter fpnew_pkg::fp_format_e   DstFormat    = FPFORMAT,
   parameter fpnew_pkg::operation_e   Operation    = CAST_OP,
   parameter logic Pipe                            = 1'b0    ,
   localparam int unsigned BW = hci_package::DEFAULT_BW      ,
@@ -61,10 +47,10 @@ logic [NUM_CAST-1:0][WIDTH-1:0] result ,
                                 operand;
 
 generate
-  for (genvar i = 0; i < NUM_CAST; i++) begin : generate_cast_units
+  for (genvar i = 0; i < NUM_CAST; i++) begin : gen_cast_units
 
     assign operand [i] = {{ZEROBITS{1'b0}}, src_int[i*MIN_FMT+:MIN_FMT]};
-  
+
     fpnew_cast_multi #(
       .FpFmtConfig    ( FpFmtConfig  ),
       .IntFmtConfig   ( IntFmtConfig )
@@ -77,7 +63,7 @@ generate
       .op_i           ( Operation      ),
       .op_mod_i       ( '0             ),
       .src_fmt_i      ( src_fmt_i      ),
-      .dst_fmt_i      ( dst_format     ),
+      .dst_fmt_i      ( DstFormat      ),
       .int_fmt_i      ( INT_SRC        ),
       .tag_i          ( '0             ),
       .mask_i         ( '0             ),
@@ -95,11 +81,11 @@ generate
       .out_ready_i    ( '1             ),
       .busy_o         (                )
     );
-  
+
     assign  dst_int [i*WIDTH+:WIDTH] = result[i];
-  
-  end // block: generate_cast_units
-  
+
+  end
+
 endgenerate
 
 assign dst_o = cast_i ? dst_int : src_i;

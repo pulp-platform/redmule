@@ -1,25 +1,11 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Instruction Decoder
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
-module redmule_inst_decoder 
+module redmule_inst_decoder
   import redmule_pkg::*;
   import cv32e40x_pkg::*;
 #(
@@ -60,8 +46,13 @@ logic cfg_ready;
 logic count_rst, count_update;
 logic [NumCfgRegs-1:0] reg_offs;
 
-typedef enum logic [1:0] {Idle, WriteCfg, Trigger} redmule_instr_cfg_state;
-redmule_instr_cfg_state current, next;
+typedef enum logic [1:0] {
+  Idle,
+  WriteCfg,
+  Trigger
+} redmule_instr_cfg_state_e;
+
+redmule_instr_cfg_state_e current, next;
 
 // Xif static binding
 assign xif_compressed_if_i.compressed_ready = 1'b0;
@@ -188,7 +179,7 @@ always_comb begin : cfg_fsm
       if (cfg_ready)
         next = WriteCfg;
     end
-  
+
     WriteCfg: begin
       cfg_req_o.req  = 1'b1;
       cfg_req_o.wen  = 1'b0;

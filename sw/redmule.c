@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: Apache-2.0
- * 
- * Author: Yvan Tortorella  <yvan.tortorella@unibo.it>
- *
- * RedMulE SW test
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 #include <stdint.h>
 #include "redmule_utils.h"
@@ -43,8 +29,8 @@ int main() {
 
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;
-  int i,j;
-  
+  int i, j;
+
   int offload_id_tmp, offload_id;
 
   // Enable RedMulE
@@ -52,29 +38,26 @@ int main() {
 
   hwpe_soft_clear();
 
-  while( ( offload_id_tmp = hwpe_acquire_job() ) < 0);
-  
-  redmule_cfg ((unsigned int) x,
-               (unsigned int) w,
-               (unsigned int) y,
-               m_size, n_size, k_size,
-               (uint8_t) GEMM,
-               (uint8_t) Float16);
+  while ((offload_id_tmp = hwpe_acquire_job()) < 0)
+    ;
+
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
+              (uint8_t)GEMM, (uint8_t)Float16);
 
   // Start RedMulE operation
   hwpe_trigger_job();
 
   // Wait for end of computation
-  asm volatile ("wfi" ::: "memory");
+  asm volatile("wfi" ::: "memory");
 
   // Disable RedMulE
   hwpe_cg_disable();
 
-  errors = redmule16_compare_int(y, golden, m_size*k_size/2);
+  errors = redmule16_compare_int(y, golden, m_size * k_size / 2);
 
-  *(int *) 0x80000000 = errors;
+  *(int *)0x80000000 = errors;
 
-  tfp_printf ("Terminated test with %d errors. See you!\n", errors);
+  tfp_printf("Terminated test with %d errors. See you!\n", errors);
 
   return errors;
 }

@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Row of Computing Elements
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_row
   import fpnew_pkg::*;
@@ -33,13 +19,13 @@ module redmule_row
 )(
   input  logic                                      clk_i             ,
   input  logic                                      rst_ni            ,
-  // Input Elements                                                   
+  // Input Elements
   input  logic                    [H-1:0][BITW-1:0] x_input_i         ,
   input  logic                    [H-1:0][BITW-1:0] w_input_i         ,
   input  logic                           [BITW-1:0] y_bias_i          ,
-  // Output Result                                                    
+  // Output Result
   output logic                           [BITW-1:0] z_output_o        ,
-  // fpnew_fma Input Signals                                          
+  // fpnew_fma Input Signals
   input  logic                    [2:0]             fma_is_boxed_i    ,
   input  logic                    [1:0]             noncomp_is_boxed_i,
   input  fpnew_pkg::roundmode_e                     stage1_rnd_i      ,
@@ -61,10 +47,10 @@ module redmule_row
   output logic                    [H-1:0]           is_class_o     ,
   output TagType                  [H-1:0]           tag_o          ,
   output AuxType                  [H-1:0]           aux_o          ,
-  // fpnew_fma Output handshake   
+  // fpnew_fma Output handshake
   output logic                    [H-1:0]           out_valid_o    ,
   input  logic                                      out_ready_i    ,
-  // fpnew_fma Indication of valid data in flight   
+  // fpnew_fma Indication of valid data in flight
   output logic                    [H-1:0]           busy_o
 );
 
@@ -80,14 +66,14 @@ logic [H-1:0]      [BITW-1:0]       output_q;
 
 // Generate PEs
 generate
-  for (genvar index = 0; index < H; index++) begin : computing_element
+  for (genvar index = 0; index < H; index++) begin : gen_computing_element
     assign input_operands [index][0] = x_input_i [index];
     assign input_operands [index][1] = w_input_i [index];
-    if (index > 0) 
+    if (index > 0)
       assign input_operands [index][2] = output_q [index-1];
     else
       assign input_operands [index][2] = y_bias_i;
-    
+
     redmule_ce         #(
     .FpFormat           ( FpFormat    ),
     .NumPipeRegs        ( NumPipeRegs ),
@@ -123,7 +109,7 @@ generate
       .out_ready_i        ( out_ready_i               ),
       .busy_o             ( busy_o          [index]   )
     );
-  end : computing_element
+  end
 endgenerate
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : intermediate_output_register
@@ -135,7 +121,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : intermediate_output_registe
         output_q [i] <= '0;
       else if (reg_enable_i)
         output_q [i] <= partial_result [i];
-      else 
+      else
         output_q [i] <= output_q [i];
     end
   end

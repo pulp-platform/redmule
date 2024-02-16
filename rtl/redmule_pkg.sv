@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Package
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 `include "hci/typedef.svh"
 `include "hci/assign.svh"
@@ -71,9 +57,9 @@ package redmule_pkg;
   parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   parameter int unsigned W_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   // Number of rows and columns leftovers (8 bits for each)
-  // [31:24] -> X/Y ROWS LEFTOVERS 
+  // [31:24] -> X/Y ROWS LEFTOVERS
   // [23:16] -> X COLUMNS LEFTOVERS
-  // [15:8]  -> W ROWS LEFTOVERS 
+  // [15:8]  -> W ROWS LEFTOVERS
   // [7:0]   -> W/Y COLUMNS LEFTOVERS
   parameter int unsigned LEFTOVERS = 5; // 0x14
   // We keep a register for the remaining params
@@ -213,7 +199,7 @@ package redmule_pkg;
     logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] out_valid;
     logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] busy;
   } flgs_engine_t;
-  
+
   typedef struct packed {
     logic start_fsm;
     logic first_load;

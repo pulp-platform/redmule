@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE X Buffer
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_x_buffer
   import fpnew_pkg::*;
@@ -27,7 +13,7 @@ parameter int unsigned           DW        = 288,
 parameter fpnew_pkg::fp_format_e FpFormat  = fpnew_pkg::FP16,
 parameter int unsigned           Height    = ARRAY_HEIGHT,  // Number of PEs per row
 parameter int unsigned           Width     = ARRAY_WIDTH,   // Number of parallel index
-localparam int unsigned          BITW      = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format                          
+localparam int unsigned          BITW      = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
 localparam int unsigned          H         = Height,
 localparam int unsigned          W         = Width,
 localparam int unsigned          D         = DW/(H*BITW),
@@ -36,7 +22,7 @@ localparam int unsigned          TOT_DEPTH = H*D
 )(
   input  logic                                               clk_i     ,
   input  logic                                               rst_ni    ,
-  input  logic                                               clear_i   , 
+  input  logic                                               clear_i   ,
   input  x_buffer_ctrl_t                                     ctrl_i    ,
   output x_buffer_flgs_t                                     flags_o   ,
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o,
@@ -57,8 +43,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
     x_buffer_q  <= '0;
   end else begin
     if (clear_i) begin
-    	x_pad_q    <= '0;
-    	x_buffer_q <= '0;
+      x_pad_q    <= '0;
+      x_buffer_q <= '0;
     end else
     if (ctrl_i.load) begin
       for (int d = 0; d < D; d++) begin
@@ -76,14 +62,14 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : bump_register
           end
         end
       end
-    end 
+    end
     if (ctrl_i.blck_shift) begin
       for (int w = 0; w < W; w++) begin
         for (int h = 0; h < H; h++) begin
           for (int d = 0; d < D; d++)
-    	    x_pad_q[d][w][h] <= (d < HALF_D) ? x_pad_q[d+2][w][h] : '0;
+            x_pad_q[d][w][h] <= (d < HALF_D) ? x_pad_q[d+2][w][h] : '0;
           for (int dd = 0; dd < HALF_D; dd++)
-    	    x_buffer_q[dd][w][h] <= x_pad_q[dd][w][h];
+            x_buffer_q[dd][w][h] <= x_pad_q[dd][w][h];
         end
       end
     end
@@ -108,7 +94,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
     if (rst_w_load || clear_i)
       w_index <= '0;
     else if (ctrl_i.load)
-      w_index <= w_index + 1; 
+      w_index <= w_index + 1;
     else
       w_index <= w_index;
   end
@@ -187,7 +173,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_counter
   if(~rst_ni) begin
     h_index <= '0;
   end else begin
-    if (rst_h_shift || clear_i) 
+    if (rst_h_shift || clear_i)
       h_index <= '0;
     else if(ctrl_i.h_shift)
       h_index <= h_index + 1;
@@ -197,6 +183,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_counter
 end
 
 // Output assignment
+// verilog_lint: waive-start generate-label
 generate
   for (genvar w = 0; w < W; w++) begin
     for (genvar h = 0; h < H; h++) begin
@@ -204,5 +191,6 @@ generate
     end
   end
 endgenerate
+// verilog_lint: waive-stop generate-label
 
 endmodule : redmule_x_buffer

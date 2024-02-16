@@ -1,3 +1,10 @@
+# Copyright 2023 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Yvan Tortorella <yvan.tortorella@unibo.it>
+#
+
 export BENDER_DIR=$(pwd)/hw/bender
 echo "Exporting bender path to $BENDER_DIR"
 export PATH=$BENDER_DIR:$PATH

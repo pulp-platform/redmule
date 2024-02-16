@@ -1,34 +1,20 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Z Buffer
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_z_buffer
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
-parameter int unsigned           DW       = 288,
-parameter fpnew_pkg::fp_format_e FpFormat = fpnew_pkg::FP16,
-parameter int unsigned           Width    = ARRAY_WIDTH,   // Number of parallel index
-localparam int unsigned          BITW     = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format                          
-localparam int unsigned          W        = Width,
-localparam int unsigned          D        = DW/BITW
+  parameter int unsigned           DW       = 288,
+  parameter fpnew_pkg::fp_format_e FpFormat = fpnew_pkg::FP16,
+  parameter int unsigned           Width    = ARRAY_WIDTH,   // Number of parallel index
+  localparam int unsigned          BITW     = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+  localparam int unsigned          W        = Width,
+  localparam int unsigned          D        = DW/BITW
 )(
   input  logic                             clk_i       ,
   input  logic                             rst_ni      ,
@@ -77,9 +63,9 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : z_buffer
         for (int d = 0; d < D; d++)
           z_buffer_q[d][w] <= (w < W - 1) ? z_buffer_q[d][w+1] : '0;
       end
-	  end else if (ctrl_i.load && ctrl_i.y_valid) begin
-	    for (int d = 0; d < D; d++)
-	      z_buffer_q[D - d - 1][w_index] <= (d < depth && w_index < y_width) ? y_buffer_i[d*BITW+:BITW] : '0;
+    end else if (ctrl_i.load && ctrl_i.y_valid) begin
+      for (int d = 0; d < D; d++)
+        z_buffer_q[D - d - 1][w_index] <= (d < depth && w_index < y_width) ? y_buffer_i[d*BITW+:BITW] : '0;
     end else
       z_buffer_q <= z_buffer_q;
   end
@@ -96,7 +82,7 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : buffer_fill_counter
     if (rst_fill || clear_i)
       fill_shift <= '0;
     else if (ctrl_i.fill)
-      fill_shift <= fill_shift + 1; 
+      fill_shift <= fill_shift + 1;
     else
       fill_shift <= fill_shift;
   end
@@ -122,7 +108,7 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : stored_rows_counter
     if (rst_store || clear_i)
       store_shift <= '0;
     else if (ctrl_i.store)
-      store_shift <= store_shift + 1; 
+      store_shift <= store_shift + 1;
     else
       store_shift <= store_shift;
   end
@@ -132,8 +118,8 @@ always_comb begin : store_shift_rst
   rst_store     = 1'b0;
   flags_o.empty = 1'b0;
   if (store_shift == W) begin
-  	rst_store     = 1'b1;
-  	flags_o.empty = 1'b1;
+    rst_store     = 1'b1;
+    flags_o.empty = 1'b1;
   end else begin
     rst_store     = 1'b0;
     flags_o.empty = 1'b0;
@@ -148,7 +134,7 @@ always_ff @(posedge buffer_clock or negedge rst_ni) begin : row_loaded_counter
     if (rst_w_load || clear_i)
       w_index <= '0;
     else if (ctrl_i.load && ctrl_i.y_valid)
-      w_index <= w_index + 1; 
+      w_index <= w_index + 1;
     else
       w_index <= w_index;
   end
