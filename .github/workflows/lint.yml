@@ -65,9 +65,10 @@ jobs:
             ColumnLimit: 100,
             AlignEscapedNewlines: DontAlign,
             SortIncludes: false,
-            AllowShortFunctionsOnASingleLine: None,
+            AllowShortFunctionsOnASingleLine: true,
             AllowShortIfStatementsOnASingleLine: true,
             AllowShortLoopsOnASingleLine: true
             }
           exclude: |
-            ./sw/inc/*
+            sw/inc/*
+            sw/utils/tinyprintf.h

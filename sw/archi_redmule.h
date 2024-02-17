@@ -52,26 +52,26 @@
 #define __builtin_bitinsert(a,b,c,d) (a | (((b << (32-c)) >> (32-c)) << d))
 
 // RedMulE architecture
-#define ADDR_WIDTH   32
-#define DATA_WIDTH   512
-#define REDMULE_FMT  16
+#define ADDR_WIDTH 32
+#define DATA_WIDTH 512
+#define REDMULE_FMT 16
 #define ARRAY_HEIGHT 8
-#define PIPE_REGS    3
-#define ARRAY_WIDTH  24 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
+#define PIPE_REGS 3
+#define ARRAY_WIDTH 24 /* Superior limit is ARRAY_HEIGHT*PIPE_REGS */
 
 // Base address
 #define REDMULE_BASE_ADD 0x00100000
 
 // Commands
-#define REDMULE_TRIGGER     0x00
-#define REDMULE_ACQUIRE     0x04
-#define REDMULE_FINISHED    0x08
-#define REDMULE_STATUS      0x0C
+#define REDMULE_TRIGGER 0x00
+#define REDMULE_ACQUIRE 0x04
+#define REDMULE_FINISHED 0x08
+#define REDMULE_STATUS 0x0C
 #define REDMULE_RUNNING_JOB 0x10
-#define REDMULE_SOFT_CLEAR  0x14
+#define REDMULE_SOFT_CLEAR 0x14
 
 // Registers
-#define REDMULE_REG_OFFS  0x40
+#define REDMULE_REG_OFFS 0x40
 #define REDMULE_REG_X_PTR 0x00
 #define REDMULE_REG_W_PTR 0x04
 #define REDMULE_REG_Z_PTR 0x08
@@ -81,7 +81,7 @@
 
 // OPs definition
 #define MATMUL 0x0
-#define GEMM   0x1
+#define GEMM 0x1
 #define ADDMAX 0x2
 #define ADDMIN 0x3
 #define MULMAX 0x4
@@ -90,15 +90,15 @@
 #define MINMAX 0x7
 
 // GEMM formats
-#define Float8     0x0
-#define Float16    0x1
-#define Float8Alt  0x2
+#define Float8 0x0
+#define Float16 0x1
+#define Float8Alt 0x2
 #define Float16Alt 0x3
 
 // FP Formats encoding
-#define FP16    0x2
-#define FP8     0x3
+#define FP16 0x2
+#define FP8 0x3
 #define FP16ALT 0x4
-#define FP8ALT  0x5
+#define FP8ALT 0x5
 
 #endif

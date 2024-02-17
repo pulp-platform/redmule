@@ -26,16 +26,16 @@ int main() {
   uint16_t n_size = N_SIZE;
   uint16_t k_size = K_SIZE;
 
-  uint32_t x_addr = *(uint32_t *) &x;
-  uint32_t w_addr = *(uint32_t *) &w;
-  uint32_t y_addr = *(uint32_t *) &y;
+  uint32_t x_addr = *(uint32_t *)&x;
+  uint32_t w_addr = *(uint32_t *)&w;
+  uint32_t y_addr = *(uint32_t *)&y;
   uint32_t cfg_reg0 = ((k_size << 16) | (m_size << 0));
   uint32_t cfg_reg1 = (n_size << 0);
-  asm volatile ("addi t0, %0, 0" :: "r"(x_addr));
-  asm volatile ("addi t1, %0, 0" :: "r"(w_addr));
-  asm volatile ("addi t2, %0, 0" :: "r"(y_addr));
-  asm volatile ("addi t3, %0, 0" :: "r"(cfg_reg0));
-  asm volatile ("addi t4, %0, 0" :: "r"(cfg_reg1));
+  asm volatile("addi t0, %0, 0" :: "r"(x_addr));
+  asm volatile("addi t1, %0, 0" :: "r"(w_addr));
+  asm volatile("addi t2, %0, 0" :: "r"(y_addr));
+  asm volatile("addi t3, %0, 0" :: "r"(cfg_reg0));
+  asm volatile("addi t4, %0, 0" :: "r"(cfg_reg1));
 
   /* mcnfig instruction */
   // asm volatile(
@@ -45,8 +45,7 @@ int main() {
   //             (0x00      <<  7) | \     /* Empty */
   //             (0b0001011 <<  0)   \n"); /* OpCode */
   
-  asm volatile(
-       ".word (0x0       << 25) | \
+  asm volatile(".word (0x0       << 25) | \
               (0b11101   << 20) | \
               (0b11100   << 15) | \
               (0x00      <<  7) | \
@@ -66,8 +65,7 @@ int main() {
   //            (0b001     <<  7) | \     /* Data format */
   //            (0b0101011 <<  0)   \n"); /* OpCode */
 
-  asm volatile(
-       ".word (0b00111   << 27) | \
+  asm volatile(".word (0b00111   << 27) | \
               (0b00      << 25) | \
               (0b00110   << 20) | \
               (0b00101   << 15) | \
@@ -80,11 +78,11 @@ int main() {
   // Wait for end of computation
   asm volatile ("wfi" ::: "memory");
 
-  errors = redmule16_compare_int(y, golden, m_size*k_size/2);
+  errors = redmule16_compare_int(y, golden, m_size*k_size / 2);
 
-  *(int *) 0x80000000 = errors;
+  *(int *)0x80000000 = errors;
 
-  tfp_printf ("Terminated test with %d errors. See you!\n", errors);
+  tfp_printf("Terminated test with %d errors. See you!\n", errors);
 
   return errors;
 }

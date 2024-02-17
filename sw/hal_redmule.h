@@ -10,42 +10,31 @@
 
 #include "tensor_dim.h"
 
-/*
- * 
- * For control, generic configuration register layout,
- * and job-dependent register map, look at redmule_archi.h
- *
- */
-
 /* LOW-LEVEL HAL */
 #define REDMULE_ADDR_BASE REDMULE_BASE_ADD
 #define REDMULE_ADDR_SPACE 0x00000100
 
-// For all the following functions we use __builtin_pulp_OffsetedWrite and __builtin_pulp_OffsetedRead
-// instead of classic load/store because otherwise the compiler is not able to correctly factorize
-// the HWPE base in case several accesses are done, ending up with twice more code
-
 #define HWPE_WRITE(value, offset) *(int *)(REDMULE_ADDR_BASE + offset) = value
 #define HWPE_READ(offset) *(int *)(REDMULE_ADDR_BASE + offset)
 
-static inline void redmule_x_add_set (unsigned int value) {
+static inline void redmule_x_add_set(unsigned int value) {
   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
 }
 
-static inline void redmule_w_add_set (unsigned int value) {
+static inline void redmule_w_add_set(unsigned int value) {
   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_W_PTR);
 }
 
-static inline void redmule_z_add_set (unsigned int value) {
+static inline void redmule_z_add_set(unsigned int value) {
   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
 }
 
-static inline void redmule_mcfg_set (uint32_t mcfg0, uint32_t mcfg1) {
+static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1) {
   HWPE_WRITE(mcfg0, REDMULE_REG_OFFS + REDMULE_MCFG0_PTR);
   HWPE_WRITE(mcfg1, REDMULE_REG_OFFS + REDMULE_MCFG1_PTR);
 }
 
-static inline void redmule_arith_set (uint32_t arith) {
+static inline void redmule_arith_set(uint32_t arith) {
   HWPE_WRITE(arith, REDMULE_REG_OFFS + REDMULE_ARITH_PTR);
 }
 
@@ -74,27 +63,23 @@ static inline void hwpe_cg_disable() {
   return;
 }
 
-void redmule_cfg (unsigned int x,  unsigned int w,  unsigned int z,
-                  uint16_t m_size, uint16_t n_size, uint16_t k_size,
-                  uint8_t gemm_op, uint8_t gemm_fmt){
+void redmule_cfg(unsigned int x,  unsigned int w,  unsigned int z, uint16_t m_size, uint16_t n_size,
+                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt){
 
   uint32_t mcfg_reg0 = 0;
   uint32_t mcfg_reg1 = 0;
   uint32_t arith_reg = 0;
 
-  mcfg_reg0 = (k_size << 16) |
-              (m_size <<  0);
+  mcfg_reg0 = (k_size << 16) | (m_size <<  0);
   mcfg_reg1 = n_size << 0;
 
-  arith_reg = (gemm_op << 10) |
-              (gemm_fmt << 7);
+  arith_reg = (gemm_op << 10) | (gemm_fmt << 7);
 
-  redmule_x_add_set ((unsigned int) x);
-  redmule_w_add_set ((unsigned int) w);
-  redmule_z_add_set ((unsigned int) z);
-  redmule_mcfg_set  ((unsigned int) mcfg_reg0,
-                     (unsigned int) mcfg_reg1);
-  redmule_arith_set ((unsigned int) arith_reg);
+  redmule_x_add_set((unsigned int) x);
+  redmule_w_add_set((unsigned int) w);
+  redmule_z_add_set((unsigned int) z);
+  redmule_mcfg_set((unsigned int) mcfg_reg0, (unsigned int) mcfg_reg1);
+  redmule_arith_set((unsigned int) arith_reg);
   
 }
 

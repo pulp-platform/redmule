@@ -29,7 +29,7 @@ int main() {
 
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;
-  int i,j;
+  int i, j;
   
   int offload_id_tmp, offload_id;
 
@@ -38,29 +38,25 @@ int main() {
 
   hwpe_soft_clear();
 
-  while( ( offload_id_tmp = hwpe_acquire_job() ) < 0);
+  while ((offload_id_tmp = hwpe_acquire_job()) < 0);
   
-  redmule_cfg ((unsigned int) x,
-               (unsigned int) w,
-               (unsigned int) y,
-               m_size, n_size, k_size,
-               (uint8_t) GEMM,
-               (uint8_t) Float16);
+  redmule_cfg((unsigned int) x, (unsigned int) w, (unsigned int) y, m_size, n_size, k_size,
+               (uint8_t) GEMM, (uint8_t) Float16);
 
   // Start RedMulE operation
   hwpe_trigger_job();
 
   // Wait for end of computation
-  asm volatile ("wfi" ::: "memory");
+  asm volatile("wfi" ::: "memory");
 
   // Disable RedMulE
   hwpe_cg_disable();
 
-  errors = redmule16_compare_int(y, golden, m_size*k_size/2);
+  errors = redmule16_compare_int(y, golden, m_size*k_size / 2);
 
-  *(int *) 0x80000000 = errors;
+  *(int *)0x80000000 = errors;
 
-  tfp_printf ("Terminated test with %d errors. See you!\n", errors);
+  tfp_printf("Terminated test with %d errors. See you!\n", errors);
 
   return errors;
 }
