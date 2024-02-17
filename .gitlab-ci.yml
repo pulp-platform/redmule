@@ -1,0 +1,81 @@
+# Copyright 2022 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Yvan Tortorella <yvan.tortorella@unibo.it>
+
+stages:
+  - init
+  - build
+
+init:
+  stage: init
+  script:
+    - cd golden-model; source setup-py.sh
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [ golden-model/venv ]
+
+
+.base:
+  artifacts:
+    when: always
+    expire_in: 1 week
+
+.redmule-build-tpl:
+  extends: .base
+  needs: [ init ]
+  stage: build
+  script:
+    - SETUP_CONFIG=${SETUP_CONFIG}
+    - source scripts/${SETUP_CONFIG}.sh
+    - make update-ips
+    - make build-hw
+
+redmule-build-hwpe:
+  extends: .redmule-build-tpl
+  variables:
+    SETUP_CONFIG: "setup-hwpe"
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [ golden-model/venv, .bender, scripts/compile.tcl, work ]
+
+redmule-build-complex:
+  extends: .redmule-build-tpl
+  variables:
+    SETUP_CONFIG: "setup-complex"
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [ golden-model/venv, .bender, scripts/compile.tcl, work ]
+
+# .redmule-vsim-tpl:
+#   extends: .base
+#   needs: [ build ]
+#   stage: test
+#   script:
+#     - SETUP-CONFIG=${SETUP-CONFIG}
+#     - source scripts/${SETUP-CONFIG}.sh
+#     - make goden M=${M} N=${N} K=${K}
+#     - make clean all
+#     - make run
+#     - '(grep -rn Success!" ./work/transcript)'
+#     - (! grep -rn "Fail!" ./work/transcript)
+# 
+# hwpe-test:
+#   extends: .redmule-vsim-tpl
+#   variables:
+#     SETUP-CONFIG: "setup-hwpe"
+#   parallel:
+#     matrix:
+#       - { M: 32, N=32, K=32 }
+# 
+# complex-test:
+#   extends: .redmule-vsim-tpl
+#   variables:
+#     SETUP-CONFIG: "setup-complex"
+#   parallel:
+#     matrix:
+#       - { M: 32, N=32, K=32 }
