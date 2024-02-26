@@ -8,9 +8,10 @@
 
 # Paths to folders
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-SW             ?= $(mkfile_path)/sw
-BUILD_DIR      ?= $(mkfile_path)/work
-QUESTA         ?= questa-2020.1
+SW             ?= $(mkfile_path)sw
+BUILD_DIR      ?= $(SW)/build
+VSIM_DIR       ?= $(mkfile_path)vsim
+QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
@@ -19,17 +20,17 @@ XLEN           ?= 32
 XTEN           ?= imc
 
 ifeq ($(REDMULE_COMPLEX),1)
-	TEST_SRCS := sw/redmule_complex.c
+	TEST_SRCS := $(SW)/redmule_complex.c
 else
-	TEST_SRCS := sw/redmule.c
+	TEST_SRCS := $(SW)/redmule.c
 endif
 
-compile_script ?= scripts/compile.tcl
-compile_script_synth ?= scripts/synth_compile.tcl
-compile_flag   ?= -suppress 2583 -suppress 13314
+compile_script ?= $(mkfile_path)scripts/compile.tcl
+compile_script_synth ?= $(mkfile_path)scripts/synth_compile.tcl
+compile_flag   ?= +acc -permissive -suppress 2583 -suppress 13314
 
-INI_PATH  = $(mkfile_path)/modelsim.ini
-WORK_PATH = $(BUILD_DIR)
+INI_PATH  = $(mkfile_path)modelsim.ini
+WORK_PATH = $(VSIM_DIR)/work
 
 # Useful Parameters
 gui      ?= 0
@@ -45,12 +46,12 @@ ifeq ($(debug),1)
 endif
 
 # Include directories
-INC += -Isw
-INC += -Isw/inc
-INC += -Isw/utils
+INC += -I$(SW)
+INC += -I$(SW)/inc
+INC += -I$(SW)/utils
 
-BOOTSCRIPT := sw/kernel/crt0.S
-LINKSCRIPT := sw/kernel/link.ld
+BOOTSCRIPT := $(SW)/kernel/crt0.S
+LINKSCRIPT := $(SW)/kernel/link.ld
 
 CC=$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(CC)
@@ -60,21 +61,17 @@ LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartf
 
 # Setup build object dirs
 CRT=$(BUILD_DIR)/crt0.o
-OBJ=$(BUILD_DIR)/$(TEST_SRCS)/verif.o
-BIN=$(BUILD_DIR)/$(TEST_SRCS)/verif
-DUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.dump
-STIM_INSTR=$(BUILD_DIR)/$(TEST_SRCS)/stim_instr.txt
-STIM_DATA=$(BUILD_DIR)/$(TEST_SRCS)/stim_data.txt
-VSIM_INI=$(BUILD_DIR)/$(TEST_SRCS)/modelsim.ini
-VSIM_LIBS=$(BUILD_DIR)/$(TEST_SRCS)/work
+OBJ=$(BUILD_DIR)/verif.o
+BIN=$(BUILD_DIR)/verif
+DUMP=$(BUILD_DIR)/verif.dump
+STIM_INSTR=$(VSIM_DIR)/stim_instr.txt
+STIM_DATA=$(VSIM_DIR)/stim_data.txt
 
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
 	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
-	ln -sfn $(INI_PATH) $(VSIM_INI)
-	ln -sfn $(WORK_PATH) $(VSIM_LIBS)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
@@ -82,11 +79,8 @@ $(BIN): $(CRT) $(OBJ)
 $(CRT): $(BUILD_DIR)
 	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
-$(OBJ): $(TEST_SRCS) $(BUILD_DIR)/$(TEST_SRCS)
+$(OBJ): $(TEST_SRCS)
 	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
-
-$(BUILD_DIR)/$(TEST_SRCS):
-	mkdir -p $(BUILD_DIR)/$(TEST_SRCS)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -94,23 +88,23 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Generate instructions and data stimuli
-all: $(STIM_INSTR) $(STIM_DATA) dis
+sw-build: $(STIM_INSTR) $(STIM_DATA) dis
 
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);          \
-	$(QUESTA) vsim -c vopt_tb -do "run -a" \
-	-gSTIM_INSTR=stim_instr.txt            \
-	-gSTIM_DATA=stim_data.txt              \
+	cd $(VSIM_DIR);                          \
+	$(QUESTA) vsim -c $(tb)_opt -do "run -a" \
+	-gSTIM_INSTR=$(STIM_INSTR)               \
+	-gSTIM_DATA=$(STIM_DATA)                 \
 	-gPROB_STALL=$(P_STALL)
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS); \
-	$(QUESTA) vsim vopt_tb        \
-	-do "add log -r sim:/$(tb)/*" \
+	cd $(VSIM_DIR);               \
+	$(QUESTA) vsim $(tb)_opt      \
+	-do "log -r /*"               \
 	-do "source $(WAVES)"         \
-	-gSTIM_INSTR=stim_instr.txt   \
-	-gSTIM_DATA=stim_data.txt     \
+	-gSTIM_INSTR=$(STIM_INSTR)    \
+	-gSTIM_DATA=$(STIM_DATA)      \
 	-gPROB_STALL=$(P_STALL)
 endif
 
@@ -123,30 +117,26 @@ include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
 
-bender_defs += -D COREV_ASSERT_OFF
-
-bender_targs += -t rtl
-bender_targs += -t test
-bender_targs += -t cv32e40p_exclude_tracer
-
 ifeq ($(REDMULE_COMPLEX),1)
 	tb := redmule_complex_tb
-	WAVES := $(mkfile_path)/wave_complex_xif.do
-	bender_targs += -t redmule_complex
+	WAVES := $(mkfile_path)wave_complex_xif.do
 else
 	tb := redmule_tb
-	WAVES := $(mkfile_path)/wave.do
-	bender_targs += -t redmule_hwpe
+	WAVES := $(mkfile_path)wave.do
 endif
 
-update-ips:
+$(VSIM_DIR):
+	mkdir -p $(VSIM_DIR)
+
+update-ips: $(VSIM_DIR)
 	$(BENDER) update
 	$(BENDER) script vsim          \
 	--vlog-arg="$(compile_flag)"   \
 	--vcom-arg="-pedanticerrors"   \
-	$(bender_targs) $(bender_defs) \
-	$(sim_targs)    $(sim_deps)    \
+	$(common_targs) $(common_defs) \
+	$(sim_targs)                   \
 	> ${compile_script}
+	echo 'vopt $(compile_flag) $(tb) -o $(tb)_opt' >> ${compile_script}
 
 synth-ips:
 	$(BENDER) update
@@ -155,18 +145,11 @@ synth-ips:
 	$(synth_targs) $(synth_defs)   \
 	> ${compile_script_synth}
 
-build-hw: hw-all
+sw-clean:
+	rm -rf $(BUILD_DIR)
 
-sdk:
-	cd $(SW); \
-	git clone \
-	git@github.com:pulp-platform/pulp-sdk.git
-
-clean-sdk:
-	rm -rf $(SW)/pulp-sdk
-
-clean:
-	rm -rf $(BUILD_DIR)/$(TEST_SRCS)
+hw-clean:
+	rm -rf $(VSIM_DIR)
 
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
@@ -183,31 +166,10 @@ golden: golden-clean
 golden-clean:
 	$(MAKE) -C golden-model golden-clean
 
-# Hardware rules
-hw-clean-all:
-	rm -rf $(BUILD_DIR)
-	rm -rf .bender
+clean-all: clean-hw clean-sw
+	rm -rf $(mkfile_path).bender
 	rm -rf $(compile_script)
-	rm -rf modelsim.ini
-	rm -rf *.log
-	rm -rf transcript
-	rm -rf .cached_ipdb.json
 
-hw-opt:
-	$(QUESTA) vopt +acc=npr -o vopt_tb $(tb) -floatparameters+$(tb) -work $(BUILD_DIR)
-
-hw-compile:
-	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
-
-hw-lib:
-	@touch modelsim.ini
-	@mkdir -p $(BUILD_DIR)
-	@$(QUESTA) vlib $(BUILD_DIR)
-	@$(QUESTA) vmap work $(BUILD_DIR)
-	@chmod +w modelsim.ini
-
-hw-clean:
-	rm -rf transcript
-	rm -rf modelsim.ini
-
-hw-all: hw-clean hw-lib hw-compile hw-opt
+hw-build: $(VSIM_DIR)
+	cd $(VSIM_DIR); \
+	$(QUESTA) vsim -c -do 'quit -code [source $(compile_script)]'

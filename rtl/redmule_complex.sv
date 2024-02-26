@@ -5,8 +5,6 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
-`include "hwpe-ctrl/typedef.svh"
-
 module redmule_complex
   import cv32e40x_pkg::*;
   import fpnew_pkg::*;
@@ -31,8 +29,6 @@ module redmule_complex
   parameter type core_data_rsp_t = logic,
   parameter type core_inst_req_t = logic,
   parameter type core_inst_rsp_t = logic,
-  parameter type redmule_data_req_t = logic,
-  parameter type redmule_data_rsp_t = logic,
   // Data format (default is FP16)
   localparam fp_format_e  FpFormat = FPFORMAT,
   // Number of PEs within a row
@@ -58,8 +54,7 @@ module redmule_complex
   output core_inst_req_t               core_inst_req_o   ,
   input  core_data_rsp_t               core_data_rsp_i   ,
   output core_data_req_t               core_data_req_o   ,
-  input  redmule_data_rsp_t            redmule_data_rsp_i,
-  output redmule_data_req_t            redmule_data_req_o
+  hci_core_intf.master                 tcdm
 );
 
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
@@ -68,11 +63,6 @@ localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
 logic busy;
 logic s_clk, s_clk_en;
 logic [N_CORES-1:0][1:0] evt;
-
-// verilog_lint: waive-start line-length
-`HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID_WIDTH-1:0])
-`HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [31:0], logic [ID_WIDTH-1:0])
-// verilog_lint: waive-stop line-length
 
 core_inst_req_t core_inst_req;
 core_inst_rsp_t core_inst_rsp;
@@ -276,21 +266,14 @@ redmule_top #(
   .DW                 ( DW                    ),
   .X_EXT              ( XExt                  ),
   .SysInstWidth       ( SysInstWidth          ),
-  .SysDataWidth       ( SysDataWidth          ),
-  .redmule_data_req_t ( redmule_data_req_t    ),
-  .redmule_data_rsp_t ( redmule_data_rsp_t    ),
-  .redmule_ctrl_req_t ( redmule_ctrl_req_t    ),
-  .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t    )
+  .SysDataWidth       ( SysDataWidth          )
 ) i_redmule_top       (
   .clk_i              ( s_clk                      ),
   .rst_ni             ( rst_ni                     ),
   .test_mode_i        ( test_mode_i                ),
   .evt_o              ( evt                        ),
   .busy_o             ( busy                       ),
-  .data_rsp_i         ( redmule_data_rsp_i         ),
-  .data_req_o         ( redmule_data_req_o         ),
-  .ctrl_req_i         ( '0                         ),
-  .ctrl_rsp_o         (                            ),
+  .tcdm               ( tcdm                       ),
   .xif_issue_if_i     ( core_xif.coproc_issue      ),
   .xif_result_if_o    ( core_xif.coproc_result     ),
   .xif_compressed_if_i( core_xif.coproc_compressed ),

@@ -84,8 +84,7 @@ module redmule_ctrl
     .N_CONTEXT      ( N_CONTEXT    ),
     .N_IO_REGS      ( REDMULE_REGS ),
     .N_GENERIC_REGS ( 6            ),
-    .ID_WIDTH       ( ID_WIDTH     ),
-    .DATA_WIDTH     ( SysDataWidth )
+    .ID_WIDTH       ( ID_WIDTH     )
   ) i_slave         (
     .clk_i          ( clk_i        ),
     .rst_ni         ( rst_ni       ),

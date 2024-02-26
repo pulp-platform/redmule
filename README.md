@@ -247,7 +247,7 @@ make build-hw
 
 To run the available tests, just do:
 ```bash
-make all
+make build-sw
 make run (gui=1 to open the Questasim Graphic User Interface)
 ```
 It is possible to run the test introducing a parametric probability of stall by explicitly passing the `P_STALL` parameter while running the test (`P_STALL=0.1` means a stall probability of the 10%).

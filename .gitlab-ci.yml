@@ -4,78 +4,117 @@
 #
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 
-stages:
-  - init
-  - build
-
-init:
-  stage: init
-  script:
-    - cd golden-model; source setup-py.sh
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths: [ golden-model/venv ]
-
-
 .base:
   artifacts:
     when: always
     expire_in: 1 week
 
+stages:
+  - init
+  - build
+  - test
+
+init:
+  stage: init
+  extends: .base
+  script:
+    - cd golden-model; source setup-py.sh
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - ./golden-model/venv
+
 .redmule-build-tpl:
   extends: .base
-  needs: [ init ]
   stage: build
+  dependencies:
+    - init
   script:
     - SETUP_CONFIG=${SETUP_CONFIG}
     - source scripts/${SETUP_CONFIG}.sh
     - make update-ips
-    - make build-hw
+    - make hw-build
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - ./.bender
+      - ./scripts/compile.tcl
+      - ./vsim/*
 
 redmule-build-hwpe:
   extends: .redmule-build-tpl
   variables:
     SETUP_CONFIG: "setup-hwpe"
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths: [ golden-model/venv, .bender, scripts/compile.tcl, work ]
 
 redmule-build-complex:
   extends: .redmule-build-tpl
   variables:
     SETUP_CONFIG: "setup-complex"
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths: [ golden-model/venv, .bender, scripts/compile.tcl, work ]
 
-# .redmule-vsim-tpl:
-#   extends: .base
-#   needs: [ build ]
-#   stage: test
-#   script:
-#     - SETUP-CONFIG=${SETUP-CONFIG}
-#     - source scripts/${SETUP-CONFIG}.sh
-#     - make goden M=${M} N=${N} K=${K}
-#     - make clean all
-#     - make run
-#     - '(grep -rn Success!" ./work/transcript)'
-#     - (! grep -rn "Fail!" ./work/transcript)
-# 
-# hwpe-test:
-#   extends: .redmule-vsim-tpl
-#   variables:
-#     SETUP-CONFIG: "setup-hwpe"
-#   parallel:
-#     matrix:
-#       - { M: 32, N=32, K=32 }
-# 
-# complex-test:
-#   extends: .redmule-vsim-tpl
-#   variables:
-#     SETUP-CONFIG: "setup-complex"
-#   parallel:
-#     matrix:
-#       - { M: 32, N=32, K=32 }
+.redmule-vsim-tpl:
+  extends: .base
+  stage: test
+  script:
+    - SETUP_CONFIG=${SETUP_CONFIG}
+    - source scripts/${SETUP_CONFIG}.sh
+    - make golden OP=${OP} M=${M} N=${N} K=${K} fp_fmt=${FMT}
+    - make sw-clean sw-build
+    - make run
+    - '(grep -rn "Success!" ./vsim/transcript)'
+    - (! grep -rn "Fail!" ./vsim/transcript)
+
+hwpe-test:
+  extends: .redmule-vsim-tpl
+  dependencies:
+    - redmule-build-hwpe
+  variables:
+    SETUP_CONFIG: "setup-hwpe"
+  parallel:
+    matrix:
+      - { OP: gemm, M: 96, N: 96, K: 96, FMT: FP16 }
+      - { OP: gemm, M: 128, N: 128, K: 128, FMT: FP16 }
+      - { OP: gemm, M: 12, N: 16, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 16, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 48, N: 32, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 30, N: 32, K: 17, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 32, K: 1, FMT: FP16 }
+      - { OP: gemm, M: 31, N: 32, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 17, N: 32, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 31, N: 32, K: 31, FMT: FP16 }
+      - { OP: gemm, M: 17, N: 32, K: 3, FMT: FP16 }
+      - { OP: gemm, M: 5, N: 32, K: 17, FMT: FP16 }
+      - { OP: gemm, M: 5, N: 32, K: 3, FMT: FP16 }
+      - { OP: gemm, M: 36, N: 31, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 12, N: 31, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 23, N: 31, K: 31, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 17, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 20, K: 32, FMT: FP16 }
+
+complex-test:
+  extends: .redmule-vsim-tpl
+  dependencies:
+    - redmule-build-complex
+  variables:
+    SETUP_CONFIG: "setup-complex"
+  parallel:
+    matrix:
+      - { OP: gemm, M: 96, N: 96, K: 96, FMT: FP16 }
+      - { OP: gemm, M: 128, N: 128, K: 128, FMT: FP16 }
+      - { OP: gemm, M: 12, N: 16, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 16, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 48, N: 32, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 30, N: 32, K: 17, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 32, K: 1, FMT: FP16 }
+      - { OP: gemm, M: 31, N: 32, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 17, N: 32, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 31, N: 32, K: 31, FMT: FP16 }
+      - { OP: gemm, M: 17, N: 32, K: 3, FMT: FP16 }
+      - { OP: gemm, M: 5, N: 32, K: 17, FMT: FP16 }
+      - { OP: gemm, M: 5, N: 32, K: 3, FMT: FP16 }
+      - { OP: gemm, M: 36, N: 31, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 12, N: 31, K: 16, FMT: FP16 }
+      - { OP: gemm, M: 23, N: 31, K: 31, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 17, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 24, N: 20, K: 32, FMT: FP16 }

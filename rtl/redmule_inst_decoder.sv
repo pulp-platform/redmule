@@ -16,8 +16,6 @@ module redmule_inst_decoder
   parameter  int unsigned FormatWidth   = 3             ,
   parameter  int unsigned OpCodeWidth   = 7             ,
   parameter  int unsigned NumCfgRegs    = 6             ,
-  parameter  type redmule_ctrl_req_t    = logic         ,
-  parameter  type redmule_ctrl_rsp_t    = logic         ,
   localparam int unsigned SizeLarge     = SysDataWidth/2,
   localparam int unsigned SizeSmall     = SysDataWidth/4
 )(
@@ -28,8 +26,7 @@ module redmule_inst_decoder
   cv32e40x_if_xif.coproc_result    xif_result_if_o,
   cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
   cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
-  output redmule_ctrl_req_t        cfg_req_o      ,
-  input  redmule_ctrl_rsp_t        cfg_rsp_i      ,
+  hwpe_ctrl_intf_periph.master     periph       ,
   input  logic                     cfg_complete_i ,
   output logic                     start_cfg_o
 );
@@ -171,7 +168,12 @@ always_comb begin : cfg_fsm
   count_rst    = '0;
   count_update = '0;
   next       = current;
-  cfg_req_o  = '0;
+  periph.req  = '0;
+  periph.wen  = '0;
+  periph.be   = '0;
+  periph.add  = '0;
+  periph.id   = '0;
+  periph.data = '0;
   start_cfg_o = 1'b0;
 
   case (current)
@@ -181,13 +183,13 @@ always_comb begin : cfg_fsm
     end
 
     WriteCfg: begin
-      cfg_req_o.req  = 1'b1;
-      cfg_req_o.wen  = 1'b0;
-      cfg_req_o.be   = '1;
-      cfg_req_o.add  = 'h40 + 4*reg_offs;
-      cfg_req_o.id   = '0;
-      cfg_req_o.data = cfg_reg_q[reg_offs];
-      if (cfg_rsp_i.gnt) begin
+      periph.req  = 1'b1;
+      periph.wen  = 1'b0;
+      periph.be   = '1;
+      periph.add  = 'h40 + 4*reg_offs;
+      periph.id   = '0;
+      periph.data = cfg_reg_q[reg_offs];
+      if (periph.gnt) begin
         count_update = 1'b1;
         if (reg_offs == NumCfgRegs - 1) begin
           next = Trigger;
@@ -199,14 +201,14 @@ always_comb begin : cfg_fsm
 
     Trigger: begin
       if (cfg_complete_i) begin
-        cfg_req_o.req  = 1'b1;
-        cfg_req_o.wen  = 1'b0;
-        cfg_req_o.be   = '1;
-        cfg_req_o.add  = '0;
-        cfg_req_o.id   = '0;
-        cfg_req_o.data = '0;
+        periph.req  = 1'b1;
+        periph.wen  = 1'b0;
+        periph.be   = '1;
+        periph.add  = '0;
+        periph.id   = '0;
+        periph.data = '0;
 
-        if (cfg_rsp_i.gnt)
+        if (periph.gnt)
           next = Idle;
       end
     end

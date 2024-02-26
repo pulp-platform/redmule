@@ -109,8 +109,10 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
+#ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte0: Error!\n");
+#endif
     }
 
     // Cheching Byte1
@@ -123,8 +125,10 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
+#ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte1: Error!\n");
+#endif
     }
 
     // Cheching Byte2
@@ -137,8 +141,10 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
+#ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte2: Error!\n");
+#endif
     }
 
     // Cheching Byte3
@@ -151,8 +157,10 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
+#ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte3: Error!\n");
+#endif
     }
 
     errors += error;
