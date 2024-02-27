@@ -93,18 +93,20 @@ sw-build: $(STIM_INSTR) $(STIM_DATA) dis
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(VSIM_DIR);                          \
-	$(QUESTA) vsim -c $(tb)_opt -do "run -a" \
-	-gSTIM_INSTR=$(STIM_INSTR)               \
-	-gSTIM_DATA=$(STIM_DATA)                 \
+	cd $(VSIM_DIR);             \
+	$(QUESTA) vsim -c $(tb)_opt \
+	-do "run -a"                \
+	-gSTIM_INSTR=$(STIM_INSTR)  \
+	-gSTIM_DATA=$(STIM_DATA)    \
 	-gPROB_STALL=$(P_STALL)
 else
-	cd $(VSIM_DIR);               \
-	$(QUESTA) vsim $(tb)_opt      \
-	-do "log -r /*"               \
-	-do "source $(WAVES)"         \
-	-gSTIM_INSTR=$(STIM_INSTR)    \
-	-gSTIM_DATA=$(STIM_DATA)      \
+	cd $(VSIM_DIR);            \
+	$(QUESTA) vsim $(tb)_opt   \
+	-do "set Testbench $(tb)"  \
+	-do "log -r /*"            \
+	-do "source $(WAVES)"      \
+	-gSTIM_INSTR=$(STIM_INSTR) \
+	-gSTIM_DATA=$(STIM_DATA)   \
 	-gPROB_STALL=$(P_STALL)
 endif
 
@@ -117,12 +119,12 @@ include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
 
+WAVES := $(mkfile_path)scripts/wave.tcl
+
 ifeq ($(REDMULE_COMPLEX),1)
 	tb := redmule_complex_tb
-	WAVES := $(mkfile_path)wave_complex_xif.do
 else
 	tb := redmule_tb
-	WAVES := $(mkfile_path)wave.do
 endif
 
 $(VSIM_DIR):
@@ -166,10 +168,14 @@ golden: golden-clean
 golden-clean:
 	$(MAKE) -C golden-model golden-clean
 
-clean-all: clean-hw clean-sw
+clean-all: hw-clean sw-clean
 	rm -rf $(mkfile_path).bender
 	rm -rf $(compile_script)
 
 hw-build: $(VSIM_DIR)
 	cd $(VSIM_DIR); \
 	$(QUESTA) vsim -c -do 'quit -code [source $(compile_script)]'
+
+sw-all: sw-clean sw-build
+
+hw-all: hw-clean hw-build
