@@ -22,7 +22,10 @@ K ?= 3
 # FP format
 fp_fmt ?= FP16
 
-check_penv:
+check_sw:
+	mkdir -p $(SW)
+
+check_penv: check_sw
 ifndef PENV
 	$(error PENV is undefined. Make sure to export       \
 	PENV=<absolute_path_your_pythonenv> before continue.)
