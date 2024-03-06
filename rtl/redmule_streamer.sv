@@ -44,7 +44,7 @@ localparam int unsigned REALIGN = 1
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
-  hci_core_intf.master           tcdm      ,
+  hci_core_intf.initiator        tcdm      ,
   
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
@@ -53,21 +53,33 @@ localparam int unsigned REALIGN = 1
 
 // Here the dynamic mux for virtual_tcdm interfaces
 // coming/going from/to the accelerator to/from the memory
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) ldst_tcdm [0:0] ( .clk ( clk_i ) );
+hci_core_intf #(
+  .DW ( DW ),
+  .UW ( UW )
+`ifndef SYNTHESIS
+  ,
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+) ldst_tcdm [0:0] ( .clk ( clk_i ) );
 
-hci_core_assign i_ldst_assign ( .tcdm_slave (ldst_tcdm [0]), .tcdm_master (tcdm) );
+hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm [0]), .tcdm_initiator (tcdm) );
 
 // Virtual internal TCDM interface splitting the upstream TCDM into two channels:
 // * Channel 0 - load channel (from TCDM to stream).
 // * Channel 1 - store channel (from stream to TCDM).
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) virt_tcdm [1:0] ( .clk ( clk_i ) );
+hci_core_intf #(
+  .DW ( DW ),
+  .UW ( UW )
+`ifndef SYNTHESIS
+  ,
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+) virt_tcdm [0:1] ( .clk ( clk_i ) );
 
 hci_core_mux_dynamic #(
-  .NB_IN_CHAN         ( 2         ),
-  .UW                 ( UW        ),
-  .DW                 ( DW        )
+  .NB_IN_CHAN         ( 2         )
 ) i_ldst_mux          (
   .clk_i              ( clk_i     ),
   .rst_ni             ( rst_ni    ),
@@ -87,7 +99,6 @@ hci_core_mux_dynamic #(
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
 hci_core_sink         #(
-  .DATA_WIDTH          ( DW                          ),
   .MISALIGNED_ACCESSES ( REALIGN                     )
 ) i_stream_sink      (                             
   .clk_i               ( clk_i                       ),
@@ -102,8 +113,15 @@ hci_core_sink         #(
 );
 
 // Store interface FIFO buses.
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) z_fifo_d ( .clk ( clk_i ) );
+hci_core_intf #(
+  .DW ( DW ),
+  .UW ( UW )
+`ifndef SYNTHESIS
+  ,
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+) z_fifo_d ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
 
@@ -128,34 +146,40 @@ redmule_castout #(
 );
 
 // Left TCDM buses assignment.
-assign z_fifo_d.req         = zstream2cast.req;
-assign zstream2cast.gnt     = z_fifo_d.gnt;
-assign z_fifo_d.add         = zstream2cast.add;
-assign z_fifo_d.wen         = zstream2cast.wen;
-assign z_fifo_d.be          = zstream2cast.be;
-assign z_fifo_d.boffs       = zstream2cast.boffs;
-assign z_fifo_d.lrdy        = zstream2cast.lrdy;
-assign z_fifo_d.user        = zstream2cast.user;
-assign zstream2cast.r_data  = z_fifo_d.r_data;
-assign zstream2cast.r_valid = z_fifo_d.r_valid;
-assign zstream2cast.r_opc   = z_fifo_d.r_opc;
-assign zstream2cast.r_user  = z_fifo_d.r_user;
+assign z_fifo_d.req          = zstream2cast.req;
+assign zstream2cast.gnt      = z_fifo_d.gnt;
+assign z_fifo_d.add          = zstream2cast.add;
+assign z_fifo_d.wen          = zstream2cast.wen;
+// do not assign z_fifo_d.data <-> zstream2cast.data
+assign z_fifo_d.be           = zstream2cast.be;
+assign z_fifo_d.r_ready      = zstream2cast.r_ready;
+assign z_fifo_d.user         = zstream2cast.user;
+assign z_fifo_d.id           = zstream2cast.id;
+assign zstream2cast.r_data   = z_fifo_d.r_data;
+assign zstream2cast.r_valid  = z_fifo_d.r_valid;
+assign zstream2cast.r_user   = z_fifo_d.r_user;
+assign zstream2cast.r_id     = z_fifo_d.r_id;
+assign z_fifo_d.ereq         = zstream2cast.ereq;
+assign zstream2cast.egnt     = z_fifo_d.egnt;
+assign zstream2cast.r_evalid = z_fifo_d.r_evalid;
+assign z_fifo_d.r_eready     = zstream2cast.r_eready;
+assign z_fifo_d.ecc          = zstream2cast.ecc;
+assign zstream2cast.r_ecc    = z_fifo_d.r_ecc;
 
 // HCI store fifo.
 hci_core_fifo #(
-  .FIFO_DEPTH  ( 2  ),
-  .DW          ( DW )
+  .FIFO_DEPTH  ( 2  )
 ) i_store_fifo (
-  .clk_i       ( clk_i    ),
-  .rst_ni      ( rst_ni   ),
-  .clear_i     ( clear_i  ),
-  .flags_o     (          ),
-  .tcdm_slave  ( z_fifo_d ),
-  .tcdm_master ( z_fifo_q )
+  .clk_i          ( clk_i    ),
+  .rst_ni         ( rst_ni   ),
+  .clear_i        ( clear_i  ),
+  .flags_o        (          ),
+  .tcdm_target    ( z_fifo_d ),
+  .tcdm_initiator ( z_fifo_q )
 );
 
 // Assigning the store FIFO output to the store side of the LD/ST multiplexer.
-hci_core_assign i_store_assign ( .tcdm_slave (z_fifo_q), .tcdm_master (virt_tcdm[1]) );
+hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_tcdm[1]) );
 
 /**************************************** Load Channel ****************************************/
 /* The load channel of the streamer connects the incoming TCDM interface to three different   *
@@ -170,17 +194,22 @@ hci_core_assign i_store_assign ( .tcdm_slave (z_fifo_q), .tcdm_master (virt_tcdm
 // X -> source[0]
 // W -> source[1]
 // Y -> source[2]
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) source [NumStreamSources-1:0] ( .clk ( clk_i ) );
+hci_core_intf #(
+  .DW ( DW ),
+  .UW ( UW )
+`ifndef SYNTHESIS
+    ,
+    .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+    .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+) source [0:NumStreamSources-1] ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
 
 // Dynamic multiplexer splitting the TCDM-side interface into
 // X, W, and Y interfaces
 hci_core_mux_dynamic #(
-  .NB_IN_CHAN         ( NumStreamSources ),
-  .UW                 ( UW               ),
-  .DW                 ( DW               )
+  .NB_IN_CHAN         ( NumStreamSources )
 ) i_source_mux        (
   .clk_i              ( clk_i            ),
   .rst_ni             ( rst_ni           ),
@@ -190,14 +219,21 @@ hci_core_mux_dynamic #(
 );
 
 // One TCDM FIFO and one HCI core source unit per stream channel.
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) load_fifo_d [NumStreamSources-1:0] ( .clk ( clk_i ) );
+hci_core_intf #(
+  .DW ( DW ),
+  .UW ( UW )
+`ifndef SYNTHESIS
+  ,
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) load_fifo_q [NumStreamSources-1:0] ( .clk ( clk_i ) );
+                 .UW ( UW ) ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) tcdm_cast [NumStreamSources-1:0] ( .clk ( clk_i ) );
+                 .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 
@@ -211,18 +247,18 @@ assign source_ctrl[YsourceStreamId] = ctrl_i.y_stream_source_ctrl;
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
-  hci_core_assign i_load_assign ( .tcdm_slave (load_fifo_d[i]), .tcdm_master (source[i]) );
+  hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (source[i]) );
 
   hci_core_fifo #(
-    .FIFO_DEPTH  ( 2  ),
-    .DW          ( DW )
+    .FIFO_DEPTH  ( 4  ) // to avoid protocol violations, as the consumer has a throughput 
+                        // of 1 packet over 4 cycles, we need a depth of 4 elements.
   ) i_load_tcdm_fifo (
-    .clk_i       ( clk_i          ),
-    .rst_ni      ( rst_ni         ),
-    .clear_i     ( clear_i        ),
-    .flags_o     (                ),
-    .tcdm_slave  ( load_fifo_q[i] ),
-    .tcdm_master ( load_fifo_d[i] )
+    .clk_i          ( clk_i          ),
+    .rst_ni         ( rst_ni         ),
+    .clear_i        ( clear_i        ),
+    .flags_o        (                ),
+    .tcdm_target    ( load_fifo_q[i] ),
+    .tcdm_initiator ( load_fifo_d[i] )
   );
 
   // Load cast unit
@@ -243,21 +279,28 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   );
 
   // Left TCDM buses assignment.
-  assign load_fifo_q[i].req   = tcdm_cast[i].req;
-  assign tcdm_cast[i].gnt     = load_fifo_q[i].gnt;
-  assign load_fifo_q[i].add   = tcdm_cast[i].add;
-  assign load_fifo_q[i].wen   = tcdm_cast[i].wen;
-  assign load_fifo_q[i].data  = tcdm_cast[i].data;
-  assign load_fifo_q[i].be    = tcdm_cast[i].be;
-  assign load_fifo_q[i].boffs = tcdm_cast[i].boffs;
-  assign load_fifo_q[i].lrdy  = tcdm_cast[i].lrdy;
-  assign load_fifo_q[i].user  = tcdm_cast[i].user;
-  assign tcdm_cast[i].r_valid = load_fifo_q[i].r_valid;
-  assign tcdm_cast[i].r_opc   = load_fifo_q[i].r_opc;
-  assign tcdm_cast[i].r_user  = load_fifo_q[i].r_user;
+  assign load_fifo_q[i].req      = tcdm_cast[i].req;
+  assign tcdm_cast[i].gnt        = load_fifo_q[i].gnt;
+  assign load_fifo_q[i].add      = tcdm_cast[i].add;
+  assign load_fifo_q[i].wen      = tcdm_cast[i].wen;
+  assign load_fifo_q[i].data     = tcdm_cast[i].data;
+  assign load_fifo_q[i].be       = tcdm_cast[i].be;
+  assign load_fifo_q[i].r_ready  = tcdm_cast[i].r_ready;
+  assign load_fifo_q[i].user     = tcdm_cast[i].user;
+  assign load_fifo_q[i].id       = tcdm_cast[i].id;
+  assign tcdm_cast[i].r_valid    = load_fifo_q[i].r_valid;
+  // do not assign tcdm_cast[i].r_data = load_fifo_q[i].r_data
+  assign tcdm_cast[i].r_opc      = load_fifo_q[i].r_opc;
+  assign tcdm_cast[i].r_user     = load_fifo_q[i].r_user;
+  assign tcdm_cast[i].r_id       = load_fifo_q[i].r_id;
+  assign load_fifo_q[i].ereq     = tcdm_cast[i].ereq;
+  assign tcdm_cast[i].egnt       = load_fifo_q[i].egnt;
+  assign tcdm_cast[i].r_evalid   = load_fifo_q[i].r_evalid;
+  assign load_fifo_q[i].r_eready = tcdm_cast[i].r_eready;
+  assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
+  assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
 
   hci_core_source       #(
-    .DATA_WIDTH          ( DW              ),
     .MISALIGNED_ACCESSES ( REALIGN         )
   ) i_stream_source      (
     .clk_i               ( clk_i           ),

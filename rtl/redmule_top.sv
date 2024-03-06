@@ -44,7 +44,7 @@ localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for
   output logic [N_CORES-1:0][1:0] evt_o      ,
  
   // TCDM master ports for the memory sID_WIDTHe
-  hci_core_intf.master            tcdm       ,
+  hci_core_intf.initiator         tcdm       ,
   // Periph slave port for the controller sID_WIDTHe
   hwpe_ctrl_intf_periph.slave     periph
 );
