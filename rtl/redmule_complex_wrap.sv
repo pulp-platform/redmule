@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51
- * (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- *
- * RedMulE Complex Core Wrap
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_complex_wrap
  import redmule_pkg::*;
@@ -56,19 +42,23 @@ core_default_inst_rsp_t       core_inst_rsp;
 core_default_inst_req_t       core_inst_req;
 core_default_data_rsp_t       core_data_rsp;
 core_default_data_req_t       core_data_req;
-redmule_default_data_rsp_t    redmule_data_rsp;
-redmule_default_data_req_t    redmule_data_req;
+
+hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
 
 always_ff @(posedge clk_i, negedge rst_ni) begin
   if (~rst_ni) begin
     // Inputs
-    test_mode        <= '0;
-    fetch_enable     <= '0;
-    boot_addr        <= '0;
-    irq              <= '0;
-    core_inst_rsp    <= '0;
-    core_data_rsp    <= '0;
-    redmule_data_rsp <= '0;
+    test_mode     <= '0;
+    fetch_enable  <= '0;
+    boot_addr     <= '0;
+    irq           <= '0;
+    core_inst_rsp <= '0;
+    core_data_rsp <= '0;
+    tcdm.gnt      <= '0;
+    tcdm.r_valid  <= '0;
+    tcdm.r_data   <= '0;
+    tcdm.r_opc    <= '0;
+    tcdm.r_user   <= '0;
     // Outputs
     irq_id_o           <= '0;
     irq_ack_o          <= '0;
@@ -78,20 +68,31 @@ always_ff @(posedge clk_i, negedge rst_ni) begin
     redmule_data_req_o <= '0;
   end else begin
     // Inputs
-    test_mode        <= test_mode_i       ;
-    fetch_enable     <= fetch_enable_i    ;
-    boot_addr        <= boot_addr_i       ;
-    irq              <= irq_i             ;
-    core_inst_rsp    <= core_inst_rsp_i   ;
-    core_data_rsp    <= core_data_rsp_i   ;
-    redmule_data_rsp <= redmule_data_rsp_i;
+    test_mode        <= test_mode_i           ;
+    fetch_enable     <= fetch_enable_i        ;
+    boot_addr        <= boot_addr_i           ;
+    irq              <= irq_i                 ;
+    core_inst_rsp    <= core_inst_rsp_i       ;
+    core_data_rsp    <= core_data_rsp_i       ;
+    tcdm.gnt     <= redmule_data_rsp_i.gnt    ;
+    tcdm.r_valid <= redmule_data_rsp_i.r_valid;
+    tcdm.r_data  <= redmule_data_rsp_i.r_data ;
+    tcdm.r_opc   <= redmule_data_rsp_i.r_opc  ;
+    tcdm.r_user  <= redmule_data_rsp_i.r_user ;
     // Outputs
     irq_id_o           <= irq_id          ;
     irq_ack_o          <= irq_ack         ;
     core_sleep_o       <= core_sleep      ;
     core_inst_req_o    <= core_inst_req   ;
     core_data_req_o    <= core_data_req   ;
-    redmule_data_req_o <= redmule_data_req;
+    redmule_data_req_o.req   <= tcdm.req  ;
+    redmule_data_req_o.wen   <= tcdm.wen  ;
+    redmule_data_req_o.be    <= tcdm.be   ;
+    redmule_data_req_o.boffs <= tcdm.boffs;
+    redmule_data_req_o.add   <= tcdm.add  ;
+    redmule_data_req_o.data  <= tcdm.data ;
+    redmule_data_req_o.lrdy  <= tcdm.lrdy ;
+    redmule_data_req_o.user  <= tcdm.user ;
   end
 end
 
@@ -106,9 +107,7 @@ redmule_complex #(
   .core_data_req_t    ( core_default_data_req_t     ),
   .core_data_rsp_t    ( core_default_data_rsp_t     ),
   .core_inst_req_t    ( core_default_inst_req_t     ),
-  .core_inst_rsp_t    ( core_default_inst_rsp_t     ),
-  .redmule_data_req_t ( redmule_default_data_req_t  ),
-  .redmule_data_rsp_t ( redmule_default_data_rsp_t  )
+  .core_inst_rsp_t    ( core_default_inst_rsp_t     )
 ) i_redmule_complex   (
   .clk_i              ( clk_i            ),
   .rst_ni             ( rst_ni           ),
@@ -123,8 +122,7 @@ redmule_complex #(
   .core_inst_req_o    ( core_inst_req    ),
   .core_data_rsp_i    ( core_data_rsp    ),
   .core_data_req_o    ( core_data_req    ),
-  .redmule_data_rsp_i ( redmule_data_rsp ),
-  .redmule_data_req_o ( redmule_data_req )
+  .tcdm               ( tcdm             )
 );
 
 endmodule : redmule_complex_wrap

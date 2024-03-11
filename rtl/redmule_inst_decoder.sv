@@ -1,25 +1,11 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Instruction Decoder
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
-module redmule_inst_decoder 
+module redmule_inst_decoder
   import redmule_pkg::*;
   import cv32e40x_pkg::*;
 #(
@@ -30,8 +16,6 @@ module redmule_inst_decoder
   parameter  int unsigned FormatWidth   = 3             ,
   parameter  int unsigned OpCodeWidth   = 7             ,
   parameter  int unsigned NumCfgRegs    = 6             ,
-  parameter  type redmule_ctrl_req_t    = logic         ,
-  parameter  type redmule_ctrl_rsp_t    = logic         ,
   localparam int unsigned SizeLarge     = SysDataWidth/2,
   localparam int unsigned SizeSmall     = SysDataWidth/4
 )(
@@ -42,8 +26,7 @@ module redmule_inst_decoder
   cv32e40x_if_xif.coproc_result    xif_result_if_o,
   cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
   cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
-  output redmule_ctrl_req_t        cfg_req_o      ,
-  input  redmule_ctrl_rsp_t        cfg_rsp_i      ,
+  hwpe_ctrl_intf_periph.master     periph       ,
   input  logic                     cfg_complete_i ,
   output logic                     start_cfg_o
 );
@@ -60,8 +43,13 @@ logic cfg_ready;
 logic count_rst, count_update;
 logic [NumCfgRegs-1:0] reg_offs;
 
-typedef enum logic [1:0] {Idle, WriteCfg, Trigger} redmule_instr_cfg_state;
-redmule_instr_cfg_state current, next;
+typedef enum logic [1:0] {
+  Idle,
+  WriteCfg,
+  Trigger
+} redmule_instr_cfg_state_e;
+
+redmule_instr_cfg_state_e current, next;
 
 // Xif static binding
 assign xif_compressed_if_i.compressed_ready = 1'b0;
@@ -180,7 +168,12 @@ always_comb begin : cfg_fsm
   count_rst    = '0;
   count_update = '0;
   next       = current;
-  cfg_req_o  = '0;
+  periph.req  = '0;
+  periph.wen  = '0;
+  periph.be   = '0;
+  periph.add  = '0;
+  periph.id   = '0;
+  periph.data = '0;
   start_cfg_o = 1'b0;
 
   case (current)
@@ -188,15 +181,15 @@ always_comb begin : cfg_fsm
       if (cfg_ready)
         next = WriteCfg;
     end
-  
+
     WriteCfg: begin
-      cfg_req_o.req  = 1'b1;
-      cfg_req_o.wen  = 1'b0;
-      cfg_req_o.be   = '1;
-      cfg_req_o.add  = 'h40 + 4*reg_offs;
-      cfg_req_o.id   = '0;
-      cfg_req_o.data = cfg_reg_q[reg_offs];
-      if (cfg_rsp_i.gnt) begin
+      periph.req  = 1'b1;
+      periph.wen  = 1'b0;
+      periph.be   = '1;
+      periph.add  = 'h40 + 4*reg_offs;
+      periph.id   = '0;
+      periph.data = cfg_reg_q[reg_offs];
+      if (periph.gnt) begin
         count_update = 1'b1;
         if (reg_offs == NumCfgRegs - 1) begin
           next = Trigger;
@@ -208,14 +201,14 @@ always_comb begin : cfg_fsm
 
     Trigger: begin
       if (cfg_complete_i) begin
-        cfg_req_o.req  = 1'b1;
-        cfg_req_o.wen  = 1'b0;
-        cfg_req_o.be   = '1;
-        cfg_req_o.add  = '0;
-        cfg_req_o.id   = '0;
-        cfg_req_o.data = '0;
+        periph.req  = 1'b1;
+        periph.wen  = 1'b0;
+        periph.be   = '1;
+        periph.add  = '0;
+        periph.id   = '0;
+        periph.data = '0;
 
-        if (cfg_rsp_i.gnt)
+        if (periph.gnt)
           next = Idle;
       end
     end

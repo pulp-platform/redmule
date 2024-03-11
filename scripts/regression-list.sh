@@ -1,3 +1,11 @@
+# Copyright 2023 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Andrea Belano <andrea.belano@studio.unibo.it>
+# Yvan Tortorella <yvan.tortorella@unibo.it>
+#
+
 #!/bin/bash
 Red="\e[31m"
 Green="\e[32m"
@@ -42,15 +50,16 @@ do
 
     i=$(( $i + 3 ))
     
-    make golden M=$M N=$N K=$K > /dev/null
-    make all 1>/dev/null 2>&1
+    make hw-clean hw-build 1>/dev/null 2>&1
+    make golden M=$M N=$N K=$K 1>/dev/null 2>&1
+    make sw-clean sw-build 1>/dev/null 2>&1
     timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
-            
-    if [[ $? -eq 124 ]]
+    grep -rn "Success!" $PWD/vsim/transcript 1>/dev/null 2>&1
+    if [[ $? -eq 0 ]]
     then
-        echo -e "${Red}ERROR ${EndColor}: M=$M N=$N K=$K"
+       echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
     else
-        echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
+       echo -e "${Red}ERROR ${EndColor}: M=$M N=$N K=$K"
     fi
     
 done

@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Streamer
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_streamer
   import fpnew_pkg::*;
@@ -45,7 +31,7 @@ module redmule_streamer
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
   hci_core_intf.master           tcdm      ,
-  
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
@@ -89,7 +75,7 @@ hci_core_intf #( .DW ( DW ),
 hci_core_sink         #(
   .DATA_WIDTH          ( DW                          ),
   .MISALIGNED_ACCESSES ( REALIGN                     )
-) i_stream_sink      (                             
+) i_stream_sink        (
   .clk_i               ( clk_i                       ),
   .rst_ni              ( rst_ni                      ),
   .test_mode_i         ( test_mode_i                 ),
@@ -116,7 +102,7 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 redmule_castout #(
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
-  .src_format    ( FPFORMAT     )
+  .SrcFormat     ( FPFORMAT     )
 ) i_store_cast   (
   .clk_i                                     ,
   .rst_ni                                    ,
@@ -231,7 +217,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   redmule_castin #(
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
-    .dst_format   ( FPFORMAT     )
+    .DstFormat    ( FPFORMAT     )
   ) i_load_cast   (
     .clk_i                                     ,
     .rst_ni                                    ,
@@ -270,7 +256,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .ctrl_i              ( source_ctrl[i]  ),
     .flags_o             ( source_flags[i] )
   );
-  
+
 end
 
 // Assign flags in the vector to the relative output buses.

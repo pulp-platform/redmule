@@ -1,40 +1,26 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Control Unit
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 import redmule_pkg::*;
 
 module redmule_ctrl
   import hwpe_ctrl_package::*;
 #(
-parameter  int unsigned N_CORES       = 8                      ,
-parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
-parameter  int unsigned ID_WIDTH      = 8                      ,
-parameter  int unsigned SysDataWidth  = 32                     ,
-parameter  int unsigned N_CONTEXT     = 2                      ,
-parameter  int unsigned Height        = 4                      ,
-parameter  int unsigned Width         = 8                      ,
-parameter  int unsigned NumPipeRegs   = 3                      ,
-localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
-localparam int unsigned W_ITERS       = W_ITERS                ,
-localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS            
+  parameter  int unsigned N_CORES       = 8                      ,
+  parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
+  parameter  int unsigned ID_WIDTH      = 8                      ,
+  parameter  int unsigned SysDataWidth  = 32                     ,
+  parameter  int unsigned N_CONTEXT     = 2                      ,
+  parameter  int unsigned Height        = 4                      ,
+  parameter  int unsigned Width         = 8                      ,
+  parameter  int unsigned NumPipeRegs   = 3                      ,
+  localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
+  localparam int unsigned W_ITERS       = W_ITERS                ,
+  localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -76,8 +62,16 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic [15:0] w_rows_iter, w_row_count_d, w_row_count_q;
   logic [15:0] z_storings_d, z_storings_q, tot_stores, issued_store_d, issued_store_q;
 
-  typedef enum logic [2:0] {REDMULE_IDLE, REDMULE_STARTING, REDMULE_COMPUTING, REDMULE_BUFFERING, REDMULE_STORING, REDMULE_FINISHED} redmule_ctrl_state;
-  redmule_ctrl_state current, next;
+  typedef enum logic [2:0] {
+    REDMULE_IDLE,
+    REDMULE_STARTING,
+    REDMULE_COMPUTING,
+    REDMULE_BUFFERING,
+    REDMULE_STORING,
+    REDMULE_FINISHED
+  } redmule_ctrl_state_e;
+
+  redmule_ctrl_state_e current, next;
 
   hwpe_ctrl_package::ctrl_regfile_t reg_file_d, reg_file_q;
   hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
@@ -90,8 +84,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .N_CONTEXT      ( N_CONTEXT    ),
     .N_IO_REGS      ( REDMULE_REGS ),
     .N_GENERIC_REGS ( 6            ),
-    .ID_WIDTH       ( ID_WIDTH     ),
-    .DATA_WIDTH     ( SysDataWidth )
+    .ID_WIDTH       ( ID_WIDTH     )
   ) i_slave         (
     .clk_i          ( clk_i        ),
     .rst_ni         ( rst_ni       ),
@@ -123,7 +116,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     if(~rst_ni) begin
        current <= REDMULE_IDLE;
     end else begin
-      if (clear) 
+      if (clear)
         current <= REDMULE_IDLE;
       else
         current <= next;
@@ -135,14 +128,14 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     if(~rst_ni) begin
       w_row_count_q <= '0;
     end else begin
-      if (clear) 
+      if (clear)
         w_row_count_q <= '0;
       else
         w_row_count_q <= w_row_count_d;
     end
   end
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin 
+  always_ff @(posedge clk_i or negedge rst_ni) begin
     if(~rst_ni) begin
       count_w_q <= 1'b0;
     end else begin
@@ -209,7 +202,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     end else begin
       if (last_w_row_rst || clear)
         last_w_row <= 1'b0;
-      else if (last_w_row_en) 
+      else if (last_w_row_en)
         last_w_row <= 1'b1;
     end
   end
@@ -233,7 +226,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     if(~rst_ni) begin
       z_storings_q <= '0;
     end else begin
-      if (clear || storing_rst) 
+      if (clear || storing_rst)
         z_storings_q <= '0;
       else
         z_storings_q <= z_storings_d;
@@ -263,7 +256,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   /*---------------------------------------------------------------------------------------------*/
   /*                                        Controller FSM                                       */
   /*---------------------------------------------------------------------------------------------*/
-  // This is a local FSM who's only work is to make the first 
+  // This is a local FSM who's only work is to make the first
   // input load operation and to start the redmule_scheduler
   always_comb begin : controller_fsm
     tiler_setback      = 1'b0;
@@ -304,10 +297,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           finish_d = 1'b0;
           next = REDMULE_STARTING;
         end
-        else 
+        else
           next = REDMULE_IDLE;
       end
-  
+
       REDMULE_STARTING: begin
         w_shift_o              = 1'b0;
         cntrl_scheduler_o.first_load = 1'b1;
@@ -321,7 +314,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
       REDMULE_COMPUTING: begin
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
-        
+
         if (w_row_count_d == Height && !count_w_q)
           w_computed_en = 1'b1;
         else if (w_row_count_q == w_rows_iter) begin
@@ -330,7 +323,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           if (!last_w_row)
             last_w_row_en = 1'b1;
         end
-        
+
         case (last_w_row)
           1'b0: begin
             if (w_computed == NumPipeRegs) begin
@@ -357,7 +350,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           end
         endcase
       end
-  
+
       REDMULE_BUFFERING: begin
         z_buffer_clk_en = 1'b1;
         if (last_w_row)
@@ -372,10 +365,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         else
           next = REDMULE_BUFFERING;
       end
-  
+
       REDMULE_STORING: begin
         cntrl_scheduler_o.storing = 1'b1;
-      
+
         if (w_loaded_i)
           w_row_count_d = w_row_count_q + 1;
 
@@ -391,7 +384,7 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
           end
         end
       end
-  
+
       REDMULE_FINISHED: begin
         cntrl_slave.done = 1'b1;
         busy_o           = 1'b0;
@@ -413,6 +406,6 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_slave.evt[7:0];
-  assign clear_o = clear; 
+  assign clear_o = clear;
 
 endmodule : redmule_ctrl

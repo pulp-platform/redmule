@@ -77,6 +77,7 @@ under a local `inc` directory and using [96x64]*[64x64] matrices, first create t
 make clean minmax M=96 N=64 K=64 fp_fmt=FP8 SW=$(pwd)/inc
 ```
 
+A list of tested combinations of the M, N, and K parameters can be found in the `scripts/regression-list.sh` file.
 Each execution of the RedMulE Golden Model also generates data in `.txt` format under the `golden-model`. The example showed above will generate a `minmax` folder containing a `txt` folder with
 the generated matrices.
 
@@ -240,14 +241,14 @@ make update-ips
 
 Build the hardware:
 ```bash
-make build-hw
+make hw-build
 ```
 
 ### Run the test
 
 To run the available tests, just do:
 ```bash
-make all
+make sw-build
 make run (gui=1 to open the Questasim Graphic User Interface)
 ```
 It is possible to run the test introducing a parametric probability of stall by explicitly passing the `P_STALL` parameter while running the test (`P_STALL=0.1` means a stall probability of the 10%).

@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich, University of Bologna
- * Copyright and related rights are licensed under the Solderpad Hardware
- * License, Version 0.51 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- * http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
- * or agreed to in writing, software, hardware and materials distributed under
- * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Author: Yvan Tortorella (yvan.tortorella@unibo.it)
- *
- * RedMulE testbench for Questa simulation
- */
-
-`include "hci/typedef.svh"
-`include "hci/assign.svh"
-`include "hwpe-ctrl/typedef.svh"
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 timeunit 1ps;
 timeprecision 1ps;
@@ -38,8 +24,8 @@ import redmule_pkg::*;
   parameter int unsigned PULP_ZFINX = 0;
   parameter logic [31:0] BASE_ADDR = 32'h1c000000;
   parameter logic [31:0] HWPE_ADDR_BASE_BIT = 20;
-  parameter string STIM_INSTR = "../../stim_instr.txt";
-  parameter string STIM_DATA  = "../../stim_data.txt";
+  parameter string STIM_INSTR = "./stim_instr.txt";
+  parameter string STIM_DATA  = "./stim_data.txt";
 
   // global signals
   logic clk;
@@ -394,12 +380,15 @@ import redmule_pkg::*;
       #(TCP);
     cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] + redmule_tb.i_dummy_dmemory.cnt_rd[1] + redmule_tb.i_dummy_dmemory.cnt_rd[2] + redmule_tb.i_dummy_dmemory.cnt_rd[3] + redmule_tb.i_dummy_dmemory.cnt_rd[4] + redmule_tb.i_dummy_dmemory.cnt_rd[5] + redmule_tb.i_dummy_dmemory.cnt_rd[6] + redmule_tb.i_dummy_dmemory.cnt_rd[7] + redmule_tb.i_dummy_dmemory.cnt_rd[8];
     cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] + redmule_tb.i_dummy_dmemory.cnt_wr[1] + redmule_tb.i_dummy_dmemory.cnt_wr[2] + redmule_tb.i_dummy_dmemory.cnt_wr[3] + redmule_tb.i_dummy_dmemory.cnt_wr[4] + redmule_tb.i_dummy_dmemory.cnt_wr[5] + redmule_tb.i_dummy_dmemory.cnt_wr[6] + redmule_tb.i_dummy_dmemory.cnt_wr[7] + redmule_tb.i_dummy_dmemory.cnt_wr[8];
-    $display("cnt_rd=%-8d", cnt_rd);
-    $display("cnt_wr=%-8d", cnt_wr);
-    if(errors != 0)
-      $error("errors=%08x", errors);
-    else
-      $display("errors=%08x", errors);
+    $display("[TB] - cnt_rd=%-8d", cnt_rd);
+    $display("[TB] - cnt_wr=%-8d", cnt_wr);
+    if(errors != 0) begin
+      $error("[TB] - errors=%08x", errors);
+      $display("[TB] - Fail!");
+    end else begin
+      $display("[TB] - errors=%08x", errors);
+      $display("[TB] - Success!");
+    end
     $finish;
 
   end

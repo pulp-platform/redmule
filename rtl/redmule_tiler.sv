@@ -1,24 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors:  Yvan Tortorella <yvan.tortorella@unibo.it>
- *           Francesco Conti <f.conti@unibo.it>
- * 
- * RedMulE Tiler
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+// Francesco Conti <f.conti@unibo.it>
 
 module redmule_tiler
   import redmule_pkg::*;
@@ -202,11 +187,11 @@ assign config_d.stage_2_op       = FPU_MINMAX;
 assign config_d.input_format     = config_d.gemm_input_fmt == Float16    ? FPU_FP16 :
                                    config_d.gemm_input_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_input_fmt == Float16Alt ? FPU_FP16ALT :
-                                                                        FPU_FP8ALT;
+                                                                           FPU_FP8ALT;
 assign config_d.computing_format = config_d.gemm_output_fmt == Float16    ? FPU_FP16 :
                                    config_d.gemm_output_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_output_fmt == Float16Alt ? FPU_FP16ALT :
-                                                                         FPU_FP8ALT;
+                                                                            FPU_FP8ALT;
 assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
 
 assign config_d.x_d1_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);

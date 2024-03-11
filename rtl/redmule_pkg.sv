@@ -1,27 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Package
- */
-
-`include "hci/typedef.svh"
-`include "hci/assign.svh"
-`include "hwpe-ctrl/typedef.svh"
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 import fpnew_pkg::*;
 import hci_package::*;
@@ -29,7 +11,7 @@ import hwpe_stream_package::*;
 
 package redmule_pkg;
 
-  parameter int unsigned            DATA_W       = 544; // TCDM port dimension (in bits)
+  parameter int unsigned            DATA_W       = 288; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
@@ -38,7 +20,7 @@ package redmule_pkg;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
-  parameter int unsigned            ARRAY_HEIGHT = 8;
+  parameter int unsigned            ARRAY_HEIGHT = 4;
   parameter int unsigned            PIPE_REGS    = 3;
   parameter int unsigned            ARRAY_WIDTH  = ARRAY_HEIGHT*PIPE_REGS; // Superior limit, smaller values are allowed.
   parameter int unsigned            TOT_DEPTH    = DATAW/BITW;
@@ -71,9 +53,9 @@ package redmule_pkg;
   parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   parameter int unsigned W_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
   // Number of rows and columns leftovers (8 bits for each)
-  // [31:24] -> X/Y ROWS LEFTOVERS 
+  // [31:24] -> X/Y ROWS LEFTOVERS
   // [23:16] -> X COLUMNS LEFTOVERS
-  // [15:8]  -> W ROWS LEFTOVERS 
+  // [15:8]  -> W ROWS LEFTOVERS
   // [7:0]   -> W/Y COLUMNS LEFTOVERS
   parameter int unsigned LEFTOVERS = 5; // 0x14
   // We keep a register for the remaining params
@@ -213,7 +195,7 @@ package redmule_pkg;
     logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] out_valid;
     logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] busy;
   } flgs_engine_t;
-  
+
   typedef struct packed {
     logic start_fsm;
     logic first_load;
@@ -316,10 +298,23 @@ package redmule_pkg;
     logic [31:0] data;
   } core_default_data_rsp_t;
 
-  `HCI_TYPEDEF_REQ_T(redmule_default_data_req_t, logic [31:0], logic [DATA_W-1:0], logic [DATA_W/8-1:0], logic signed [DATA_W/32-1:0][31:0], logic)
-  `HCI_TYPEDEF_RSP_T(redmule_default_data_rsp_t, logic [DATA_W-1:0], logic)
+  typedef struct packed {
+    logic req;
+    logic wen;
+    logic [DATA_W/8-1:0] be;
+    logic signed [DATA_W/32-1:0][31:0]boffs;
+    logic [31:0] add;
+    logic [DATA_W-1:0] data;
+    logic lrdy;
+    logic user;
+  } redmule_default_data_req_t;
 
-  `HWPE_CTRL_TYPEDEF_REQ_T(redmule_default_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID-1:0])
-  `HWPE_CTRL_TYPEDEF_RSP_T(redmule_default_ctrl_rsp_t, logic [31:0], logic [ID-1:0])
+  typedef struct packed {
+    logic gnt;
+    logic r_valid;
+    logic [DATA_W-1:0] r_data;
+    logic r_opc;
+    logic r_user;
+  } redmule_default_data_rsp_t;
 
 endpackage

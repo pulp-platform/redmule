@@ -1,34 +1,20 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE W Buffer
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_w_buffer
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
-parameter int unsigned  DW       = 288               ,
-parameter fp_format_e   FpFormat = FP16              ,
-parameter int unsigned  Height   = ARRAY_HEIGHT      , // Number of PEs per row
-localparam int unsigned BITW     = fp_width(FpFormat), // Number of bits for the given format                          
-localparam int unsigned H        = Height            ,
-localparam int unsigned D        = DW/BITW
+  parameter int unsigned  DW       = 288               ,
+  parameter fp_format_e   FpFormat = FP16              ,
+  parameter int unsigned  Height   = ARRAY_HEIGHT      , // Number of PEs per row
+  localparam int unsigned BITW     = fp_width(FpFormat), // Number of bits for the given format
+  localparam int unsigned H        = Height            ,
+  localparam int unsigned D        = DW/BITW
 )(
   input  logic                             clk_i     ,
   input  logic                             rst_ni    ,
@@ -63,8 +49,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : w_trailer
         for (int d = 0; d < D; d++)
           w_buffer_q[h][d] <= (d < D - 1) ? w_buffer_q[h][d+1] : '0;
       end
-    end else 
-      w_buffer_q <= w_buffer_q; 
+    end else
+      w_buffer_q <= w_buffer_q;
   end
 end
 
@@ -72,13 +58,13 @@ end
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
   if(~rst_ni) begin
     w_row <= '0;
-  end else begin	
+  end else begin
     if (clear_i || w_row == H )
       w_row <= '0;
     else if (ctrl_i.load)
-      w_row <= w_row + 1; 
+      w_row <= w_row + 1;
     else
-      w_row <= w_row;	
+      w_row <= w_row;
   end
 end
 

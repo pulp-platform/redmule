@@ -1,25 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51
- * (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- *
- * RedMulE Complex Core
- */
-
-`include "hwpe-ctrl/typedef.svh"
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_complex
   import cv32e40x_pkg::*;
@@ -29,35 +13,40 @@ module redmule_complex
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter  core_type_e   CoreType           = CV32X                , // CV32E40P, IBEX, SNITCH, CVA6
-  parameter  int unsigned  ID_WIDTH           = 8                    ,
-  parameter  int unsigned  N_CORES            = 8                    ,
-  parameter  int unsigned  DW                 = DATA_W               , // TCDM port dimension (in bits)
-  parameter  int unsigned  MP                 = DW/redmule_pkg::MemDw,
-  parameter  int unsigned  NumIrqs            = 32                   ,
-  parameter  int unsigned  AddrWidth          = 32                   ,
-  parameter  int unsigned  XPulp              = 0                    ,
-  parameter  int unsigned  FpuPresent         = 0                    ,
-  parameter  int unsigned  Zfinx              = 0                    ,
-  parameter      type      core_data_req_t    = logic                ,
-  parameter      type      core_data_rsp_t    = logic                ,
-  parameter      type      core_inst_req_t    = logic                ,
-  parameter      type      core_inst_rsp_t    = logic                ,
-  parameter      type      redmule_data_req_t = logic                ,
-  parameter      type      redmule_data_rsp_t = logic                ,
-  localparam fp_format_e   FpFormat    = FPFORMAT                    , // Data format (default is FP16)
-  localparam int unsigned  Height      = ARRAY_HEIGHT                , // Number of PEs within a row
-  localparam int unsigned  Width       = ARRAY_WIDTH                 , // Number of parallel rows
-  localparam int unsigned  NumPipeRegs = PIPE_REGS                   , // Number of pipeline registers within each PE
-  localparam pipe_config_t PipeConfig  = DISTRIBUTED                 ,
-  localparam int unsigned  BITW        = fp_width(FpFormat)            // Number of bits for the given format
+  // CV32E40P, IBEX, SNITCH, CVA6
+  parameter core_type_e CoreType = CV32X,
+  parameter int unsigned ID_WIDTH = 8,
+  parameter int unsigned N_CORES = 8,
+  // TCDM port dimension (in bits)
+  parameter int unsigned DW = DATA_W,
+  parameter int unsigned MP = DW/redmule_pkg::MemDw,
+  parameter int unsigned NumIrqs = 32,
+  parameter int unsigned AddrWidth = 32,
+  parameter int unsigned XPulp = 0,
+  parameter int unsigned FpuPresent = 0,
+  parameter int unsigned Zfinx = 0,
+  parameter type core_data_req_t = logic,
+  parameter type core_data_rsp_t = logic,
+  parameter type core_inst_req_t = logic,
+  parameter type core_inst_rsp_t = logic,
+  // Data format (default is FP16)
+  localparam fp_format_e  FpFormat = FPFORMAT,
+  // Number of PEs within a row
+  localparam int unsigned Height = ARRAY_HEIGHT,
+  // Number of parallel rows
+  localparam int unsigned Width = ARRAY_WIDTH,
+  // Number of pipeline registers within each PE
+  localparam int unsigned NumPipeRegs = PIPE_REGS,
+  localparam pipe_config_t PipeConfig  = DISTRIBUTED,
+  // Number of bits for the given format
+  localparam int unsigned BITW = fp_width(FpFormat)
 )(
   input  logic                         clk_i             ,
   input  logic                         rst_ni            ,
   input  logic                         test_mode_i       ,
   input  logic                         fetch_enable_i    ,
-  input  logic    [     AddrWidth-1:0] boot_addr_i       ,
-  input  logic    [       NumIrqs-1:0] irq_i             ,
+  input  logic   [      AddrWidth-1:0] boot_addr_i       ,
+  input  logic   [        NumIrqs-1:0] irq_i             ,
   output logic   [$clog2(NumIrqs)-1:0] irq_id_o          ,
   output logic                         irq_ack_o         ,
   output logic                         core_sleep_o      ,
@@ -65,8 +54,7 @@ module redmule_complex
   output core_inst_req_t               core_inst_req_o   ,
   input  core_data_rsp_t               core_data_rsp_i   ,
   output core_data_req_t               core_data_req_o   ,
-  input  redmule_data_rsp_t            redmule_data_rsp_i,
-  output redmule_data_req_t            redmule_data_req_o
+  hci_core_intf.master                 tcdm
 );
 
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
@@ -75,9 +63,6 @@ localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
 logic busy;
 logic s_clk, s_clk_en;
 logic [N_CORES-1:0][1:0] evt;
-
-`HWPE_CTRL_TYPEDEF_REQ_T(redmule_ctrl_req_t, logic [31:0], logic [31:0], logic [3:0], logic [ID_WIDTH-1:0])
-`HWPE_CTRL_TYPEDEF_RSP_T(redmule_ctrl_rsp_t, logic [31:0], logic [ID_WIDTH-1:0])
 
 core_inst_req_t core_inst_req;
 core_inst_rsp_t core_inst_rsp;
@@ -281,21 +266,14 @@ redmule_top #(
   .DW                 ( DW                    ),
   .X_EXT              ( XExt                  ),
   .SysInstWidth       ( SysInstWidth          ),
-  .SysDataWidth       ( SysDataWidth          ),
-  .redmule_data_req_t ( redmule_data_req_t    ),
-  .redmule_data_rsp_t ( redmule_data_rsp_t    ),
-  .redmule_ctrl_req_t ( redmule_ctrl_req_t    ),
-  .redmule_ctrl_rsp_t ( redmule_ctrl_rsp_t    )
+  .SysDataWidth       ( SysDataWidth          )
 ) i_redmule_top       (
   .clk_i              ( s_clk                      ),
   .rst_ni             ( rst_ni                     ),
   .test_mode_i        ( test_mode_i                ),
   .evt_o              ( evt                        ),
   .busy_o             ( busy                       ),
-  .data_rsp_i         ( redmule_data_rsp_i         ),
-  .data_req_o         ( redmule_data_req_o         ),
-  .ctrl_req_i         ( '0                         ),
-  .ctrl_rsp_o         (                            ),
+  .tcdm               ( tcdm                       ),
   .xif_issue_if_i     ( core_xif.coproc_issue      ),
   .xif_result_if_o    ( core_xif.coproc_result     ),
   .xif_compressed_if_i( core_xif.coproc_compressed ),

@@ -1,50 +1,34 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich and University of Bologna
- *
- * Licensed under the Solderpad Hardware License, Version 0.51 
- * (the "License"); you may not use this file except in compliance 
- * with the License. You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Authors: Yvan Tortorella <yvan.tortorella@unibo.it>
- * 
- * RedMulE Engine
- */
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 module redmule_engine
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
  parameter  fp_format_e   FpFormat    = FP16                         ,
- parameter  int unsigned  Height      = 4                            ,                             // Number of PEs per row
- parameter  int unsigned  Width       = 8                            ,                             // Number of parallel index
+ parameter  int unsigned  Height      = 4                            , // Number of PEs per row
+ parameter  int unsigned  Width       = 8                            , // Number of parallel index
  parameter  int unsigned  NumPipeRegs = 3                            ,
  parameter  pipe_config_t PipeConfig  = DISTRIBUTED                  ,
  parameter  type          TagType     = logic                        ,
  parameter  type          AuxType     = logic                        ,
- localparam int unsigned  BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format                          
+ localparam int unsigned  BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
  localparam int unsigned  H           = Height                       ,
  localparam int unsigned  W           = Width                        ,
  localparam int unsigned  DELAY       = NumPipeRegs+1
 )(
   input  logic                                             clk_i              ,
   input  logic                                             rst_ni             ,
-  // Input Elements                                                           
+  // Input Elements
   input  logic                    [W-1:0][H-1:0][BITW-1:0] x_input_i          , // Inputs to be loaded inside the buffer
-  input  logic                           [H-1:0][BITW-1:0] w_input_i          ,// Weights to be streamed inside the datapath
+  input  logic                           [H-1:0][BITW-1:0] w_input_i          , // Weights to be streamed inside the datapath
   input  logic                    [W-1:0]       [BITW-1:0] y_bias_i           ,
-  // Output Result                                                            
+  // Output Result
   output logic                    [W-1:0]       [BITW-1:0] z_output_o         , // Outputs computations
-  // input  cntrl_engine_t                                         ctrl_i  [W-1:0][H-1:0],
-  // output flgs_engine_t                                          flags_o [W-1:0][H-1:0]
   // Control signal for successive accumulations
   input  logic                                             accumulate_i       ,
   // fpnew_fma Input Signals
@@ -57,19 +41,19 @@ module redmule_engine
   input  logic                                             op_mod_i           ,
   input  TagType                                           tag_i              ,
   input  AuxType                                           aux_i              ,
-  // fpnew_fma Input Handshake                                                
+  // fpnew_fma Input Handshake
   input  logic                                             in_valid_i         ,
   output logic                    [W-1:0][H-1:0]           in_ready_o         ,
   input  logic                                             reg_enable_i       ,
   input  logic                                             flush_i            ,
-  // fpnew_fma Output signals                                                 
+  // fpnew_fma Output signals
   output fpnew_pkg::status_t      [W-1:0][H-1:0]           status_o           ,
   output logic                    [W-1:0][H-1:0]           extension_bit_o    ,
   output fpnew_pkg::classmask_e   [W-1:0][H-1:0]           class_mask_o       ,
   output logic                    [W-1:0][H-1:0]           is_class_o         ,
   output TagType                  [W-1:0][H-1:0]           tag_o              ,
   output AuxType                  [W-1:0][H-1:0]           aux_o              ,
-  // fpnew_fma Output handshake                                               
+  // fpnew_fma Output handshake
   output logic                    [W-1:0][H-1:0]           out_valid_o        ,
   input  logic                                             out_ready_i        ,
   // fpnew_fma Indication of valid data in flight
@@ -87,7 +71,7 @@ logic [W-1:0] row_clk;
 logic [W-1:0]       [BITW-1:0] result, feedback;
 
 generate
-  for (genvar index = 0; index < W; index++) begin
+  for (genvar index = 0; index < W; index++) begin: gen_redmule_rows
   /*--------------------------------------- Array ----------------------------------------*/
     tc_clk_gating i_row_clk_gating (
       .clk_i     ( clk_i                                ),
@@ -131,7 +115,7 @@ generate
       .out_ready_i        ( out_ready_i             ),
       .busy_o             ( busy_o          [index] )
     );
-    
+
     // In case input matrix is bigger than the array, we feedback the partial results to continue the computation
     always_comb begin : partial_product_feedback
       feedback[index] = y_bias_i[index];
@@ -140,7 +124,7 @@ generate
       else
         feedback[index] = y_bias_i[index];
     end
-  end	
+  end
 endgenerate
 
 assign z_output_o = result;

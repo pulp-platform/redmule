@@ -1,22 +1,9 @@
-/*
- * Copyright (C) 2022-2023 ETH Zurich, University of Bologna
- * Copyright and related rights are licensed under the Solderpad Hardware
- * License, Version 0.51 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- * http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
- * or agreed to in writing, software, hardware and materials distributed under
- * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- * SPDX-License-Identifier: SHL-0.51
- *
- * Author: Yvan Tortorella (yvan.tortorella@unibo.it)
- *
- * RedMulE testbench for Questa simulation
- */
-
-`include "hci/typedef.svh"
-`include "hci/assign.svh"
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
 
 timeunit 1ps;
 timeprecision 1ps;
@@ -37,8 +24,8 @@ import redmule_pkg::*;
   parameter int unsigned PULP_ZFINX = 0;
   parameter logic [31:0] BASE_ADDR = 32'h1c000000;
   parameter logic [31:0] HWPE_ADDR_BASE_BIT = 20;
-  parameter string STIM_INSTR = "../../stim_instr.txt";
-  parameter string STIM_DATA  = "../../stim_data.txt";
+  parameter string STIM_INSTR = "./stim_instr.txt";
+  parameter string STIM_DATA  = "./stim_data.txt";
 
   // global signals
   logic clk;
@@ -145,17 +132,13 @@ import redmule_pkg::*;
     logic [31:0] data;
   } core_data_rsp_t;
 
-  `HCI_TYPEDEF_REQ_T(redmule_data_req_t, logic [31:0], logic [DW-1:0], logic [DW/8-1:0], logic signed [DW/32-1:0][31:0], logic)
-  `HCI_TYPEDEF_RSP_T(redmule_data_rsp_t, logic [DW-1:0], logic)
+  hci_core_intf #(.DW(DW)) redmule_tcdm (.clk(clk_i));
 
   core_inst_req_t core_inst_req;
   core_inst_rsp_t core_inst_rsp;
 
   core_data_req_t core_data_req;
   core_data_rsp_t core_data_rsp;
-
-  redmule_data_req_t redmule_data_req;
-  redmule_data_rsp_t redmule_data_rsp;
 
   // bindings
   always_comb begin : bind_periph
@@ -198,20 +181,20 @@ import redmule_pkg::*;
   end
 
   for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
-    assign tcdm[ii].req  = redmule_data_req.req;
-    assign tcdm[ii].add  = redmule_data_req.add + ii*4;
-    assign tcdm[ii].wen  = redmule_data_req.wen;
-    assign tcdm[ii].be   = redmule_data_req.be[(ii+1)*4-1:ii*4];
-    assign tcdm[ii].data = redmule_data_req.data[(ii+1)*32-1:ii*32];
+    assign tcdm[ii].req  = redmule_tcdm.req;
+    assign tcdm[ii].add  = redmule_tcdm.add + ii*4;
+    assign tcdm[ii].wen  = redmule_tcdm.wen;
+    assign tcdm[ii].be   = redmule_tcdm.be[(ii+1)*4-1:ii*4];
+    assign tcdm[ii].data = redmule_tcdm.data[(ii+1)*32-1:ii*32];
     assign tcdm_gnt[ii]     = tcdm[ii].gnt;
     assign tcdm_r_valid[ii] = tcdm[ii].r_valid;
     assign tcdm_r_data[ii]  = tcdm[ii].r_data;
   end
-  assign redmule_data_rsp.gnt     = &tcdm_gnt;
-  assign redmule_data_rsp.r_data  = { >> {tcdm_r_data} };
-  assign redmule_data_rsp.r_valid = &tcdm_r_valid;
-  assign redmule_data_rsp.r_opc   = '0;
-  assign redmule_data_rsp.r_user  = '0;
+  assign redmule_tcdm.gnt     = &tcdm_gnt;
+  assign redmule_tcdm.r_data  = { >> {tcdm_r_data} };
+  assign redmule_tcdm.r_valid = &tcdm_r_valid;
+  assign redmule_tcdm.r_opc   = '0;
+  assign redmule_tcdm.r_user  = '0;
 
   assign tcdm[MP].req  = core_data_req.req &
                          (core_data_req.addr[31:24] != '0) &
@@ -300,9 +283,7 @@ import redmule_pkg::*;
     .core_data_req_t    ( core_data_req_t     ),
     .core_data_rsp_t    ( core_data_rsp_t     ),
     .core_inst_req_t    ( core_inst_req_t     ),
-    .core_inst_rsp_t    ( core_inst_rsp_t     ),
-    .redmule_data_req_t ( redmule_data_req_t  ),
-    .redmule_data_rsp_t ( redmule_data_rsp_t  )
+    .core_inst_rsp_t    ( core_inst_rsp_t     )
   ) i_dut               (
     .clk_i              ( clk              ),
     .rst_ni             ( rst_n            ),
@@ -317,8 +298,7 @@ import redmule_pkg::*;
     .core_inst_req_o    ( core_inst_req    ),
     .core_data_rsp_i    ( core_data_rsp    ),
     .core_data_req_o    ( core_data_req    ),
-    .redmule_data_rsp_i ( redmule_data_rsp ),
-    .redmule_data_req_o ( redmule_data_req )
+    .tcdm               ( redmule_tcdm     )
   );
 
   initial begin
@@ -401,12 +381,15 @@ import redmule_pkg::*;
              redmule_complex_tb.i_dummy_dmemory.cnt_wr[7] +
              redmule_complex_tb.i_dummy_dmemory.cnt_wr[8];
 
-    $display("cnt_rd=%-8d", cnt_rd);
-    $display("cnt_wr=%-8d", cnt_wr);
-    if(errors != 0)
-      $error("errors=%08x", errors);
-    else
-      $display("errors=%08x", errors);
+    $display("[TB] - cnt_rd=%-8d", cnt_rd);
+    $display("[TB] - cnt_wr=%-8d", cnt_wr);
+    if(errors != 0) begin
+      $error("[TB] - errors=%08x", errors);
+      $display("[TB] - Fail!");
+    end else begin
+      $display("[TB] - errors=%08x", errors);
+      $display("[TB] - Success!");
+    end
     $finish;
 
   end
