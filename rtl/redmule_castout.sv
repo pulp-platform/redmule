@@ -30,7 +30,6 @@ module redmule_castout #(
   parameter fpnew_pkg::operation_e   Operation    = CAST_OP,
   parameter logic Pipe                            = 1'b0    ,
   localparam int unsigned BW = hci_package::DEFAULT_BW      ,
-  localparam int unsigned WW = hci_package::DEFAULT_WW      ,
   localparam int unsigned OW = ADDR_W                       ,
   localparam int unsigned UW = hci_package::DEFAULT_UW      ,
   localparam int unsigned WIDTH = fpnew_pkg::maximum(fpnew_pkg::max_fp_width(FpFmtConfig),
