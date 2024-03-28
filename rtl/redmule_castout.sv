@@ -41,18 +41,18 @@ module redmule_castout #(
   input  logic                   rst_ni   ,
   input  logic                   clear_i  ,
   input  logic                   cast_i   ,
-  input  logic [DATA_W-1:0]      src_i    ,
+  input  logic [data_w-1:0]      src_i    ,
   input  fpnew_pkg::fp_format_e  dst_fmt_i,
-  output logic [DATA_W-1:0]      dst_o
+  output logic [data_w-1:0]      dst_o
 );
 
-localparam int unsigned NUM_CAST = DATA_W/BITW;
+localparam int unsigned NUM_CAST = data_w/BITW;
 localparam int unsigned NARRBITW = fpnew_pkg::fp_width(fpnew_pkg::FP8);
 // localparam int unsigned ZEROBITS = WIDTH - NARRBITW;
 localparam int unsigned ZEROBITS = MIN_FMT;
 localparam fpnew_pkg::int_format_e INT_SRC = fpnew_pkg::INT8;
 
-logic [DATA_W-1:0] dst_int,
+logic [data_w-1:0] dst_int,
                    res;
 logic [NUM_CAST-1:0][WIDTH-1:0] result ,
                                 operand;
@@ -99,7 +99,7 @@ generate
   
 endgenerate
 
-assign dst_int = {{DATA_W-DW_CUT{1'b0}}, res[DATA_W-DW_CUT-1:0]};
+assign dst_int = {{data_w-DW_CUT{1'b0}}, res[data_w-DW_CUT-1:0]};
 
 assign dst_o = cast_i ? dst_int : src_i;
 

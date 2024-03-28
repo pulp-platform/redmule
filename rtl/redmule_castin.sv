@@ -41,23 +41,23 @@ module redmule_castin #(
   input  logic                   rst_ni   ,
   input  logic                   clear_i  ,
   input  logic                   cast_i   ,
-  input  logic [DATA_W-1:0]      src_i    ,
+  input  logic [data_w-1:0]      src_i    ,
   input  fpnew_pkg::fp_format_e  src_fmt_i,
-  output logic [DATA_W-1:0]      dst_o
+  output logic [data_w-1:0]      dst_o
 );
 
-localparam int unsigned NUM_CAST = DATA_W/BITW;
+localparam int unsigned NUM_CAST = data_w/BITW;
 localparam int unsigned NARRBITW = fpnew_pkg::fp_width(fpnew_pkg::FP8);
 // localparam int unsigned ZEROBITS = WIDTH - NARRBITW;
 localparam int unsigned ZEROBITS = MIN_FMT;
 localparam fpnew_pkg::int_format_e INT_SRC = fpnew_pkg::INT8;
 
-logic [DATA_W-1:0] src_int;
+logic [data_w-1:0] src_int;
 
-assign src_int[DATA_W-DW_CUT-1:0] = src_i[DATA_W-DW_CUT-1:0];
-assign src_int[DATA_W-1:DATA_W-DW_CUT] = '0;
+assign src_int[data_w-DW_CUT-1:0] = src_i[data_w-DW_CUT-1:0];
+assign src_int[data_w-1:data_w-DW_CUT] = '0;
 
-logic [DATA_W-1:0] dst_int;
+logic [data_w-1:0] dst_int;
 logic [NUM_CAST-1:0][WIDTH-1:0] result ,
                                 operand;
 
