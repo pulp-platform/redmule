@@ -116,7 +116,8 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 redmule_castout #(
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
-  .src_format    ( FPFORMAT     )
+  .src_format    ( FPFORMAT     ),
+  .data_w        ( DW           )
 ) i_store_cast   (
   .clk_i                                     ,
   .rst_ni                                    ,
@@ -231,7 +232,8 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   redmule_castin #(
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
-    .dst_format   ( FPFORMAT     )
+    .dst_format   ( FPFORMAT     ),
+    .data_w       ( DW           )
   ) i_load_cast   (
     .clk_i                                     ,
     .rst_ni                                    ,

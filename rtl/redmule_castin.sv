@@ -29,6 +29,7 @@ module redmule_castin #(
   parameter fpnew_pkg::fp_format_e   dst_format   = FPFORMAT,
   parameter fpnew_pkg::operation_e   Operation    = CAST_OP,
   parameter logic Pipe                            = 1'b0    ,
+  parameter int unsigned             data_w       = DATA_W,
   localparam int unsigned BW = hci_package::DEFAULT_BW      ,
   localparam int unsigned WW = hci_package::DEFAULT_WW      ,
   localparam int unsigned OW = ADDR_W                       ,
