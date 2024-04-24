@@ -26,7 +26,6 @@ module redmule_streamer
   import hwpe_stream_package::*;
 #(
 parameter  int unsigned DW      = 288   ,
-parameter  int unsigned UW      = 1     ,
 parameter  int unsigned AW      = ADDR_W,
 localparam int unsigned REALIGN = 1
 )(
@@ -45,17 +44,21 @@ localparam int unsigned REALIGN = 1
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
-  
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
 );
 
+localparam int unsigned UW = tcdm.UW;
+localparam int unsigned EW = tcdm.EW;
+
 // Here the dynamic mux for virtual_tcdm interfaces
 // coming/going from/to the accelerator to/from the memory
 hci_core_intf #(
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .EW ( EW )
 `ifndef SYNTHESIS
   ,
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
@@ -70,7 +73,8 @@ hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm [0]), .tcdm_initiator (t
 // * Channel 1 - store channel (from stream to TCDM).
 hci_core_intf #(
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .EW ( EW )
 `ifndef SYNTHESIS
   ,
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
@@ -97,10 +101,11 @@ hci_core_mux_dynamic #(
 
 // Sink module that turns the incoming Z stream into TCDM.
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
-hci_core_sink         #(
+                 .UW ( UW ),
+                 .EW ( EW ) ) zstream2cast ( .clk ( clk_i ) );
+hci_ecc_sink         #(
   .MISALIGNED_ACCESSES ( REALIGN                     )
-) i_stream_sink      (                             
+) i_stream_ecc_sink      (
   .clk_i               ( clk_i                       ),
   .rst_ni              ( rst_ni                      ),
   .test_mode_i         ( test_mode_i                 ),
@@ -115,7 +120,8 @@ hci_core_sink         #(
 // Store interface FIFO buses.
 hci_core_intf #(
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .EW ( EW )
 `ifndef SYNTHESIS
   ,
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
@@ -123,7 +129,8 @@ hci_core_intf #(
 `endif
 ) z_fifo_d ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .EW ( EW ) ) z_fifo_q ( .clk ( clk_i ) );
 
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
@@ -196,7 +203,8 @@ hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_
 // Y -> source[2]
 hci_core_intf #(
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .EW ( EW )
 `ifndef SYNTHESIS
     ,
     .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
@@ -204,7 +212,8 @@ hci_core_intf #(
 `endif
 ) source [0:NumStreamSources-1] ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .EW ( EW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
 
 // Dynamic multiplexer splitting the TCDM-side interface into
 // X, W, and Y interfaces
@@ -221,7 +230,8 @@ hci_core_mux_dynamic #(
 // One TCDM FIFO and one HCI core source unit per stream channel.
 hci_core_intf #(
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .EW ( EW )
 `ifndef SYNTHESIS
   ,
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
@@ -230,10 +240,12 @@ hci_core_intf #(
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .EW ( EW ) ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .EW ( EW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 
@@ -300,9 +312,9 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
   assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
 
-  hci_core_source       #(
+  hci_ecc_source       #(
     .MISALIGNED_ACCESSES ( REALIGN         )
-  ) i_stream_source      (
+  ) i_stream_ecc_source      (
     .clk_i               ( clk_i           ),
     .rst_ni              ( rst_ni          ),
     .test_mode_i         ( test_mode_i     ),
