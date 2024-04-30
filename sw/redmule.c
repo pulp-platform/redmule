@@ -26,12 +26,18 @@ int main() {
   uint8_t *w = w_inp;
   uint8_t *y = y_inp;
   uint8_t *z = z_oup; // golden_out //1c010000
+  uint32_t *gold;
 
   uint8_t float_fmt = (SRC_FMT == FP8)       ? (uint8_t)Float8
                       : (SRC_FMT == FP8ALT)  ? (uint8_t)Float8Alt
                       : (SRC_FMT == FP16)    ? (uint8_t)Float16
                       : (SRC_FMT == FP16ALT) ? (uint8_t)Float16Alt
                                              : (uint8_t)Float16;
+
+  int golden_size = (float_fmt == (Float8 | Float8Alt)) ? m_size*k_size/4 : m_size*k_size/2;
+
+  for (int i = 0; i < golden_size; i++)
+    *(gold + i) = golden[i];
 
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;
@@ -65,7 +71,7 @@ int main() {
   if (float_fmt == Float16 || float_fmt == Float16Alt)
     errors = redmule16_compare_int(y, golden, m_size * k_size / 2);
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
-    errors = redmule8_compare_int(y, golden, m_size * k_size / 4);
+    errors = redmule8_compare_int(y, gold, m_size, k_size);
 
   *(int *)0x80000000 = errors;
 

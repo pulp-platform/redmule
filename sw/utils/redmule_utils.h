@@ -80,7 +80,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   return errors;
 }
 
-int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
+int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int m, int k) {
   uint32_t actual_word = 0;
   uint8_t actual_Byte0, actual_Byte1, actual_Byte2, actual_Byte3;
   uint32_t golden_word = 0;
@@ -88,94 +88,99 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   uint32_t actual = 0;
   uint32_t golden = 0;
 
+  #define BytePerWord 4
+  #define FpFormat 8
+  uint32_t jump = k*FpFormat/BytePerWord;
   int errors = 0;
   int error;
 
-  for (int i = 0; i < len; i++) {
-    error = 0;
-    actual_word = *(actual_z + i);
-    golden_word = *(golden_z + i);
+  for (int j = 0; j < m; j++) {
+    for (int i = 0; i < k/4; i++) {
+      error = 0;
+      actual_word = *(actual_z + i + j*jump);
+      golden_word = *(golden_z + i + j);
 
-    // int error = ((actual_word ^ golden_word) & ~IGNORE_BITS_COMPARE) ? 1 : 0;
-    uint8_t diff = 0;
+      // int error = ((actual_word ^ golden_word) & ~IGNORE_BITS_COMPARE) ? 1 : 0;
+      uint8_t diff = 0;
 
-    // Cheching Byte0
-    actual_Byte0 = (uint8_t)(actual_word & 0x000000FF);
-    golden_Byte0 = (uint8_t)(golden_word & 0x000000FF);
+      // Cheching Byte0
+      actual_Byte0 = (uint8_t)(actual_word & 0x000000FF);
+      golden_Byte0 = (uint8_t)(golden_word & 0x000000FF);
 
-    diff = (actual_Byte0 > golden_Byte0)   ? (actual_Byte0 - golden_Byte0)
-           : (actual_Byte0 < golden_Byte0) ? (golden_Byte0 - actual_Byte0)
-                                           : 0;
+      diff = (actual_Byte0 > golden_Byte0)   ? (actual_Byte0 - golden_Byte0)
+             : (actual_Byte0 < golden_Byte0) ? (golden_Byte0 - actual_Byte0)
+                                             : 0;
 
-    if (diff > ERR) {
-      error = 1;
+      if (diff > ERR) {
+        error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte0: Error!\n");
 #endif
-    }
+      }
 
-    // Cheching Byte1
-    actual_Byte1 = (uint8_t)((actual_word >> 8) & 0x000000FF);
-    golden_Byte1 = (uint8_t)((golden_word >> 8) & 0x000000FF);
+      // Cheching Byte1
+      actual_Byte1 = (uint8_t)((actual_word >> 8) & 0x000000FF);
+      golden_Byte1 = (uint8_t)((golden_word >> 8) & 0x000000FF);
 
-    diff = (actual_Byte1 > golden_Byte1)   ? (actual_Byte1 - golden_Byte1)
-           : (actual_Byte1 < golden_Byte1) ? (golden_Byte1 - actual_Byte1)
-                                           : 0;
+      diff = (actual_Byte1 > golden_Byte1)   ? (actual_Byte1 - golden_Byte1)
+             : (actual_Byte1 < golden_Byte1) ? (golden_Byte1 - actual_Byte1)
+                                             : 0;
 
-    if (diff > ERR) {
-      error = 1;
+      if (diff > ERR) {
+        error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte1: Error!\n");
 #endif
-    }
+      }
 
-    // Cheching Byte2
-    actual_Byte2 = (uint8_t)((actual_word >> 16) & 0x000000FF);
-    golden_Byte2 = (uint8_t)((golden_word >> 16) & 0x000000FF);
+      // Cheching Byte2
+      actual_Byte2 = (uint8_t)((actual_word >> 16) & 0x000000FF);
+      golden_Byte2 = (uint8_t)((golden_word >> 16) & 0x000000FF);
+  
+      diff = (actual_Byte2 > golden_Byte2)   ? (actual_Byte2 - golden_Byte2)
+             : (actual_Byte2 < golden_Byte2) ? (golden_Byte2 - actual_Byte2)
+                                             : 0;
 
-    diff = (actual_Byte2 > golden_Byte2)   ? (actual_Byte2 - golden_Byte2)
-           : (actual_Byte2 < golden_Byte2) ? (golden_Byte2 - actual_Byte2)
-                                           : 0;
-
-    if (diff > ERR) {
-      error = 1;
+      if (diff > ERR) {
+        error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte2: Error!\n");
 #endif
-    }
+      }
 
-    // Cheching Byte3
-    actual_Byte3 = (uint8_t)((actual_word >> 24) & 0x000000FF);
-    golden_Byte3 = (uint8_t)((golden_word >> 24) & 0x000000FF);
+      // Cheching Byte3
+      actual_Byte3 = (uint8_t)((actual_word >> 24) & 0x000000FF);
+      golden_Byte3 = (uint8_t)((golden_word >> 24) & 0x000000FF);
 
-    diff = (actual_Byte3 > golden_Byte3)   ? (actual_Byte3 - golden_Byte3)
-           : (actual_Byte3 < golden_Byte3) ? (golden_Byte3 - actual_Byte3)
-                                           : 0;
+      diff = (actual_Byte3 > golden_Byte3)   ? (actual_Byte3 - golden_Byte3)
+             : (actual_Byte3 < golden_Byte3) ? (golden_Byte3 - actual_Byte3)
+                                             : 0;
 
-    if (diff > ERR) {
-      error = 1;
+      if (diff > ERR) {
+        error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
       tfp_printf("Byte3: Error!\n");
 #endif
-    }
-
-    errors += error;
+      }
+  
+      errors += error;
 
 #ifdef DEBUG
     tfp_printf("Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
 #endif
 
 #ifdef VERBOSE
-    if (error) {
-      if (errors == 1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-      tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z + i),
-                 i * 4);
-    }
+      if (error) {
+        if (errors == 1) tfp_printf("  golden     <- actual     @ address    @ index\n");
+        tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z + i),
+                   i * 4);
+      }
 #endif
+    }
   }
   return errors;
 }
