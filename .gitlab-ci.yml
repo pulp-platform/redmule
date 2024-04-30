@@ -63,7 +63,7 @@ redmule-build-complex:
 
 hwpe-test:
   extends: .redmule-vsim-tpl
-  needs: [redmule-build-hwpe]
+  needs: [init, redmule-build-hwpe]
   variables:
     SETUP_CONFIG: "setup-hwpe"
   parallel:
@@ -107,7 +107,7 @@ hwpe-test:
 
 complex-test:
   extends: .redmule-vsim-tpl
-  needs: [redmule-build-complex]
+  needs: [init, redmule-build-complex]
   variables:
     SETUP_CONFIG: "setup-complex"
   parallel:
