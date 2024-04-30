@@ -22,14 +22,12 @@ init:
   artifacts:
     when: always
     expire_in: 1 week
-    paths:
-      - ./golden-model/venv
+    paths: [./golden-model/venv]
 
 .redmule-build-tpl:
   extends: .base
   stage: build
-  dependencies:
-    - init
+  needs: [init]
   script:
     - SETUP_CONFIG=${SETUP_CONFIG}
     - source scripts/${SETUP_CONFIG}.sh
@@ -38,10 +36,7 @@ init:
   artifacts:
     when: always
     expire_in: 1 week
-    paths:
-      - ./.bender
-      - ./scripts/compile.tcl
-      - ./vsim/*
+    paths: [./.bender, ./scripts/compile.tcl, ./vsim/*]
 
 redmule-build-hwpe:
   extends: .redmule-build-tpl
@@ -56,6 +51,7 @@ redmule-build-complex:
 .redmule-vsim-tpl:
   extends: .base
   stage: test
+  needs: [build]
   script:
     - SETUP_CONFIG=${SETUP_CONFIG}
     - source scripts/${SETUP_CONFIG}.sh
