@@ -30,7 +30,7 @@ package redmule_pkg;
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
-  parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned DW_CUT   = DATAW - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
 
   // Register File mapping
   /**********************
