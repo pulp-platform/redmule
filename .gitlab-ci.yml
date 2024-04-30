@@ -18,7 +18,7 @@ init:
   stage: init
   extends: .base
   script:
-    - cd golden-model; source setup-py.sh
+    - cd golden-model; source setup-py.sh; cd ..
   artifacts:
     when: always
     expire_in: 1 week
