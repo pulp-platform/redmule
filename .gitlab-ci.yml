@@ -107,7 +107,7 @@ hwpe-test:
 
 complex-test:
   extends: .redmule-vsim-tpl
-  dependencies: [redmule-build-complex]
+  needs: [redmule-build-complex]
   variables:
     SETUP_CONFIG: "setup-complex"
   parallel:
