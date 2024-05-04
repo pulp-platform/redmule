@@ -83,8 +83,11 @@ generate
   assign tcdm.gnt     = &(tcdm_gnt_i);
   assign tcdm.r_valid = &(tcdm_r_valid_i);
   assign tcdm.r_data  = { >> {tcdm_r_data_i} };
-  assign tcdm.r_opc   = tcdm_r_opc_i;
   assign tcdm.r_user  = tcdm_r_user_i;
+  assign tcdm.r_ecc   = '0;
+  assign tcdm.r_id    = '0;
+  assign tcdm.egnt    = '1;
+  assign tcdm.r_evalid = '0;
 endgenerate
 
 always_comb begin
