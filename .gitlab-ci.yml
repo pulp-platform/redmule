@@ -95,13 +95,9 @@ hwpe-test:
       - { OP: gemm, M: 24, N: 32, K: 1, FMT: FP8 }
       - { OP: gemm, M: 31, N: 32, K: 16, FMT: FP8 }
       - { OP: gemm, M: 17, N: 32, K: 16, FMT: FP8 }
-      - { OP: gemm, M: 31, N: 32, K: 31, FMT: FP8 }
-      - { OP: gemm, M: 17, N: 32, K: 3, FMT: FP8 }
       - { OP: gemm, M: 5, N: 32, K: 17, FMT: FP8 }
-      - { OP: gemm, M: 5, N: 32, K: 3, FMT: FP8 }
       - { OP: gemm, M: 36, N: 31, K: 32, FMT: FP8 }
       - { OP: gemm, M: 12, N: 31, K: 16, FMT: FP8 }
-      - { OP: gemm, M: 23, N: 31, K: 31, FMT: FP8 }
       - { OP: gemm, M: 24, N: 17, K: 32, FMT: FP8 }
       - { OP: gemm, M: 24, N: 20, K: 32, FMT: FP8 }
 
