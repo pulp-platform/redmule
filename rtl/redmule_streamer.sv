@@ -25,9 +25,10 @@ module redmule_streamer
   import hci_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned DW      = 288   ,
-parameter  int unsigned AW      = ADDR_W,
-localparam int unsigned REALIGN = 1
+parameter  int unsigned DW             = 288   ,
+parameter  int unsigned AW             = ADDR_W,
+parameter  int unsigned ECC_CHUNK_SIZE = 32    ,
+localparam int unsigned REALIGN        = 1
 )(
   input logic                    clk_i,
   input logic                    rst_ni,
@@ -52,6 +53,9 @@ localparam int unsigned REALIGN = 1
 
 localparam int unsigned UW = tcdm.UW;
 localparam int unsigned EW = tcdm.EW;
+localparam int unsigned EW_DW     = $clog2(ECC_CHUNK_SIZE)+2;
+localparam int unsigned EW_RQMETA = $clog2(AW+DW/8+UW+1)+2;
+localparam int unsigned EW_RSMETA = $clog2(UW+1)+2;
 
 // Here the dynamic mux for virtual_tcdm interfaces
 // coming/going from/to the accelerator to/from the memory
@@ -147,7 +151,28 @@ hci_core_intf #( .DW ( DW ),
                  .EW ( EW ) ) z_fifo_q ( .clk ( clk_i ) );
 
 logic cast;
+logic [NumStreamSources-1:0][DW-1:0] pre_castin_r_data;
+logic [NumStreamSources-1:0][DW-1:0] post_castin_r_data;
+logic [DW-1:0] pre_castout_data;
+logic [DW-1:0] post_castout_data;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
+
+if (EW > 0) begin: gen_pre_castout_decoder
+    logic [DW/ECC_CHUNK_SIZE-1:0][1:0]  pre_castout_err;
+    for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : data_decoding
+      hsiao_ecc_dec #(
+        .DataWidth ( ECC_CHUNK_SIZE ),
+        .ProtWidth ( EW_DW          )
+      ) i_castout_data_dec (
+        .in         ( { zstream2cast.ecc[EW_RQMETA+(ii*EW_DW)+:EW_DW], zstream2cast.data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] } ),
+        .out        ( pre_castout_data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] ),
+        .syndrome_o (  ),
+        .err_o      ( pre_castout_err[ii] )
+      );
+    end
+  end else begin
+    assign pre_castout_data = zstream2cast.data;
+  end
 
 // Store cast unit
 // This unit uses only the data bus of the TCDM interface. The other buses
@@ -161,10 +186,27 @@ redmule_castout #(
   .rst_ni                                    ,
   .clear_i                                   ,
   .cast_i       ( cast                      ),
-  .src_i        (zstream2cast.data          ),
+  .src_i        (pre_castout_data           ),
   .dst_fmt_i    (ctrl_i.output_cast_dst_fmt ),
-  .dst_o        (z_fifo_d.data              )
+  .dst_o        (post_castout_data             )
 );
+
+if (EW > 0) begin: gen_post_castout_encoder
+    logic [DW/ECC_CHUNK_SIZE*EW_DW-1:0] post_castout_ecc;
+    for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : data_encoding
+      hsiao_ecc_enc #(
+        .DataWidth ( ECC_CHUNK_SIZE ),
+        .ProtWidth ( EW_DW          )
+      ) i_castout_data_enc (
+        .in         ( post_castout_data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] ),
+        .out        ( { post_castout_ecc[ii*EW_DW+:EW_DW], z_fifo_d.data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE]} )
+      );
+    end
+    assign z_fifo_d.ecc = { zstream2cast.ecc[EW-1:DW/ECC_CHUNK_SIZE*EW_DW], post_castout_ecc, zstream2cast.ecc[EW_RQMETA-1:0]};
+  end else begin
+    assign z_fifo_d.data = post_castout_data;
+    assign z_fifo_d.ecc  = zstream2cast.ecc;
+  end
 
 // Left TCDM buses assignment.
 assign z_fifo_d.req          = zstream2cast.req;
@@ -184,7 +226,7 @@ assign z_fifo_d.ereq         = zstream2cast.ereq;
 assign zstream2cast.egnt     = z_fifo_d.egnt;
 assign zstream2cast.r_evalid = z_fifo_d.r_evalid;
 assign z_fifo_d.r_eready     = zstream2cast.r_eready;
-assign z_fifo_d.ecc          = zstream2cast.ecc;
+// do not assign z_fifo_d.ecc = zstream2cast.ecc;
 assign zstream2cast.r_ecc    = z_fifo_d.r_ecc;
 
 // HCI store fifo.
@@ -285,6 +327,23 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .tcdm_initiator ( load_fifo_d[i] )
   );
 
+  if (EW > 0) begin: gen_pre_castin_decoder
+    logic [DW/ECC_CHUNK_SIZE-1:0][1:0]  pre_castin_err;
+    for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : r_data_decoding
+      hsiao_ecc_dec #(
+        .DataWidth ( ECC_CHUNK_SIZE ),
+        .ProtWidth ( EW_DW          )
+      ) i_castin_r_data_dec (
+        .in         ( { load_fifo_q[i].r_ecc[EW_RSMETA+(ii*EW_DW)+:EW_DW], load_fifo_q[i].r_data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] } ),
+        .out        ( pre_castin_r_data[i][ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] ),
+        .syndrome_o (  ),
+        .err_o      ( pre_castin_err[ii] )
+      );
+    end
+  end else begin
+    assign pre_castin_r_data[i] = load_fifo_q[i].r_data;
+  end
+
   // Load cast unit
   // This unit uses only the data bus of the TCDM interface. The other buses
   // are assigned manually.
@@ -297,10 +356,27 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .rst_ni                                    ,
     .clear_i                                   ,
     .cast_i       ( cast                      ),
-    .src_i        ( load_fifo_q[i].r_data     ),
+    .src_i        ( pre_castin_r_data[i]      ),
     .src_fmt_i    ( ctrl_i.input_cast_src_fmt ),
-    .dst_o        ( tcdm_cast[i].r_data       )
+    .dst_o        ( post_castin_r_data[i]     )
   );
+
+  if (EW > 0) begin: gen_post_castin_encoder
+    logic [DW/ECC_CHUNK_SIZE*EW_DW-1:0] post_castin_r_ecc;
+    for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : r_data_encoding
+      hsiao_ecc_enc #(
+        .DataWidth ( ECC_CHUNK_SIZE ),
+        .ProtWidth ( EW_DW          )
+      ) i_castin_r_data_enc (
+        .in         ( post_castin_r_data[i][ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE] ),
+        .out        ( { post_castin_r_ecc[ii*EW_DW+:EW_DW], tcdm_cast[i].r_data[ii*ECC_CHUNK_SIZE+:ECC_CHUNK_SIZE]} )
+      );
+    end
+    assign tcdm_cast[i].r_ecc= { load_fifo_q[i].r_ecc[EW-1:DW/ECC_CHUNK_SIZE*EW_DW], post_castin_r_ecc, load_fifo_q[i].r_ecc[EW_RSMETA-1:0]};
+  end else begin
+    assign tcdm_cast[i].r_data = post_castin_r_data[i];
+    assign tcdm_cast[i].r_ecc  = load_fifo_q[i].r_ecc;
+  end
 
   // Left TCDM buses assignment.
   assign load_fifo_q[i].req      = tcdm_cast[i].req;
@@ -322,7 +398,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign tcdm_cast[i].r_evalid   = load_fifo_q[i].r_evalid;
   assign load_fifo_q[i].r_eready = tcdm_cast[i].r_eready;
   assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
-  assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
+  // do not assign tcdm_cast[i].r_ecc = load_fifo_q[i].r_ecc;
 
   if (EW > 0) begin: gen_ecc_source
     hci_ecc_source       #(
