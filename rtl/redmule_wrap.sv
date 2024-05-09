@@ -30,6 +30,7 @@ parameter  int unsigned  ID_WIDTH    = 8                    ,
 parameter  int unsigned  N_CORES     = 8                    ,
 parameter  int unsigned  DW          = DATA_W               , // TCDM port dimension (in bits)
 parameter  int unsigned  MP          = DW/redmule_pkg::MemDw,
+parameter  int unsigned  EW          = 0                    , // ECC signals width
 localparam fp_format_e   FpFormat    = FPFORMAT             , // Data format (default is FP16)
 localparam int unsigned  Height      = ARRAY_HEIGHT         , // Number of PEs within a row
 localparam int unsigned  Width       = ARRAY_WIDTH          , // Number of parallel rows
@@ -51,10 +52,12 @@ localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for
   output logic [      MP-1:0]       tcdm_wen_o      ,
   output logic [      MP-1:0][ 3:0] tcdm_be_o       ,
   output logic [      MP-1:0][31:0] tcdm_data_o     ,
+  output logic [      EW-1:0]       tcdm_ecc_o      ,
   input  logic [      MP-1:0][31:0] tcdm_r_data_i   ,
   input  logic [      MP-1:0]       tcdm_r_valid_i  ,
   input  logic                      tcdm_r_opc_i    ,
   input  logic                      tcdm_r_user_i   ,
+  input  logic [      EW-1:0]       tcdm_r_ecc_i    ,
   // periph slave port
   input  logic                      periph_req_i    ,
   output logic                      periph_gnt_o    ,
@@ -68,7 +71,13 @@ localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for
   output logic [ID_WIDTH-1:0]       periph_r_id_o
 );
 
-hci_core_intf #(.DW(DW)) tcdm (.clk(clk_i));
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+  .DW ( DW ),
+  .EW ( EW ) ) tcdm ( .clk ( clk_i ) );
 hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
 
 // bindings
@@ -80,11 +89,13 @@ generate
     assign tcdm_be_o   [ii] = tcdm.be[(ii+1)*4-1:ii*4];
     assign tcdm_data_o [ii] = tcdm.data[(ii+1)*32-1:ii*32];
   end
+  assign tcdm_ecc_o   = tcdm.ecc;
   assign tcdm.gnt     = &(tcdm_gnt_i);
   assign tcdm.r_valid = &(tcdm_r_valid_i);
   assign tcdm.r_data  = { >> {tcdm_r_data_i} };
+  assign tcdm.r_opc   = tcdm_r_opc_i;
   assign tcdm.r_user  = tcdm_r_user_i;
-  assign tcdm.r_ecc   = '0;
+  assign tcdm.r_ecc   = tcdm_r_ecc_i;
   assign tcdm.r_id    = '0;
   assign tcdm.egnt    = '1;
   assign tcdm.r_evalid = '0;

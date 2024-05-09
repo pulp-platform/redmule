@@ -1,4 +1,20 @@
 packages:
+  apb:
+    revision: 77ddf073f194d44b9119949d2421be59789e69ae
+    version: 0.2.4
+    source:
+      Git: https://github.com/pulp-platform/apb.git
+    dependencies:
+    - common_cells
+  axi:
+    revision: 2f395b176bee1c769c80f060a4345fda965bb04b
+    version: 0.38.0
+    source:
+      Git: https://github.com/pulp-platform/axi.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - tech_cells_generic
   cluster_interconnect:
     revision: 7d0a4f8acae71a583a6713cab5554e60b9bb8d27
     version: 1.2.1
@@ -7,8 +23,8 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: 2bd027cb87eaa9bf7d17196ec5f69864b35b630f
-    version: 1.32.0
+    revision: 0d67563b6b592549542544f1abc0f43e5d4ee8b4
+    version: 1.35.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -45,14 +61,17 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 4823e503851eb7e8cc765a58621d767a01d6a77b
+    revision: 79aae747ec9562e94dd2e34bb937583696c02282
     version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
     dependencies:
     - cluster_interconnect
+    - common_cells
     - hwpe-stream
     - l2_tcdm_hybrid_interco
+    - redundancy_cells
+    - register_interface
   hwpe-ctrl:
     revision: a5966201aeeb988d607accdc55da933a53c6a56e
     version: null
@@ -61,8 +80,8 @@ packages:
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: 389bd7fb1975d2df1546910c5f220c668122e646
-    version: 1.6.5
+    revision: 65c99a4a2f37a79acee800ab0151f67dfb1edef1
+    version: 1.8.0
     source:
       Git: https://github.com/pulp-platform/hwpe-stream.git
     dependencies:
@@ -73,6 +92,25 @@ packages:
     source:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
+  redundancy_cells:
+    revision: c37bdb47339bf70e8323de8df14ea8bbeafb6583
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/redundancy_cells.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - register_interface
+    - tech_cells_generic
+  register_interface:
+    revision: 146501d80052b61475cdc333d3aab4cd769fd5dc
+    version: 0.3.9
+    source:
+      Git: https://github.com/pulp-platform/register_interface.git
+    dependencies:
+    - apb
+    - axi
+    - common_cells
   tech_cells_generic:
     revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
     version: 0.2.13

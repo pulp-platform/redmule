@@ -35,6 +35,8 @@ module redmule_tb;
   parameter logic [31:0] HWPE_ADDR_BASE_BIT = 20;
   parameter string STIM_INSTR = "../../stim_instr.txt";
   parameter string STIM_DATA  = "../../stim_data.txt";
+  parameter bit USE_ECC = 0;
+  parameter int unsigned EW = (USE_ECC) ? 72 : 0;
 
   // global signals
   logic clk;
@@ -56,11 +58,13 @@ module redmule_tb;
   logic [MP-1:0]       tcdm_wen;
   logic [MP-1:0][3:0]  tcdm_be;
   logic [MP-1:0][31:0] tcdm_data;
+  logic [EW-1:0]       tcdm_ecc;
   logic [MP-1:0][31:0] tcdm_r_data;
   logic [MP-1:0]       tcdm_r_valid;
   logic                tcdm_r_opc;
   logic                tcdm_r_user;
-   
+  logic [EW-1:0]       tcdm_r_ecc;
+
   logic          periph_req;
   logic          periph_gnt;
   logic [31:0]   periph_add;
@@ -161,7 +165,8 @@ module redmule_tb;
     assign tcdm[ii].add  = tcdm_add  [ii];
     assign tcdm[ii].wen  = tcdm_wen  [ii];
     assign tcdm[ii].be   = tcdm_be   [ii];
-    assign tcdm[ii].data = tcdm_data [ii];
+    if (~USE_ECC)
+      assign tcdm[ii].data = tcdm_data [ii];
     assign tcdm_gnt     [ii] = tcdm[ii].gnt;
     assign tcdm_r_data  [ii] = tcdm[ii].r_data;
     assign tcdm_r_valid [ii] = tcdm[ii].r_valid;
@@ -185,11 +190,62 @@ module redmule_tb;
                        tcdm[MP].r_valid |
                        other_r_valid    ;
 
+  if (USE_ECC) begin : gen_r_ecc
+    // RESPONSE PHASE ENCODING
+    logic [MP-1:0][38:0] tcdm_r_data_enc;
+    logic         [2:0]  tcdm_r_meta_enc;
+    for(genvar ii=0; ii<MP; ii++) begin : r_data_encoding
+      hsiao_ecc_enc #(
+        .DataWidth ( 32 )
+      ) i_r_data_enc (
+        .in  (tcdm[ii].r_data),
+        .out (tcdm_r_data_enc[ii])
+      );
+      assign tcdm_r_ecc[(ii+1)*7-1+2:ii*7+2] = tcdm_r_data_enc[ii][38:32];
+    end
+
+    hsiao_ecc_enc #(
+      .DataWidth ( 1 )
+    ) i_r_meta_enc (
+      .in  (tcdm_r_opc),
+      .out (tcdm_r_meta_enc)
+    );
+    assign tcdm_r_ecc[1:0]             = tcdm_r_meta_enc[2:1];
+    assign tcdm_r_ecc[EW-1:(7*MP+2)] = '0;
+
+  end else begin : gen_no_r_ecc
+    assign tcdm_r_ecc = '0;
+  end
+
+  if (USE_ECC) begin : gen_ecc_dec
+    // REQUEST PHASE DECODING
+    for(genvar ii=0; ii<MP; ii++) begin : data_decoding
+      hsiao_ecc_dec #(
+        .DataWidth ( 32 )
+      ) i_data_dec (
+        .in         ( { tcdm_ecc[(ii+1)*7-1+9:ii*7+9], tcdm_data[ii] } ),
+        .out        ( tcdm[ii].data ),
+        .syndrome_o ( ),
+        .err_o      ( )
+      );
+    end
+
+    hsiao_ecc_dec #(
+      .DataWidth ( 32+36+1 )
+    ) i_meta_dec (
+      .in         ( { tcdm_ecc[8:0], tcdm_add[0], tcdm_wen[0], tcdm_be } ),
+      .out        (  ),
+      .syndrome_o (  ),
+      .err_o      (  )
+    );
+  end
+
   redmule_wrap #(
     .ID_WIDTH          ( ID             ),
     .N_CORES           ( NC             ),
     .DW                ( DW             ),
-    .MP                ( DW/32          )
+    .MP                ( DW/32          ),
+    .EW                ( EW             )
   ) i_redmule_wrap     (
     .clk_i             ( clk            ),
     .rst_ni            ( rst_n          ),
@@ -201,11 +257,13 @@ module redmule_tb;
     .tcdm_wen_o        ( tcdm_wen       ),
     .tcdm_be_o         ( tcdm_be        ),
     .tcdm_data_o       ( tcdm_data      ),
+    .tcdm_ecc_o        ( tcdm_ecc       ),
     .tcdm_gnt_i        ( tcdm_gnt       ),
     .tcdm_r_data_i     ( tcdm_r_data    ),
     .tcdm_r_valid_i    ( tcdm_r_valid   ),
     .tcdm_r_opc_i      ( tcdm_r_opc     ),
     .tcdm_r_user_i     ( tcdm_r_user    ),
+    .tcdm_r_ecc_i      ( tcdm_r_ecc     ),
     .periph_req_i      ( periph_req     ),
     .periph_gnt_o      ( periph_gnt     ),
     .periph_add_i      ( periph_add     ),
