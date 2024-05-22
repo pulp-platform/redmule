@@ -116,20 +116,38 @@ hci_core_mux_dynamic #(
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ),
                  .EW ( EW ) ) zstream2cast ( .clk ( clk_i ) );
-hci_ecc_sink          #(
-  .MISALIGNED_ACCESSES ( REALIGN                     ),
-  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_stream_ecc_sink    (
-  .clk_i               ( clk_i                       ),
-  .rst_ni              ( rst_ni                      ),
-  .test_mode_i         ( test_mode_i                 ),
-  .clear_i             ( clear_i                     ),
-  .enable_i            ( enable_i                    ),
-  .tcdm                ( zstream2cast                ),
-  .stream              ( z_stream_i                  ),
-  .ctrl_i              ( ctrl_i.z_stream_sink_ctrl   ),
-  .flags_o             ( flags_o.z_stream_sink_flags )
-);
+
+if (EW > 0) begin: gen_ecc_sink
+  hci_ecc_sink            #(
+    .MISALIGNED_ACCESSES   ( REALIGN                     ),
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm)  )
+  ) i_stream_ecc_sink      (
+    .clk_i                 ( clk_i                       ),
+    .rst_ni                ( rst_ni                      ),
+    .test_mode_i           ( test_mode_i                 ),
+    .clear_i               ( clear_i                     ),
+    .enable_i              ( enable_i                    ),
+    .tcdm                  ( zstream2cast                ),
+    .stream                ( z_stream_i                  ),
+    .ctrl_i                ( ctrl_i.z_stream_sink_ctrl   ),
+    .flags_o               ( flags_o.z_stream_sink_flags )
+  );
+end else begin: gen_sink
+  hci_core_sink           #(
+    .MISALIGNED_ACCESSES   ( REALIGN                     ),
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm)  )
+  ) i_stream_sink          (
+    .clk_i                 ( clk_i                       ),
+    .rst_ni                ( rst_ni                      ),
+    .test_mode_i           ( test_mode_i                 ),
+    .clear_i               ( clear_i                     ),
+    .enable_i              ( enable_i                    ),
+    .tcdm                  ( zstream2cast                ),
+    .stream                ( z_stream_i                  ),
+    .ctrl_i                ( ctrl_i.z_stream_sink_ctrl   ),
+    .flags_o               ( flags_o.z_stream_sink_flags )
+  );
+end
 
 // Store interface FIFO buses.
 hci_core_intf #(
@@ -326,21 +344,38 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
   assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
 
-  hci_ecc_source        #(
-    .MISALIGNED_ACCESSES   ( REALIGN                    ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-  ) i_stream_ecc_source  (
-    .clk_i               ( clk_i           ),
-    .rst_ni              ( rst_ni          ),
-    .test_mode_i         ( test_mode_i     ),
-    .clear_i             ( clear_i         ),
-    .enable_i            ( enable_i        ),
-    .tcdm                ( tcdm_cast[i]    ),
-    .stream              ( out_stream[i]   ),
-    .ctrl_i              ( source_ctrl[i]  ),
-    .flags_o             ( source_flags[i] )
-  );
-  
+  if (EW > 0) begin: gen_ecc_source
+    hci_ecc_source          #(
+      .MISALIGNED_ACCESSES   ( REALIGN                    ),
+      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+    ) i_stream_ecc_source    (
+      .clk_i                 ( clk_i                      ),
+      .rst_ni                ( rst_ni                     ),
+      .test_mode_i           ( test_mode_i                ),
+      .clear_i               ( clear_i                    ),
+      .enable_i              ( enable_i                   ),
+      .tcdm                  ( tcdm_cast[i]               ),
+      .stream                ( out_stream[i]              ),
+      .ctrl_i                ( source_ctrl[i]             ),
+      .flags_o               ( source_flags[i]            )
+    );
+  end else begin: gen_source
+    hci_core_source           #(
+        .MISALIGNED_ACCESSES   ( REALIGN                    ),
+        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+      ) i_stream_source        (
+        .clk_i                 ( clk_i                      ),
+        .rst_ni                ( rst_ni                     ),
+        .test_mode_i           ( test_mode_i                ),
+        .clear_i               ( clear_i                    ),
+        .enable_i              ( enable_i                   ),
+        .tcdm                  ( tcdm_cast[i]               ),
+        .stream                ( out_stream[i]              ),
+        .ctrl_i                ( source_ctrl[i]             ),
+        .flags_o               ( source_flags[i]            )
+      );
+  end
+
 end
 
 // Assign flags in the vector to the relative output buses.
