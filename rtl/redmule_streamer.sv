@@ -28,9 +28,9 @@ module redmule_streamer
   import hwpe_stream_package::*;
 #(
 parameter  int unsigned DW      = 288   ,
-parameter  int unsigned UW      = 1     ,
 parameter  int unsigned AW      = ADDR_W,
-localparam int unsigned REALIGN = 1
+localparam int unsigned REALIGN = 1     ,
+parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input logic                    clk_i,
   input logic                    rst_ni,
@@ -47,13 +47,16 @@ localparam int unsigned REALIGN = 1
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
-  
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
 );
 
-// this localparam is reused for all internal HCI interfaces
+localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
+localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
+
+// this localparam is reused for all internal, non-ecc HCI interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   DW:  DW,
   AW:  DEFAULT_AW,
@@ -61,6 +64,17 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   UW:  UW,
   IW:  DEFAULT_IW,
   EW:  DEFAULT_EW,
+  EHW: DEFAULT_EHW
+};
+
+// this localparam is reused for the  internal ecc HCI interface
+localparam hci_size_parameter_t `HCI_SIZE_PARAM(ecc_ldst_tcdm) = '{
+  DW:  DW,
+  AW:  DEFAULT_AW,
+  BW:  DEFAULT_BW,
+  UW:  UW,
+  IW:  DEFAULT_IW,
+  EW:  EW,
   EHW: DEFAULT_EHW
 };
 
@@ -76,7 +90,18 @@ hci_core_intf #(
 `endif
 ) ldst_tcdm [0:0] ( .clk ( clk_i ) );
 
-hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm [0]), .tcdm_initiator (tcdm) );
+if (EW > 1) begin : gen_ecc_encoder
+  hci_ecc_enc #(
+    .DW ( DW ),
+    .`HCI_SIZE_PARAM(tcdm_target)    ( `HCI_SIZE_PARAM(ldst_tcdm)     ),
+    .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ecc_ldst_tcdm) )
+  ) i_ecc_enc (
+    .tcdm_target         ( ldst_tcdm[0]                 ),
+    .tcdm_initiator      ( tcdm                         )
+  );
+end else begin : gen_ldst_assign
+  hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm [0]), .tcdm_initiator (tcdm) );
+end
 
 // Virtual internal TCDM interface splitting the upstream TCDM into two channels:
 // * Channel 0 - load channel (from TCDM to stream).
@@ -115,7 +140,7 @@ hci_core_intf #( .DW ( DW ),
 hci_core_sink         #(
   .MISALIGNED_ACCESSES   ( REALIGN                    ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_stream_sink      (                             
+) i_stream_sink      (
   .clk_i               ( clk_i                       ),
   .rst_ni              ( rst_ni                      ),
   .test_mode_i         ( test_mode_i                 ),
@@ -151,13 +176,13 @@ redmule_castout #(
   .IntFmtConfig  ( IntFmtConfig ),
   .src_format    ( FPFORMAT     )
 ) i_store_cast   (
-  .clk_i                                     ,
-  .rst_ni                                    ,
-  .clear_i                                   ,
-  .cast_i       ( cast                      ),
-  .src_i        (zstream2cast.data          ),
-  .dst_fmt_i    (ctrl_i.output_cast_dst_fmt ),
-  .dst_o        (z_fifo_d.data              )
+  .clk_i                                      ,
+  .rst_ni                                     ,
+  .clear_i                                    ,
+  .cast_i       ( cast                       ),
+  .src_i        ( zstream2cast.data          ),
+  .dst_fmt_i    ( ctrl_i.output_cast_dst_fmt ),
+  .dst_o        ( z_fifo_d.data              )
 );
 
 // Left TCDM buses assignment.

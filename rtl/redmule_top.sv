@@ -19,6 +19,8 @@
  * RedMulE Top-Level Module
  */
 
+`include "hci_helpers.svh"
+
 module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
@@ -35,7 +37,8 @@ localparam int unsigned  Height      = ARRAY_HEIGHT      , // Number of PEs with
 localparam int unsigned  Width       = ARRAY_WIDTH       , // Number of parallel rows
 localparam int unsigned  NumPipeRegs = PIPE_REGS         , // Number of pipeline registers within each PE
 localparam pipe_config_t PipeConfig  = DISTRIBUTED       ,
-localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
+localparam int unsigned  BITW        = fp_width(FpFormat),  // Number of bits for the given format
+parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
@@ -133,7 +136,8 @@ end
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW             ) 
+  .DW                    ( DW                    ),
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i          ( clk_i          ),
   .rst_ni         ( rst_ni         ),
