@@ -17,6 +17,7 @@
 
 timeunit 1ps;
 timeprecision 1ps;
+import hci_package::*;
 
 module redmule_tb;
 
@@ -36,7 +37,7 @@ module redmule_tb;
   parameter string STIM_INSTR = "../../stim_instr.txt";
   parameter string STIM_DATA  = "../../stim_data.txt";
   parameter bit USE_ECC = 0;
-  parameter int unsigned EW = (USE_ECC) ? 72 : 0;
+  parameter int unsigned EW = (USE_ECC) ? 72 : DEFAULT_EW;
 
   // global signals
   logic clk;

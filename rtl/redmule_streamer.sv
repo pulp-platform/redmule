@@ -121,7 +121,7 @@ hci_core_intf #( .DW ( DW ),
                  .UW ( UW ),
                  .EW ( EW ) ) zstream2cast ( .clk ( clk_i ) );
 
-if (EW > 0) begin: gen_ecc_sink
+if (EW > 1) begin: gen_ecc_sink
   hci_ecc_sink            #(
     .MISALIGNED_ACCESSES   ( REALIGN                     ),
     .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm)  )
@@ -174,7 +174,7 @@ logic [DW-1:0] pre_castout_data;
 logic [DW-1:0] post_castout_data;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 
-if (EW > 0) begin: gen_pre_castout_decoder
+if (EW > 1) begin: gen_pre_castout_decoder
     logic [DW/ECC_CHUNK_SIZE-1:0][1:0]  pre_castout_err;
     for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : data_decoding
       hsiao_ecc_dec #(
@@ -208,7 +208,7 @@ redmule_castout #(
   .dst_o        (post_castout_data             )
 );
 
-if (EW > 0) begin: gen_post_castout_encoder
+if (EW > 1) begin: gen_post_castout_encoder
     logic [DW/ECC_CHUNK_SIZE*EW_DW-1:0] post_castout_ecc;
     for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : data_encoding
       hsiao_ecc_enc #(
@@ -347,7 +347,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .tcdm_initiator ( load_fifo_d[i] )
   );
 
-  if (EW > 0) begin: gen_pre_castin_decoder
+  if (EW > 1) begin: gen_pre_castin_decoder
     logic [DW/ECC_CHUNK_SIZE-1:0][1:0]  pre_castin_err;
     for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : r_data_decoding
       hsiao_ecc_dec #(
@@ -381,7 +381,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .dst_o        ( post_castin_r_data[i]     )
   );
 
-  if (EW > 0) begin: gen_post_castin_encoder
+  if (EW > 1) begin: gen_post_castin_encoder
     logic [DW/ECC_CHUNK_SIZE*EW_DW-1:0] post_castin_r_ecc;
     for(genvar ii=0; ii<DW/ECC_CHUNK_SIZE; ii++) begin : r_data_encoding
       hsiao_ecc_enc #(
@@ -420,7 +420,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
   // do not assign tcdm_cast[i].r_ecc = load_fifo_q[i].r_ecc;
 
-  if (EW > 0) begin: gen_ecc_source
+  if (EW > 1) begin: gen_ecc_source
     hci_ecc_source          #(
       .MISALIGNED_ACCESSES   ( REALIGN                    ),
       .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
