@@ -56,8 +56,18 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     actual_LSHWord = (uint16_t)(actual_word & 0x0000FFFF);
     golden_LSHWord = (uint16_t)(golden_word & 0x0000FFFF);
 
-    diff = (actual_LSHWord > golden_LSHWord) ? (actual_LSHWord - golden_LSHWord) : 0;
-    diff = (actual_LSHWord < golden_LSHWord) ? (golden_LSHWord - actual_LSHWord) : 0;
+    if ((actual_LSHWord & 0x7C00) == 0x7C00) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x7C00; 
+    } else if (actual_LSHWord > golden_LSHWord) {
+      diff = actual_LSHWord - golden_LSHWord;
+    }
+    else if  (actual_LSHWord < golden_LSHWord) {
+      diff = golden_LSHWord - actual_LSHWord;
+    }
+    else {
+      diff = 0;
+    }
 
     if (diff > ERR) {
       error = 1;
@@ -71,8 +81,18 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     actual_MSHWord = (uint16_t)((actual_word >> 16) & 0x0000FFFF);
     golden_MSHWord = (uint16_t)((golden_word >> 16) & 0x0000FFFF);
 
-    diff = (actual_MSHWord > golden_MSHWord) ? (actual_MSHWord - golden_MSHWord) : 0;
-    diff = (actual_MSHWord < golden_MSHWord) ? (golden_MSHWord - actual_MSHWord) : 0;
+    if ((actual_MSHWord & 0x7C00) == 0x7C00) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x7C00; 
+    } else if (actual_MSHWord > golden_MSHWord) {
+      diff = actual_MSHWord - golden_MSHWord;
+    }
+    else if  (actual_MSHWord < golden_MSHWord) {
+      diff = golden_MSHWord - actual_MSHWord;
+    } 
+    else {
+      diff = 0;
+    }
 
     if (diff > ERR) {
       error = 1;
@@ -121,12 +141,22 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     // int error = ((actual_word ^ golden_word) & ~IGNORE_BITS_COMPARE) ? 1 : 0;
     uint8_t diff = 0;
     
-    // Cheching Byte0
+    // Checking Byte0
     actual_Byte0 = (uint8_t)(actual_word & 0x000000FF);
     golden_Byte0 = (uint8_t)(golden_word & 0x000000FF);
 
-    diff = (actual_Byte0 > golden_Byte0) ? (actual_Byte0 - golden_Byte0) : 0;
-    diff = (actual_Byte0 < golden_Byte0) ? (golden_Byte0 - actual_Byte0) : 0;
+    if ((actual_Byte0 & 0x78) == 0x78) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x78; 
+    } else if (actual_Byte0 > golden_Byte0) {
+      diff = actual_Byte0 - golden_Byte0;
+    }
+    else if  (actual_Byte0 < golden_Byte0) {
+      diff = golden_Byte0 - actual_Byte0;
+    }
+    else {
+      diff = 0;
+    }
 
     if (diff > ERR) {
       error = 1;
@@ -134,12 +164,22 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
       tfp_printf ("Byte0: Error!\n");
     }
 
-    // Cheching Byte1
+    // Checking Byte1
     actual_Byte1 = (uint8_t)( (actual_word >> 8 ) & 0x000000FF);
     golden_Byte1 = (uint8_t)( (golden_word >> 8 ) & 0x000000FF);
 
-    diff = (actual_Byte1 > golden_Byte1) ? (actual_Byte1 - golden_Byte1) : 0;
-    diff = (actual_Byte1 < golden_Byte1) ? (golden_Byte1 - actual_Byte1) : 0;
+    if ((actual_Byte1 & 0x78) == 0x78) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x78; 
+    } else if (actual_Byte1 > golden_Byte1) {
+      diff = actual_Byte1 - golden_Byte1;
+    }
+    else if  (actual_Byte1 < golden_Byte1) {
+      diff = golden_Byte1 - actual_Byte1;
+    }
+    else {
+      diff = 0;
+    }
 
     if (diff > ERR) {
       error = 1;
@@ -147,9 +187,19 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
       tfp_printf ("Byte1: Error!\n");
     }
 
-    // Cheching Byte2
-    actual_Byte2 = (uint8_t)( (actual_word >> 16 ) & 0x000000FF);
-    golden_Byte2 = (uint8_t)( (golden_word >> 16 ) & 0x000000FF);
+    // Checking Byte2
+    if ((actual_Byte2 & 0x78) == 0x78) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x78; 
+    } else if (actual_Byte2 > golden_Byte2) {
+      diff = actual_Byte2 - golden_Byte2;
+    }
+    else if  (actual_Byte2 < golden_Byte2) {
+      diff = golden_Byte2 - actual_Byte2;
+    }
+    else {
+      diff = 0;
+    }
 
     diff = (actual_Byte2 > golden_Byte2) ? (actual_Byte2 - golden_Byte2) : 0;
     diff = (actual_Byte2 < golden_Byte2) ? (golden_Byte2 - actual_Byte2) : 0;
@@ -160,12 +210,22 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
       tfp_printf ("Byte2: Error!\n");
     }
 
-    // Cheching Byte3
+    // Checking Byte3
     actual_Byte3 = (uint8_t)( (actual_word >> 24 ) & 0x000000FF);
     golden_Byte3 = (uint8_t)( (golden_word >> 24 ) & 0x000000FF);
 
-    diff = (actual_Byte3 > golden_Byte3) ? (actual_Byte3 - golden_Byte3) : 0;
-    diff = (actual_Byte3 < golden_Byte3) ? (golden_Byte3 - actual_Byte3) : 0;
+    if ((actual_Byte3 & 0x78) == 0x78) {
+      // Actual is (+/-) Infinity or Nan, set diff to positive Infinity
+      diff = 0x78; 
+    } else if (actual_Byte3 > golden_Byte3) {
+      diff = actual_Byte3 - golden_Byte3;
+    }
+    else if  (actual_Byte3 < golden_Byte3) {
+      diff = golden_Byte3 - actual_Byte3;
+    }
+    else {
+      diff = 0;
+    }
 
     if (diff > ERR) {
       error = 1;
