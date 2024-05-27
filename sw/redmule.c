@@ -200,7 +200,9 @@ int main() {
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;
   int i,j;
-  
+
+  volatile int data_correctable_cnt, data_uncorrectable_cnt = 0;
+
   int offload_id_tmp, offload_id;
 
   // Enable RedMulE
@@ -226,6 +228,11 @@ int main() {
 
   // Disable RedMulE
   hwpe_cg_disable();
+
+  data_correctable_cnt = redmule_get_data_correctable_count();
+  data_uncorrectable_cnt = redmule_get_data_uncorrectable_count();
+  tfp_printf ("errors corrected: %d \n", data_correctable_cnt);
+  tfp_printf ("errors uncorrectable: %d \n", data_uncorrectable_cnt);
 
   errors = redmule16_compare_int(z, golden, m_size*k_size/2);
   // errors = redmule8_compare_int(z, golden, m_size*k_size/4);

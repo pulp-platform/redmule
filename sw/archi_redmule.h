@@ -145,6 +145,12 @@
 #define REDMULE_REG_X_TOT_LEN_PTR      0x44
 #define REDMULE_REG_OP_SELECTION       0x48
 
+#define REDMULE_ECC_REG_OFFS           0x90
+#define DATA_CORR_ERR                  0x00
+#define DATA_UNCORR_ERR                0x04
+#define METADATA_CORR_ERR              0x08
+#define METADATA_UNCORR_ERR            0x0c
+
 // OPs definition
 #define MATMUL 0x0
 #define GEMM   0x1
