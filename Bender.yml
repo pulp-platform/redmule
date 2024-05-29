@@ -24,7 +24,7 @@ package:
 dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.6                                  }
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: "bd25a28"                                } # branch: lg/ecc
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: "4cc543c"                                } # branch: lg/ecc_to_mem_rebase
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: a5966201aeeb988d607accdc55da933a53c6a56e } # branch: master
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
