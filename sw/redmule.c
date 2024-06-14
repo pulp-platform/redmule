@@ -26,7 +26,7 @@ int main() {
   uint8_t *w = w_inp;
   uint8_t *y = y_inp;
   uint8_t *z = z_oup; // golden_out //1c010000
-  uint32_t *gold;
+  uint32_t *gold = golden;
 
   uint8_t float_fmt = (SRC_FMT == FP8)       ? (uint8_t)Float8
                       : (SRC_FMT == FP8ALT)  ? (uint8_t)Float8Alt
@@ -35,9 +35,6 @@ int main() {
                                              : (uint8_t)Float16;
 
   int golden_size = (float_fmt == (Float8 | Float8Alt)) ? m_size*k_size/4 : m_size*k_size/2;
-
-  for (int i = 0; i < golden_size; i++)
-    *(gold + i) = golden[i];
 
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;

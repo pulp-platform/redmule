@@ -66,13 +66,13 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     errors += error;
 
 #ifdef DEBUG
-    tfp_printf("Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    tfp_printf("Golden: 0x%08lx @ 0x%08ln; Actual: 0x%08lx @ 0x%08ln,\n", golden_word, (golden_z + i), actual_word, (actual_z + i));
 #endif
 
 #ifdef VERBOSE
     if (error) {
       if (errors == 1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-      tfp_printf("0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z + i),
+      tfp_printf("0x%08lx <- 0x%08lx @ 0x%08ln @ 0x%08x\n", golden_word, actual_word, (actual_z + i),
                  i * 4);
     }
 #endif
@@ -170,13 +170,13 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int m, int k) {
       errors += error;
 
 #ifdef DEBUG
-    tfp_printf("Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    tfp_printf("Golden: 0x%08x @ 0x%08x; Actual: 0x%08x @ 0x%08x,\n", golden_word, (golden_z + i), actual_word, (actual_z + i));
 #endif
 
 #ifdef VERBOSE
       if (error) {
         if (errors == 1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-        tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z + i),
+        tfp_printf("  0x%x <- 0x%x @ 0x%x @ 0x%x\n", golden_word, actual_word, (actual_z + i),
                    i * 4);
       }
 #endif
