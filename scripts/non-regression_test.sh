@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_TIMEOUT=100
+BASE_TIMEOUT=120
 
 PARAMS=(
     96 96 96
@@ -28,26 +28,40 @@ PARAMS=(
     #17 13 17
 )
 
-i=0
-
-while [[ $i -lt ${#PARAMS[@]} ]]
-do
-
-    M=${PARAMS[$i]}
-    N=${PARAMS[$(( $i + 1 ))]}
-    K=${PARAMS[$(( $i + 2 ))]}
-
-    i=$(( $i + 3 ))
-    
+run_regr() {
+    local use_ecc=$1
     make golden M=$M N=$N K=$K > /dev/null
     make all 1>/dev/null 2>&1
-    timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
-            
-    if [[ $? -eq 124 ]]
-    then
+    if [[ $use_ecc -eq 1 ]]; then
+        timeout $BASE_TIMEOUT make run USE_ECC=1 1>/dev/null 2>&1
+    else
+        timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
+    fi
+    if [[ $? -eq 124 ]]; then
         echo "ERROR : M=$M N=$N K=$K"
     else
         echo "OK    : M=$M N=$N K=$K"
     fi
-    
+}
+
+i=0
+while [[ $i -lt ${#PARAMS[@]} ]]; do
+    M=${PARAMS[$i]}
+    N=${PARAMS[$((i + 1))]}
+    K=${PARAMS[$((i + 2))]}
+    i=$((i + 3))
+
+    run_regr 0
+done
+
+# Second loop: USE_ECC=1
+echo "Running with USE_ECC=1"
+i=0
+while [[ $i -lt ${#PARAMS[@]} ]]; do
+    M=${PARAMS[$i]}
+    N=${PARAMS[$((i + 1))]}
+    K=${PARAMS[$((i + 2))]}
+    i=$((i + 3))
+
+    run_regr 1
 done
