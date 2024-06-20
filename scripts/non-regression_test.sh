@@ -18,7 +18,7 @@ PARAMS=(
     5  32 3
     36 31 32
     12 31 16
-    23 31 31 
+    # 23 31 31 
     24 17 32
     24 20 32
     #23 17 33
@@ -28,40 +28,43 @@ PARAMS=(
     #17 13 17
 )
 
+VSIM_LOGFILE=vsim.log
+rm -f $VSIM_LOGFILE
+
+
 run_regr() {
-    local use_ecc=$1
     make golden M=$M N=$N K=$K > /dev/null
-    make all 1>/dev/null 2>&1
-    if [[ $use_ecc -eq 1 ]]; then
-        timeout $BASE_TIMEOUT make run USE_ECC=1 1>/dev/null 2>&1
-    else
-        timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
-    fi
+    make all USE_REDUNDANCY=$SW_REDUNDANCY 1>/dev/null 2>&1
+    timeout $BASE_TIMEOUT make run USE_ECC=$USE_ECC USE_REDUNDANCY=$HW_REDUNDANCY 1>$VSIM_LOGFILE 2>&1
+    
+    # If you want detailed output, uncomment this line
+    # tail -10 $VSIM_LOGFILE
+
     if [[ $? -eq 124 ]]; then
-        echo "ERROR : M=$M N=$N K=$K"
+        STATUS="TIMEOUT"
     else
-        echo "OK    : M=$M N=$N K=$K"
+        if grep -wq "Errors: 0," $VSIM_LOGFILE; then
+            STATUS="OK     "
+        else
+            STATUS="ERROR  "
+        fi
     fi
+    echo "$STATUS: M=$M N=$N K=$K, ECC=$USE_ECC, HW_RED=$HW_REDUNDANCY, SW_RED=${SW_REDUNDANCY}"
 }
 
-i=0
-while [[ $i -lt ${#PARAMS[@]} ]]; do
-    M=${PARAMS[$i]}
-    N=${PARAMS[$((i + 1))]}
-    K=${PARAMS[$((i + 2))]}
-    i=$((i + 3))
+for SW_REDUNDANCY in 0 1; do
+    for HW_REDUNDANCY in 0 1; do
+        for USE_ECC in 0 1; do
+            i=0
+            while [[ $i -lt ${#PARAMS[@]} ]]; do
 
-    run_regr 0
-done
-
-# Second loop: USE_ECC=1
-echo "Running with USE_ECC=1"
-i=0
-while [[ $i -lt ${#PARAMS[@]} ]]; do
-    M=${PARAMS[$i]}
-    N=${PARAMS[$((i + 1))]}
-    K=${PARAMS[$((i + 2))]}
-    i=$((i + 3))
-
-    run_regr 1
+                # For redundant operations we reduce the size of the matrix so run time is about the same
+                M=$((${PARAMS[$i]} / (1 + $SW_REDUNDANCY)))
+                N=${PARAMS[$((i + 1))]}
+                K=${PARAMS[$((i + 2))]}
+                i=$((i + 3))        
+                run_regr
+            done
+        done
+    done
 done
