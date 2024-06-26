@@ -69,9 +69,10 @@ logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
 logic [$clog2(Height):0]    w_rows_lftovr;
 logic [$clog2(Width):0]     y_rows_lftovr;
 
-// Streamer control signals and flags
+// Streamer control signals, flags and ecc info
 cntrl_streamer_t cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
+errs_streamer_t ecc_errors_streamer;
 
 cntrl_engine_t   cntrl_engine;
 
@@ -139,22 +140,23 @@ redmule_streamer #(
   .DW                    ( DW                    ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
-  .clk_i          ( clk_i          ),
-  .rst_ni         ( rst_ni         ),
-  .test_mode_i    ( test_mode_i    ),
+  .clk_i          ( clk_i               ),
+  .rst_ni         ( rst_ni              ),
+  .test_mode_i    ( test_mode_i         ),
   // Controller generated signals
-  .enable_i       ( 1'b1           ),
-  .clear_i        ( clear          ),
+  .enable_i       ( 1'b1                ),
+  .clear_i        ( clear               ),
   // Source interfaces for the incoming streams
-  .x_stream_o     ( x_buffer_d     ),
-  .w_stream_o     ( w_buffer_d     ),
-  .y_stream_o     ( y_buffer_d     ),
+  .x_stream_o     ( x_buffer_d          ),
+  .w_stream_o     ( w_buffer_d          ),
+  .y_stream_o     ( y_buffer_d          ),
   // Sink interface for the outgoing stream
-  .z_stream_i     ( z_buffer_fifo  ),
+  .z_stream_i     ( z_buffer_fifo       ),
   // Master TCDM interface ports for the memory side
-  .tcdm           ( tcdm           ),
-  .ctrl_i         ( cntrl_streamer ),
-  .flags_o        ( flgs_streamer  )
+  .tcdm           ( tcdm                ),
+  .ecc_errors_o   ( ecc_errors_streamer ),
+  .ctrl_i         ( cntrl_streamer      ),
+  .flags_o        ( flgs_streamer       )
 );
 
 hwpe_stream_fifo #(
@@ -421,6 +423,7 @@ redmule_ctrl        #(
   .flush_o           ( engine_flush            ),
   .accumulate_o      ( accumulate              ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
+  .errs_streamer_i   ( ecc_errors_streamer     ),
   .periph            ( periph_local            )
 );
     
