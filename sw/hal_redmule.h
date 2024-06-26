@@ -38,6 +38,22 @@ static inline void redmule_arith_set(uint32_t arith) {
   HWPE_WRITE(arith, REDMULE_REG_OFFS + REDMULE_ARITH_PTR);
 }
 
+static inline unsigned int redmule_get_data_correctable_count() {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + DATA_CORR_ERR);
+}
+
+static inline unsigned int redmule_get_data_uncorrectable_count() {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + DATA_UNCORR_ERR);
+}
+
+static inline unsigned int redmule_get_meta_correctable_count() {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_CORR_ERR);
+}
+
+static inline unsigned int redmule_get_meta_uncorrectable_count() {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_UNCORR_ERR);
+}
+
 static inline void hwpe_trigger_job() { HWPE_WRITE(0, REDMULE_TRIGGER); }
 
 static inline int hwpe_acquire_job() { return HWPE_READ(REDMULE_ACQUIRE); }
