@@ -81,13 +81,12 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ecc_ldst_tcdm) = '{
 // Here the dynamic mux for virtual_tcdm interfaces
 // coming/going from/to the accelerator to/from the memory
 hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
   .DW ( DW ),
   .UW ( UW )
-`ifndef SYNTHESIS
-  ,
-  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
-`endif
 ) ldst_tcdm [0:0] ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
@@ -107,13 +106,12 @@ end
 // * Channel 0 - load channel (from TCDM to stream).
 // * Channel 1 - store channel (from stream to TCDM).
 hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
   .DW ( DW ),
   .UW ( UW )
-`ifndef SYNTHESIS
-  ,
-  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
-`endif
 ) virt_tcdm [0:1] ( .clk ( clk_i ) );
 
 hci_core_mux_dynamic #(
@@ -154,13 +152,12 @@ hci_core_sink         #(
 
 // Store interface FIFO buses.
 hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
   .DW ( DW ),
   .UW ( UW )
-`ifndef SYNTHESIS
-  ,
-  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
-`endif
 ) z_fifo_d ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
@@ -236,13 +233,12 @@ hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_
 // W -> source[1]
 // Y -> source[2]
 hci_core_intf #(
+`ifndef SYNTHESIS
+    .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+    .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
   .DW ( DW ),
   .UW ( UW )
-`ifndef SYNTHESIS
-    ,
-    .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-    .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
-`endif
 ) source [0:NumStreamSources-1] ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
@@ -262,13 +258,12 @@ hci_core_mux_dynamic #(
 
 // One TCDM FIFO and one HCI core source unit per stream channel.
 hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
   .DW ( DW ),
   .UW ( UW )
-`ifndef SYNTHESIS
-  ,
-  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-  .WAIVE_RSP5_ASSERT ( 1'b1 )  // waive RSP-5 on memory-side of HCI FIFO
-`endif
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #( .DW ( DW ),
