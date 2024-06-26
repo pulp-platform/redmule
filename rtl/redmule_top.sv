@@ -47,6 +47,7 @@ module redmule_top
 );
 
 localparam int unsigned DATAW_ALIGN = `HCI_SIZE_GET_DW(tcdm) - SysDataWidth;
+localparam int unsigned HCI_ECC = (`HCI_SIZE_GET_EW(tcdm)>1);
 
 logic                       enable, clear;
 logic                       reg_enable;
@@ -113,9 +114,10 @@ end else begin: gen_xif_decoder
   assign periph.r_id    = '0;
 end
 
-// Streamer control signals and flags
-cntrl_streamer_t cntrl_streamer_int, cntrl_streamer;
+// Streamer control signals, flags and ecc info
+cntrl_streamer_t cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
+errs_streamer_t  ecc_errors_streamer;
 
 cntrl_engine_t   cntrl_engine;
 
@@ -167,22 +169,23 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .c
 redmule_streamer #(
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
-  .clk_i           ( clk_i           ),
-  .rst_ni          ( rst_ni          ),
-  .test_mode_i     ( test_mode_i     ),
+  .clk_i           ( clk_i               ),
+  .rst_ni          ( rst_ni              ),
+  .test_mode_i     ( test_mode_i         ),
   // Controller generated signals
-  .enable_i        ( 1'b1            ),
-  .clear_i         ( clear           ),
+  .enable_i        ( 1'b1                ),
+  .clear_i         ( clear               ),
   // Source interfaces for the incoming streams
-  .x_stream_o      ( x_buffer_d      ),
-  .w_stream_o      ( w_buffer_d      ),
-  .y_stream_o      ( y_buffer_d      ),
+  .x_stream_o      ( x_buffer_d          ),
+  .w_stream_o      ( w_buffer_d          ),
+  .y_stream_o      ( y_buffer_d          ),
   // Sink interface for the outgoing stream
-  .z_stream_i      ( z_buffer_fifo   ),
+  .z_stream_i      ( z_buffer_fifo       ),
   // Master TCDM interface ports for the memory side
-  .tcdm            ( tcdm            ),
-  .ctrl_i          ( cntrl_streamer  ),
-  .flags_o         ( flgs_streamer   )
+  .tcdm            ( tcdm                ),
+  .ecc_errors_o    ( ecc_errors_streamer ),
+  .ctrl_i          ( cntrl_streamer      ),
+  .flags_o         ( flgs_streamer       )
 );
 
 hwpe_stream_fifo #(
@@ -428,6 +431,7 @@ redmule_ctrl        #(
   .IO_REGS           ( REDMULE_REGS            ),
   .ID_WIDTH          ( ID_WIDTH                ),
   .N_CONTEXT         ( NumContext              ),
+  .HCI_ECC           ( HCI_ECC                 ),
   .SysDataWidth      ( SysDataWidth            ),
   .Height            ( Height                  ),
   .Width             ( Width                   ),
@@ -448,6 +452,7 @@ redmule_ctrl        #(
   .flush_o           ( engine_flush            ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
   .cntrl_flags_o     ( cntrl_flags             ),
+  .errs_streamer_i   ( ecc_errors_streamer     ),
   .periph            ( local_periph            )
 );
 

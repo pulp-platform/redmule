@@ -33,6 +33,8 @@ module redmule_streamer
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
 
+  // ECC error signals
+  output errs_streamer_t         ecc_errors_o,
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
@@ -119,8 +121,14 @@ if (EW > 1) begin : gen_ecc_encoder
     .tcdm_target         ( ldst_tcdm       ),
     .tcdm_initiator      ( tcdm            )
   );
+
+  assign ecc_errors_o.data_single_err = data_single_err & {ECC_N_CHUNK{tcdm.r_valid}};
+  assign ecc_errors_o.data_multi_err  = data_multi_err  & {ECC_N_CHUNK{tcdm.r_valid}};
+  assign ecc_errors_o.meta_single_err = meta_single_err & tcdm.r_valid;
+  assign ecc_errors_o.meta_multi_err  = meta_multi_err  & tcdm.r_valid;
 end else begin : gen_ldst_assign
   hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm), .tcdm_initiator (tcdm) );
+  assign ecc_errors_o = '0;
 end
 
 // Virtual internal TCDM interface used by the y and z channels

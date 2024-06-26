@@ -86,6 +86,8 @@ package redmule_pkg;
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 17; // 0x44
 
+  parameter int unsigned HCI_ECC_MASK = 4'b1001; // 0x90-0x9C
+
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
   parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
   parameter bit[6:0] RVCSR  = 7'b1110011; // 0x73 -> RISC-V CSR instruction opcode
@@ -316,5 +318,12 @@ package redmule_pkg;
     logic r_opc;
     logic r_user;
   } redmule_default_data_rsp_t;
+
+  typedef struct packed {
+    logic [ECC_N_CHUNK-1:0] data_single_err;
+    logic [ECC_N_CHUNK-1:0] data_multi_err;
+    logic                   meta_single_err;
+    logic                   meta_multi_err;
+  } errs_streamer_t;
 
 endpackage
