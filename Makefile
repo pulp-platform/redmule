@@ -166,7 +166,7 @@ hw-clean-all:
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt +acc -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
+	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
 
 hw-compile:
 	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'

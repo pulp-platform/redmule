@@ -194,7 +194,6 @@ module redmule_tb;
   if (USE_ECC) begin : gen_r_ecc
     // RESPONSE PHASE ENCODING
     logic [MP-1:0][38:0] tcdm_r_data_enc;
-    logic         [4:0]  tcdm_r_meta_enc;
     for(genvar ii=0; ii<MP; ii++) begin : r_data_encoding
       hsiao_ecc_enc #(
         .DataWidth ( 32 )
@@ -202,18 +201,9 @@ module redmule_tb;
         .in  (tcdm[ii].r_data),
         .out (tcdm_r_data_enc[ii])
       );
-      assign tcdm_r_ecc[(ii+1)*7-1+3:ii*7+3] = tcdm_r_data_enc[ii][38:32];
+      assign tcdm_r_ecc[(ii+1)*7-1:ii*7] = tcdm_r_data_enc[ii][38:32];
     end
-
-    hsiao_ecc_enc #(
-      .DataWidth ( 2 )
-    ) i_r_meta_enc (
-      .in  ({tcdm_r_opc, tcdm_r_user}),
-      .out (tcdm_r_meta_enc)
-    );
-    assign tcdm_r_ecc[2:0]           = tcdm_r_meta_enc[4:2];
-    assign tcdm_r_ecc[EW-1:(7*MP+3)] = '0;
-
+    assign tcdm_r_ecc[EW-1:(7*MP)] = '0;
   end else begin : gen_no_r_ecc
     assign tcdm_r_ecc = '0;
   end
@@ -232,9 +222,9 @@ module redmule_tb;
     end
 
     hsiao_ecc_dec #(
-      .DataWidth ( 32+36+1+1 )
+      .DataWidth ( 32+36+1 )
     ) i_meta_dec (
-      .in         ( { tcdm_ecc[8:0], tcdm_add[0], tcdm_wen[0], tcdm_be, 1'b0 } ),
+      .in         ( { tcdm_ecc[8:0], tcdm_add[0], tcdm_wen[0], tcdm_be } ),
       .out        (  ),
       .syndrome_o (  ),
       .err_o      (  )
