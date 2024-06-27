@@ -272,10 +272,11 @@ int main() {
   uint8_t *z = z_oup; // golden_out //1c010000
 
   volatile int errors = 0;
+  int error_count = 0;
   int gold_sum = 0, check_sum = 0;
   int i,j;
 
-  volatile int data_correctable_cnt, data_uncorrectable_cnt = 0;
+  volatile int data_correctable_cnt, data_uncorrectable_cnt, meta_uncorrectable_cnt = 0;
 
   int offload_id_tmp, offload_id;
 
@@ -306,11 +307,29 @@ int main() {
 
   data_correctable_cnt = redmule_get_data_correctable_count();
   data_uncorrectable_cnt = redmule_get_data_uncorrectable_count();
-  tfp_printf ("errors corrected: %d \n", data_correctable_cnt);
-  tfp_printf ("errors uncorrectable: %d \n", data_uncorrectable_cnt);
+  meta_uncorrectable_cnt = redmule_get_meta_uncorrectable_count();
 
-  errors = redmule16_compare_int(z, golden, m_size*k_size/2, k_size/2);
-  // errors = redmule8_compare_int(z, golden, m_size*k_size/4);
+  tfp_printf ("Data errors corrected: %d \n", data_correctable_cnt);
+  tfp_printf ("Data errors uncorrectable: %d \n", data_uncorrectable_cnt);
+  tfp_printf ("Meta errors uncorrectable: %d \n", meta_uncorrectable_cnt);
+
+  error_count = redmule16_compare_int(z, golden, m_size*k_size/2, k_size/2);
+  // error_count = redmule8_compare_int(z, golden, m_size*k_size/4);
+
+  // Determine return code
+  if (error_count == 0) {
+    if (data_uncorrectable_cnt == 0 && meta_uncorrectable_cnt == 0 ) {
+      errors = 0;
+    } else {
+      errors = 1;
+    }
+  } else {
+    if (data_uncorrectable_cnt > 0 || meta_uncorrectable_cnt > 0 ) {
+      errors = 2;
+    } else {
+      errors = 3;
+    }
+  }
 
   *(int *) 0x80000000 = errors;
 }

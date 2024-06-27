@@ -44,9 +44,16 @@ module redmule_tb;
   logic clk;
   logic rst_n;
   logic test_mode;
+  logic done;
   logic fetch_enable;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
+
+  // Signals for Vulnerabilty Analysis
+  logic correct_termination;
+  logic incorrect_termination;
+  logic exception_termination;
+  logic retry_termination, unnecesary_retry_termination;
 
   hwpe_stream_intf_tcdm instr[0:0]  (.clk(clk));
   hwpe_stream_intf_tcdm stack[0:0]  (.clk(clk));
@@ -266,8 +273,7 @@ module redmule_tb;
     .periph_id_i       ( periph_id      ),
     .periph_r_data_o   ( periph_r_data  ),
     .periph_r_valid_o  ( periph_r_valid ),
-    .periph_r_id_o     ( periph_r_id    ),
-    .fault_detected_o  ( /* Unused */   )
+    .periph_r_id_o     ( periph_r_id    )
   );
 
   tb_dummy_memory  #(
@@ -386,6 +392,7 @@ module redmule_tb;
   initial begin
     clk <= 1'b0;
     rst_n <= 1'b0;
+    done <= 1'b0;
     core_boot_addr = 32'h0;
     for (int i = 0; i < 20; i++)
       cycle();
@@ -399,10 +406,9 @@ module redmule_tb;
       cycle();
     rst_n <= #TA 1'b1;
 
-    while(1) begin
+    while (~done) begin
       cycle();
     end
-
   end
   
   integer f_t0, f_t1;
@@ -423,6 +429,13 @@ module redmule_tb;
   initial begin
     integer id;
     int cnt_rd, cnt_wr;
+
+    // Set signals for InjectaFault
+    correct_termination = '0;
+    incorrect_termination = '0;
+    exception_termination = '0;
+    retry_termination = '0;
+    unnecesary_retry_termination = '0;
 
     test_mode = 1'b0;
     fetch_enable = 1'b0;
@@ -445,12 +458,37 @@ module redmule_tb;
     cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] + redmule_tb.i_dummy_dmemory.cnt_wr[1] + redmule_tb.i_dummy_dmemory.cnt_wr[2] + redmule_tb.i_dummy_dmemory.cnt_wr[3] + redmule_tb.i_dummy_dmemory.cnt_wr[4] + redmule_tb.i_dummy_dmemory.cnt_wr[5] + redmule_tb.i_dummy_dmemory.cnt_wr[6] + redmule_tb.i_dummy_dmemory.cnt_wr[7] + redmule_tb.i_dummy_dmemory.cnt_wr[8];
     $display("cnt_rd=%-8d", cnt_rd);
     $display("cnt_wr=%-8d", cnt_wr);
-    if(errors != 0)
-      $error("errors=%08x", errors);
-    else
-      $display("errors=%08x", errors);
-    $finish;
 
+    // Parse Error Types
+    if (errors == 0) begin
+      correct_termination = '1;
+      $info("Redmule Terminated Correctly!");
+    end else if (errors == 1) begin
+      // ID 1: Retry was triggered and result seems fine on SW side
+      // We check if the write amout matches what we would think from a good run
+      // with vulnerability analysis e.g. USE_REDUNDANCY=1, M=12, N=16, K=16 
+      if (cnt_wr == 216) begin 
+        $error("Retry was triggered but result was correct (Fine if fault injecting, otherwise not good).");
+        unnecesary_retry_termination = '1;
+      end else begin
+        $error("Retry was triggered for an incorrect result (Fine if fault injecting, otherwise not good).");
+        retry_termination = '1;
+      end
+    end else if (errors == 2) begin
+      // ID 1: Retry was triggered and result was wrong on SW side
+      $error("Retry was triggered for an incorrect result (Fine if fault injecting, otherwise not good).");
+      retry_termination = '1;
+    end else if (errors == 3) begin
+      // ID 3: Retry was not triggered and result is wrong
+      $error("Incorrect result - failure was not detected.");
+      incorrect_termination = '1;
+    end else begin
+      // Any other ID: Exception
+      $error("Incorrect result - unknown error code!");
+      exception_termination = '1;
+    end
+
+    done = 1'b1;
   end
 
 endmodule // redmule_tb
