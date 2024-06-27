@@ -39,56 +39,74 @@ localparam int unsigned D        = DW/BITW
   input logic                     [DW-1:0] w_buffer_i
 );
 
-logic [$clog2(H):0]            w_row;
-logic [$clog2(H):0]            count_limit;
-logic [$clog2(D):0]            depth;
-logic [H-1:0][D-1:0][BITW-1:0] w_buffer_q;
+  // Find out usable bounds
+  logic [$clog2(H):0]            count_limit;
+  logic [$clog2(D):0]            depth;
 
-always_ff @(posedge clk_i or negedge rst_ni) begin : w_trailer
-  if(~rst_ni) begin
-    w_buffer_q <= '0;
-  end else begin
-    if (clear_i)
-      w_buffer_q <= '0;
-    else if ({ctrl_i.load, ctrl_i.shift} == 2'b10 || {ctrl_i.load, ctrl_i.shift} == 2'b11) begin
-      for (int d = 0; d < D; d++) begin
-        w_buffer_q[w_row][d] <= (d < depth && w_row < count_limit) ? w_buffer_i[d*BITW+:BITW] : '0;
-        for (int h = 0; h < H; h++) begin
-          if (h != w_row)
-             w_buffer_q[h][d] <= (d < D - 1) ? w_buffer_q[h][d+1] : '0;
+  assign depth       = (ctrl_i.cols_lftovr == '0) ? D : ctrl_i.cols_lftovr;
+  assign count_limit = (ctrl_i.rows_lftovr == '0) ? H : ctrl_i.rows_lftovr;
+
+
+  // Counter to track the number of shifts per row
+  logic [$clog2(H):0]            w_row_q, w_row_d;
+
+  always_comb begin : row_load_counter
+      if (clear_i)
+        w_row_d = '0;
+      else if (ctrl_i.load)
+        w_row_d = (w_row_q + 1) % H;
+      else
+        w_row_d = w_row_q;
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter_ff
+    if(~rst_ni) begin
+      w_row_q <= '0;
+    end else begin
+      w_row_q <= w_row_d;
+    end
+  end
+
+
+  // Main storage element
+  logic [D-1:0][H-1:0][BITW-1:0] w_buffer_d, w_buffer_q;
+
+  always_comb begin: w_trailer_comb
+    if (clear_i) begin
+      w_buffer_d = '0;
+
+    end else if (ctrl_i.shift | ctrl_i.load) begin // Load always means shift as well
+
+      // Shift elements in in d direction
+      for (int d = 0; d < D - 1; d++) w_buffer_d[d] = w_buffer_q[d+1];
+      w_buffer_d[D - 1] = '0;
+
+      // If load is set Overwrite (!) elements in w_row_q
+      if (ctrl_i.load) begin
+        for (int d = 0; d < D; d++) begin
+          // Elements outside of usable bounds get set to 0
+          if (d < depth && w_row_q < count_limit) begin
+            w_buffer_d[d][w_row_q] = w_buffer_i[d*BITW+:BITW];
+          end else begin
+            w_buffer_d[d][w_row_q] = '0;
+          end
         end
       end
-    end else if ({ctrl_i.load, ctrl_i.shift} == 2'b01) begin
-      for (int h = 0; h < H; h++) begin
-        for (int d = 0; d < D; d++)
-          w_buffer_q[h][d] <= (d < D - 1) ? w_buffer_q[h][d+1] : '0;
-      end
-    end else 
-      w_buffer_q <= w_buffer_q; 
+
+    end else begin
+        w_buffer_d = w_buffer_q;
+    end
   end
-end
 
-// Counter to track the number of shifts per row
-always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
-  if(~rst_ni) begin
-    w_row <= '0;
-  end else begin	
-    if (clear_i || w_row == H )
-      w_row <= '0;
-    else if (ctrl_i.load)
-      w_row <= w_row + 1; 
-    else
-      w_row <= w_row;	
+  always_ff @(posedge clk_i or negedge rst_ni) begin : w_trailer_ff
+    if(~rst_ni) begin
+      w_buffer_q <= '0;
+    end else begin
+      w_buffer_q <= w_buffer_d;
+    end
   end
-end
 
-assign depth       = (ctrl_i.cols_lftovr == '0) ? D : ctrl_i.cols_lftovr;
-assign count_limit = (ctrl_i.rows_lftovr != '0) ? ctrl_i.rows_lftovr : Height;
-
-// Output assignment
-generate
-  for (genvar h = 0; h < H; h++)
-    assign w_buffer_o[h] = w_buffer_q[h][0];
-endgenerate
+  // Output assignment
+  assign w_buffer_o = w_buffer_q[0];
 
 endmodule : redmule_w_buffer
