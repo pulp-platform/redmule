@@ -1,2 +1,12 @@
 overrides:
+  # Repository got renamed, fpnew is the old name cvfpu the new one
   fpnew: { git: "https://github.com/pulp-platform/cvfpu.git", rev: "pulp-v0.1.3" }
+
+  # branch: itemm/redmule_features for new features
+  hwpe-stream       : { git: "https://github.com/Lynx005F/hwpe-stream.git" , rev: 5e4813fb953c7d79af9c1b4ad9c3a09a91c011b1 } 
+
+  # branch: master, need newer version for voter macros
+  redundancy_cells  : { git: "https://github.com/pulp-platform/redundancy_cells" , rev: 74749bdf83a8ceaaa99c5c73d2427020f54c70b0 } 
+
+  # version which redmule and hci require, not version which redundancy_cells requires (we don't need those cells)
+  register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.3.1                           } 
