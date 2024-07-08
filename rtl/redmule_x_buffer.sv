@@ -40,6 +40,7 @@ localparam int unsigned          TOT_DEPTH = H*D
 )(
   input  logic                                               clk_i,
   input  logic                                               rst_ni,
+  input  logic                                     [REP-1:0] buffer_clk_en_i,
   input  logic                                     [REP-1:0] clear_i, 
   input  x_buffer_ctrl_t                           [REP-1:0] ctrl_i,
   output x_buffer_flgs_t                           [REP-1:0] flags_o,
@@ -47,6 +48,16 @@ localparam int unsigned          TOT_DEPTH = H*D
   input logic                                       [DW-1:0] x_buffer_i,
   output logic                                               fault_o
 );
+
+logic [REP-1:0] buffer_clock;
+for (genvar r = 0; r < REP; r++) begin: gen_clock_gate_cells
+  tc_clk_gating i_x_buffer_clock_gating (
+    .clk_i     ( clk_i              ),
+    .en_i      ( buffer_clk_en_i[r] ),
+    .test_en_i ( '0                 ),
+    .clk_o     ( buffer_clock[r]    )
+  );
+end
 
 // W Index Counnter
 logic [REP-1:0][$clog2(W):0] w_index_b, w_index_v, w_index_d, w_index_q;
@@ -78,7 +89,9 @@ for (genvar r = 0; r < REP; r++) begin: gen_w_counter_default_state
   assign w_index_b[r] = '0;
 end
 
-`FF(w_index_q, w_index_d, w_index_b);
+for (genvar r = 0; r < REP; r++) begin: gen_w_counter_clock_gated_ffs
+  `FFARN(w_index_q[r], w_index_d[r], w_index_b[r], buffer_clock[r], rst_ni);
+end
 
 // Depth Shift Counter with partial deactivation
 logic [REP-1:0][$clog2(D):0] d_shift_b, d_shift_v, d_shift_d, d_shift_q;
@@ -107,7 +120,9 @@ for (genvar r = 0; r < REP; r++) begin: gen_d_shift_default_state
   assign d_shift_b[r] = '0;
 end
 
-`FF(d_shift_q, d_shift_d, d_shift_b);
+for (genvar r = 0; r < REP; r++) begin: gen_d_shift_clock_gated_ffs
+  `FFARN(d_shift_q[r], d_shift_d[r], d_shift_b[r], buffer_clock[r], rst_ni);
+end
 
 for (genvar r = 0; r < REP; r++) begin: gen_empty_next_state
   always_comb begin
@@ -127,7 +142,9 @@ for (genvar r = 0; r < REP; r++) begin: gen_empty_default_state
   assign empty_count_b[r] = '0;
 end
 
-`FF(empty_count_q, empty_count_d, empty_count_b);
+for (genvar r = 0; r < REP; r++) begin: gen_empty_counter_clock_gated_ffs
+  `FFARN(empty_count_q[r], empty_count_d[r], empty_count_b[r], buffer_clock[r], rst_ni);
+end
 
 for (genvar r = 0; r < REP; r++) begin: gen_depth_shift_counter_reset
   always_comb begin : empty_gen_and_shift_count_rst
@@ -170,7 +187,9 @@ for (genvar r = 0; r < REP; r++) begin: gen_h_counter_default_state
   assign h_index_b[r] = '0;
 end
 
-`FF(h_index_q, h_index_d, h_index_b);
+for (genvar r = 0; r < REP; r++) begin: gen_h_counter_clock_gated_ffs
+  `FFARN(h_index_q[r], h_index_d[r], h_index_b[r], buffer_clock[r], rst_ni);
+end
 
 // From here on out we use the signal of the first replica.
 // If a fault happens on it then we can detect it since there is no more recursive dependency
@@ -226,8 +245,8 @@ always_comb begin
   end
 end
 
-`FF(x_pad_q, x_pad_d, '0);
-`FF(x_buffer_q, x_buffer_d, '0);
+`FFARN(x_pad_q, x_pad_d, '0, buffer_clock[0], rst_ni);
+`FFARN(x_buffer_q, x_buffer_d, '0, buffer_clock[0], rst_ni);
 
 // Output assignment
 generate

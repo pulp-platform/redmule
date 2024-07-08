@@ -385,13 +385,6 @@ end
 /*----------------------------------------------------------------*/
 
 logic [REP-1:0] x_buffer_clk_en;
-logic x_buffer_clock;
-tc_clk_gating i_x_buffer_clock_gating (
-  .clk_i     ( clk_i              ),
-  .en_i      ( x_buffer_clk_en[0] ),
-  .test_en_i ( '0                 ),
-  .clk_o     ( x_buffer_clock     )
-);
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
 redmule_x_buffer #(
@@ -401,14 +394,15 @@ redmule_x_buffer #(
   .Width    ( Width       ),
   .REP      ( REP         )
 ) i_x_buffer (
-  .clk_i      ( x_buffer_clock     ),
-  .rst_ni     ( rst_ni             ),
-  .clear_i    ( clear | soft_clear ),
-  .ctrl_i     ( x_buffer_ctrl      ),
-  .flags_o    ( x_buffer_flgs      ),
-  .x_buffer_o ( x_buffer_q         ),
-  .x_buffer_i ( x_buffer_fifo.data ),
-  .fault_o    ( x_fault            )
+  .clk_i           ( clk_i              ),
+  .rst_ni          ( rst_ni             ),
+  .buffer_clk_en_i ( x_buffer_clk_en    ),
+  .clear_i         ( clear | soft_clear ),
+  .ctrl_i          ( x_buffer_ctrl      ),
+  .flags_o         ( x_buffer_flgs      ),
+  .x_buffer_o      ( x_buffer_q         ),
+  .x_buffer_i      ( x_buffer_fifo.data ),
+  .fault_o         ( x_fault            )
 );
 
 
