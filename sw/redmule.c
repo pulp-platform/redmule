@@ -287,12 +287,8 @@ int main() {
   while( ( offload_id_tmp = hwpe_acquire_job() ) < 0);
   
   // job-dependent registers
-  redmule_x_add_set ((unsigned int) x);
-  redmule_w_add_set ((unsigned int) w);
-  redmule_y_add_set ((unsigned int) y);
-  redmule_z_add_set ((unsigned int) z);
   // _Bool is_gemm = 1;
-  redmule_cfg (m_size, n_size, k_size, gemm_ops, redundancy);
+  redmule_cfg ((uint32_t) x, (uint32_t) w, (uint32_t) y, (uint32_t) z, m_size, n_size, k_size, gemm_ops, redundancy);
 
   // Start RedMulE operation
   hwpe_trigger_job();

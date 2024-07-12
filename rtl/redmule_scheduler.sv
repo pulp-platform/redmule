@@ -193,7 +193,7 @@ always_comb begin : address_gen_signals
   cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl   = '0;
   cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl = '0;
 
-  if (reg_file_i.hwpe_params[REDUNDANCY_SELECTION] > 0) begin
+  if (reg_file_i.hwpe_params[REDUNDANCY_SELECTION][15:0] != 16'hFF00) begin
     // In case of redundancy, we get each element twice in the lowest dimension
     // There are also some changes on higher levels because we only cover half 
     // as many elements per compute cycle, but we can more cheaply do these on the software side
