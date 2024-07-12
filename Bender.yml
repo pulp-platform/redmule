@@ -41,6 +41,8 @@ sources:
     - rtl/redmule_castin.sv
     - rtl/redmule_castout.sv
     - rtl/redmule_streamer.sv
+    - rtl/redmule_streamin.sv
+    - rtl/redmule_streamout.sv
     - rtl/redmule_x_buffer.sv
     - rtl/redmule_w_buffer.sv
     - rtl/redmule_z_buffer.sv
