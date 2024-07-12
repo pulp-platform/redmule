@@ -38,6 +38,7 @@ module redmule_tb;
   parameter string STIM_DATA  = "../../stim_data.txt";
   parameter bit USE_ECC = 0;
   parameter int unsigned EW = (USE_ECC) ? 72 : DEFAULT_EW;
+  parameter bit USE_REDUNDANCY = 1;
 
   // global signals
   logic clk;
@@ -232,11 +233,12 @@ module redmule_tb;
   end
 
   redmule_wrap #(
-    .ID_WIDTH          ( ID             ),
-    .N_CORES           ( NC             ),
-    .DW                ( DW             ),
-    .MP                ( DW/32          ),
-    .EW                ( EW             )
+    .ID_WIDTH       ( ID             ),
+    .N_CORES        ( NC             ),
+    .DW             ( DW             ),
+    .MP             ( DW/32          ),
+    .EW             ( EW             ),
+    .USE_REDUNDANCY ( USE_REDUNDANCY )
   ) i_redmule_wrap     (
     .clk_i             ( clk            ),
     .rst_ni            ( rst_n          ),
@@ -264,7 +266,8 @@ module redmule_tb;
     .periph_id_i       ( periph_id      ),
     .periph_r_data_o   ( periph_r_data  ),
     .periph_r_valid_o  ( periph_r_valid ),
-    .periph_r_id_o     ( periph_r_id    )
+    .periph_r_id_o     ( periph_r_id    ),
+    .fault_detected_o  ( /* Unused */   )
   );
 
   tb_dummy_memory  #(

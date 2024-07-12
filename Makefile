@@ -42,6 +42,7 @@ gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
 USE_ECC  ?= 0
+ENABLE_REDUNDANCY ?= 0
 USE_REDUNDANCY    ?= 0
 
 ifeq ($(verbose),1)
@@ -96,23 +97,25 @@ all: $(STIM_INSTR) $(STIM_DATA) dis
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);          \
-	$(QUESTA) vsim -c vopt_tb -do "run -a" \
-	-gSTIM_INSTR=stim_instr.txt            \
-	-gSTIM_DATA=stim_data.txt              \
-	-gPROB_STALL=$(P_STALL)                \
-	-gUSE_ECC=$(USE_ECC)                   \
-		-suppress vsim-3009
+	cd $(BUILD_DIR)/$(TEST_SRCS);            \
+	$(QUESTA) vsim -c vopt_tb -do "run -a"   \
+	-gSTIM_INSTR=stim_instr.txt              \
+	-gSTIM_DATA=stim_data.txt                \
+	-gPROB_STALL=$(P_STALL)                  \
+	-gUSE_ECC=$(USE_ECC)                     \
+	-gENABLE_REDUNDANCY=$(ENABLE_REDUNDANCY) \
+	-suppress vsim-3009
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS);      \
-	$(QUESTA) vsim vopt_tb             \
-	-do "add log -r sim:/redmule_tb/*" \
-	-do "source $(WAVES)"              \
-	-gSTIM_INSTR=stim_instr.txt        \
-	-gSTIM_DATA=stim_data.txt          \
-	-gPROB_STALL=$(P_STALL)            \
-	-gUSE_ECC=$(USE_ECC)               \
-		-suppress vsim-3009
+	cd $(BUILD_DIR)/$(TEST_SRCS);            \
+	$(QUESTA) vsim vopt_tb                   \
+	-do "add log -r sim:/redmule_tb/*"       \
+	-do "source $(WAVES)"                    \
+	-gSTIM_INSTR=stim_instr.txt              \
+	-gSTIM_DATA=stim_data.txt                \
+	-gPROB_STALL=$(P_STALL)                  \
+	-gUSE_ECC=$(USE_ECC)                     \
+	-gENABLE_REDUNDANCY=$(ENABLE_REDUNDANCY) \
+	-suppress vsim-3009
 endif
 
 # Download bender
