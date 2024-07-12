@@ -103,7 +103,7 @@ static inline unsigned int redmule_get_meta_uncorrectable_count () {
   return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_UNCORR_ERR);
 }
 
-void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops){
+void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops, uint32_t redundancy_enabled){
    uint32_t x_iters        = 0;
    uint32_t w_iters        = 0;
    uint32_t leftovers      = 0;
@@ -139,6 +139,11 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
             w_rows_lftovr,
             w_cols_lftovr,
             slots;
+
+   // In case we want to do the calculation redundantly, we virtually have 2x the matrix size
+   if (redundancy_enabled) {
+    m_size *= 2;
+   }
 
    // Calculating the number of iterations alng the two dimensions of the X matrix
    x_rows_iter_tmp = m_size/ARRAY_WIDTH;
@@ -241,21 +246,29 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    yz_d2_stride  = ARRAY_WIDTH*w_d0_stride;
    tot_x_read    = x_rows_iter*x_cols_iter*w_cols_iter;
 
+   // In case we have redundancy enabled, tiles only have half the offset in row direction
+   // Since we use every element twice in a tile
+   if (redundancy_enabled) {
+      x_rows_offs /= 2;
+      yz_d2_stride /= 2;
+   }
+
    // Writing the computations in configuration register
-   HWPE_WRITE(x_iters       , REDMULE_REG_OFFS + REDMULE_REG_X_ITER_PTR         );
-   HWPE_WRITE(w_iters       , REDMULE_REG_OFFS + REDMULE_REG_W_ITER_PTR         );
-   HWPE_WRITE(leftovers     , REDMULE_REG_OFFS + REDMULE_REG_LEFTOVERS_PTR      );
-   HWPE_WRITE(left_params   , REDMULE_REG_OFFS + REDMULE_REG_LEFT_PARAMS_PTR    );
-   HWPE_WRITE(x_d1_stride   , REDMULE_REG_OFFS + REDMULE_REG_X_D1_STRIDE_PTR    );
-   HWPE_WRITE(x_rows_offs   , REDMULE_REG_OFFS + REDMULE_REG_X_ROWS_OFFS_PTR    );
-   HWPE_WRITE(tot_x_read    , REDMULE_REG_OFFS + REDMULE_REG_TOT_X_READ_PTR     );
-   HWPE_WRITE(x_buffer_slots, REDMULE_REG_OFFS + REDMULE_REG_X_BUFFER_SLOTS_PTR );
-   HWPE_WRITE(w_tot_len     , REDMULE_REG_OFFS + REDMULE_REG_W_TOT_LEN_PTR      );
-   HWPE_WRITE(w_d0_stride   , REDMULE_REG_OFFS + REDMULE_REG_W_D0_STRIDE_PTR    );
-   HWPE_WRITE(yz_tot_len    , REDMULE_REG_OFFS + REDMULE_REG_YZ_TOT_LEN_PTR     );
-   HWPE_WRITE(yz_d0_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D0_STRIDE_PTR   );
-   HWPE_WRITE(yz_d2_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D2_STRIDE_PTR   );
-   HWPE_WRITE(op_selection  , REDMULE_REG_OFFS + REDMULE_REG_OP_SELECTION       );
+   HWPE_WRITE(x_iters           , REDMULE_REG_OFFS + REDMULE_REG_X_ITER_PTR         );
+   HWPE_WRITE(w_iters           , REDMULE_REG_OFFS + REDMULE_REG_W_ITER_PTR         );
+   HWPE_WRITE(leftovers         , REDMULE_REG_OFFS + REDMULE_REG_LEFTOVERS_PTR      );
+   HWPE_WRITE(left_params       , REDMULE_REG_OFFS + REDMULE_REG_LEFT_PARAMS_PTR    );
+   HWPE_WRITE(x_d1_stride       , REDMULE_REG_OFFS + REDMULE_REG_X_D1_STRIDE_PTR    );
+   HWPE_WRITE(x_rows_offs       , REDMULE_REG_OFFS + REDMULE_REG_X_ROWS_OFFS_PTR    );
+   HWPE_WRITE(tot_x_read        , REDMULE_REG_OFFS + REDMULE_REG_TOT_X_READ_PTR     );
+   HWPE_WRITE(x_buffer_slots    , REDMULE_REG_OFFS + REDMULE_REG_X_BUFFER_SLOTS_PTR );
+   HWPE_WRITE(w_tot_len         , REDMULE_REG_OFFS + REDMULE_REG_W_TOT_LEN_PTR      );
+   HWPE_WRITE(w_d0_stride       , REDMULE_REG_OFFS + REDMULE_REG_W_D0_STRIDE_PTR    );
+   HWPE_WRITE(yz_tot_len        , REDMULE_REG_OFFS + REDMULE_REG_YZ_TOT_LEN_PTR     );
+   HWPE_WRITE(yz_d0_stride      , REDMULE_REG_OFFS + REDMULE_REG_YZ_D0_STRIDE_PTR   );
+   HWPE_WRITE(yz_d2_stride      , REDMULE_REG_OFFS + REDMULE_REG_YZ_D2_STRIDE_PTR   );
+   HWPE_WRITE(op_selection      , REDMULE_REG_OFFS + REDMULE_REG_OP_SELECTION       );
+   HWPE_WRITE(redundancy_enabled, REDMULE_REG_OFFS + REDMULE_REG_REDUNDANCY_ENABLED );
 }
 
 #endif /* __HAL_REDMULE_H__ */

@@ -42,6 +42,7 @@ gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
 USE_ECC  ?= 0
+USE_REDUNDANCY    ?= 0
 
 ifeq ($(verbose),1)
 FLAGS += -DVERBOSE
@@ -51,7 +52,7 @@ endif
 CC=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
 OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP -DUSE_REDUNDANCY=$(USE_REDUNDANCY)
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Setup build object dirs
