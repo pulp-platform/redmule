@@ -145,6 +145,12 @@
 #define REDMULE_REG_X_TOT_LEN_PTR      0x44
 #define REDMULE_REG_OP_SELECTION       0x48
 
+#define REDMULE_ECC_REG_OFFS           0x90
+#define DATA_CORR_ERR                  0x00
+#define DATA_UNCORR_ERR                0x04
+#define METADATA_CORR_ERR              0x08
+#define METADATA_UNCORR_ERR            0x0c
+
 // OPs definition
 #define MATMUL 0x0
 #define GEMM   0x1
@@ -157,10 +163,11 @@
 
 #define RNE       0x0
 #define RTZ       0x1
-#define OP_FMADD  0x3
-#define OP_ADD    0x5
-#define OP_MUL    0x6
-#define OP_MINMAX 0xA
+
+#define OP_FMADD  0x0
+#define OP_ADD    0x2
+#define OP_MUL    0x3
+#define OP_MINMAX 0x7
 
 // FP Formats encoding
 #define FP16    0x2

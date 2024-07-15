@@ -45,6 +45,8 @@ package redmule_pkg;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
   parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned ECC_CHUNK_SIZE = 32;
+  parameter int unsigned ECC_N_CHUNK    = DATA_W / ECC_CHUNK_SIZE;
 
   // Register file index
   // Matrix addresses
@@ -86,7 +88,9 @@ package redmule_pkg;
   // [14:12] -> computing format
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 18; // 0x48
-  
+
+  parameter int unsigned HCI_ECC_MASK = 4'b1001; // 0x90-0x9C
+
   parameter int unsigned NumStreamSources = 3; // X, W, Y
   parameter int unsigned XsourceStreamId  = 0;
   parameter int unsigned WsourceStreamId  = 1;
@@ -204,5 +208,12 @@ package redmule_pkg;
     logic            stored;
     logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
+
+  typedef struct packed {
+    logic [ECC_N_CHUNK-1:0] data_single_err;
+    logic [ECC_N_CHUNK-1:0] data_multi_err;
+    logic                   meta_single_err;
+    logic                   meta_multi_err;
+  } errs_streamer_t;
 
 endpackage

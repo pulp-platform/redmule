@@ -87,6 +87,22 @@ static inline void hwpe_cg_disable() {
   return;
 }
 
+static inline unsigned int redmule_get_data_correctable_count () {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + DATA_CORR_ERR);
+}
+
+static inline unsigned int redmule_get_data_uncorrectable_count () {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + DATA_UNCORR_ERR);
+}
+
+static inline unsigned int redmule_get_meta_correctable_count () {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_CORR_ERR);
+}
+
+static inline unsigned int redmule_get_meta_uncorrectable_count () {
+  return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_UNCORR_ERR);
+}
+
 void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops){
    uint32_t x_iters        = 0;
    uint32_t w_iters        = 0;

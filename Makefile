@@ -41,6 +41,7 @@ WORK_PATH = $(BUILD_DIR)
 gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
+USE_ECC  ?= 0
 
 ifeq ($(verbose),1)
 FLAGS += -DVERBOSE
@@ -98,7 +99,9 @@ ifeq ($(gui), 0)
 	$(QUESTA) vsim -c vopt_tb -do "run -a" \
 	-gSTIM_INSTR=stim_instr.txt            \
 	-gSTIM_DATA=stim_data.txt              \
-	-gPROB_STALL=$(P_STALL)
+	-gPROB_STALL=$(P_STALL)                \
+	-gUSE_ECC=$(USE_ECC)                   \
+		-suppress vsim-3009
 else
 	cd $(BUILD_DIR)/$(TEST_SRCS);      \
 	$(QUESTA) vsim vopt_tb             \
@@ -106,7 +109,9 @@ else
 	-do "source $(WAVES)"              \
 	-gSTIM_INSTR=stim_instr.txt        \
 	-gSTIM_DATA=stim_data.txt          \
-	-gPROB_STALL=$(P_STALL)
+	-gPROB_STALL=$(P_STALL)            \
+	-gUSE_ECC=$(USE_ECC)               \
+		-suppress vsim-3009
 endif
 
 # Download bender
