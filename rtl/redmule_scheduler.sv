@@ -1468,8 +1468,8 @@ clear_regs       = 1'b0;
             flgs_scheduler_o.x_ready = 1'b1;
           end
 
-          if (tot_store_q == reg_file_i.hwpe_params[LEFT_PARAMS][31:16] - 1) begin
-            if (x_cols_iter_q < reg_file_i.hwpe_params[X_ITERS][15:0] && tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1) begin
+          if (tot_store_q < reg_file_i.hwpe_params[LEFT_PARAMS][31:16] - 1) begin
+            if (tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ] - 1) begin
               cntrl_streamer_o.x_stream_source_ctrl.req_start = 1'b1;
               tot_x_read_d = tot_x_read_q + 1;
             end
