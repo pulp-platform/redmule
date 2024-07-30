@@ -23,8 +23,8 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: 0d67563b6b592549542544f1abc0f43e5d4ee8b4
-    version: 1.35.0
+    revision: c27bce39ebb2e6bae52f60960814a2afca7bd4cb
+    version: 1.37.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
@@ -61,10 +61,10 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 97c8d93f513595e7392078ba2ee4bda50fe1e395
+    revision: cbfa4a809e1e15dd55610ee4662969b297af7e64
     version: null
     source:
-      Git: https://github.com/pulp-platform/hci.git
+      Git: https://github.com/Lynx005F/hci.git
     dependencies:
     - cluster_interconnect
     - common_cells
@@ -73,17 +73,17 @@ packages:
     - redundancy_cells
     - register_interface
   hwpe-ctrl:
-    revision: a5966201aeeb988d607accdc55da933a53c6a56e
+    revision: 376c5da312d60cecd732336d23a0d0da2a1d0ea2
     version: null
     source:
-      Git: https://github.com/pulp-platform/hwpe-ctrl.git
+      Git: https://github.com/Lynx005F/hwpe-ctrl.git
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: 65c99a4a2f37a79acee800ab0151f67dfb1edef1
-    version: 1.8.0
+    revision: a39dd676f7f4594910306dfcd190ef0ff94e4381
+    version: null
     source:
-      Git: https://github.com/pulp-platform/hwpe-stream.git
+      Git: https://github.com/Lynx005F/hwpe-stream.git
     dependencies:
     - tech_cells_generic
   l2_tcdm_hybrid_interco:
@@ -93,10 +93,10 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   redundancy_cells:
-    revision: c37bdb47339bf70e8323de8df14ea8bbeafb6583
+    revision: 74749bdf83a8ceaaa99c5c73d2427020f54c70b0
     version: null
     source:
-      Git: https://github.com/pulp-platform/redundancy_cells.git
+      Git: https://github.com/pulp-platform/redundancy_cells
     dependencies:
     - common_cells
     - common_verification

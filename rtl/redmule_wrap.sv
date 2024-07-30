@@ -28,17 +28,18 @@ module redmule_wrap
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-parameter  int unsigned  ID_WIDTH    = 8                    ,
-parameter  int unsigned  N_CORES     = 8                    ,
-parameter  int unsigned  DW          = DATA_W               , // TCDM port dimension (in bits)
-parameter  int unsigned  MP          = DW/redmule_pkg::MemDw,
-parameter  int unsigned  EW          = 0                    , // ECC signals width
-localparam fp_format_e   FpFormat    = FPFORMAT             , // Data format (default is FP16)
-localparam int unsigned  Height      = ARRAY_HEIGHT         , // Number of PEs within a row
-localparam int unsigned  Width       = ARRAY_WIDTH          , // Number of parallel rows
-localparam int unsigned  NumPipeRegs = PIPE_REGS            , // Number of pipeline registers within each PE 
-localparam pipe_config_t PipeConfig  = DISTRIBUTED          ,
-localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
+parameter  int unsigned  ID_WIDTH          = 8                    ,
+parameter  int unsigned  N_CORES           = 8                    ,
+parameter  int unsigned  DW                = DATA_W               , // TCDM port dimension (in bits)
+parameter  int unsigned  MP                = DW/redmule_pkg::MemDw,
+parameter  int unsigned  EW                = 0                    , // ECC signals width
+parameter           bit  USE_REDUNDANCY    = 1                    , // Number of Replicas of Internal State Machine
+localparam fp_format_e   FpFormat          = FPFORMAT             , // Data format (default is FP16)
+localparam int unsigned  Height            = ARRAY_HEIGHT         , // Number of PEs within a row
+localparam int unsigned  Width             = ARRAY_WIDTH          , // Number of parallel rows
+localparam int unsigned  NumPipeRegs       = PIPE_REGS            , // Number of pipeline registers within each PE 
+localparam pipe_config_t PipeConfig        = DISTRIBUTED          ,
+localparam int unsigned  BITW              = fp_width(FpFormat)  // Number of bits for the given format
 ) (
   // global signals
   input  logic                      clk_i         ,
@@ -129,15 +130,16 @@ redmule_top #(
   .ID_WIDTH              ( ID_WIDTH              ),
   .N_CORES               ( N_CORES               ),
   .DW                    ( DW                    ),
-  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) ),
+  .USE_REDUNDANCY        ( USE_REDUNDANCY        )
 ) i_redmule_top (
-  .clk_i        ( clk_i        ),
-  .rst_ni       ( rst_ni       ),
-  .test_mode_i  ( test_mode_i  ),
-  .evt_o        ( evt_o        ),
-  .busy_o       ( busy_o       ),
-  .tcdm         ( tcdm         ),
-  .periph       ( periph       )
+  .clk_i            ( clk_i        ),
+  .rst_ni           ( rst_ni       ),
+  .test_mode_i      ( test_mode_i  ),
+  .evt_o            ( evt_o        ),
+  .busy_o           ( busy_o       ),
+  .tcdm             ( tcdm         ),
+  .periph           ( periph       )
 );
 
 endmodule: redmule_wrap

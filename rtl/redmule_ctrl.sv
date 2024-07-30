@@ -26,16 +26,16 @@ import redmule_pkg::*;
 module redmule_ctrl
   import hwpe_ctrl_package::*;
 #(
-parameter  int unsigned N_CORES       = 8                      ,
-parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
-parameter  int unsigned ID_WIDTH      = 8                      ,
-parameter  int unsigned N_CONTEXT     = 2                      ,
-parameter  int unsigned Height        = 4                      ,
-parameter  int unsigned Width         = 8                      ,
-parameter  int unsigned NumPipeRegs   = 3                      ,
-localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
-localparam int unsigned W_ITERS       = W_ITERS                ,
-localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
+parameter  int unsigned N_CORES           = 8                      ,
+parameter  int unsigned IO_REGS           = REDMULE_REGS           ,
+parameter  int unsigned ID_WIDTH          = 8                      ,
+parameter  int unsigned N_CONTEXT         = 2                      ,
+parameter  int unsigned Height            = 4                      ,
+parameter  int unsigned Width             = 8                      ,
+parameter  int unsigned NumPipeRegs       = 3                      ,
+localparam int unsigned TILE              = (NumPipeRegs +1)*Height,
+localparam int unsigned W_ITERS           = W_ITERS                ,
+localparam int unsigned LEFT_PARAMS       = LEFT_PARAMS
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -62,7 +62,10 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   // ECC error signals
   input errs_streamer_t           errs_streamer_i,
   // Peripheral slave port
-  hwpe_ctrl_intf_periph.slave     periph
+  hwpe_ctrl_intf_periph.slave     periph,
+  // Error signals
+  input logic                     serial_fault_i,
+  input logic                     parallel_fault_i
 );
 
   logic        clear;
@@ -72,7 +75,6 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
   logic        z_buffer_clk_en;
   logic        enable_depth_count, reset_depth_count;
   logic [4:0]  w_computed;
-  logic [15:0] w_rows;
   logic [15:0] w_rows_iter, w_row_count_d, w_row_count_q;
   logic [15:0] z_storings_d, z_storings_q, tot_stores;
 
@@ -139,6 +141,17 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .reg_file       ( reg_file     )
   );
 
+  logic regfile_fault;
+  hwpe_ctrl_regfile_parity #(
+    .N_IO_REGS      ( REDMULE_REGS ),
+    .N_GENERIC_REGS ( 6            )
+  ) i_regfile_parity_checker (
+    .clk_i,
+    .rst_ni,
+    .reg_file_i       ( reg_file      ),
+    .fault_detected_o ( regfile_fault )
+  );
+
   /*---------------------------------------------------------------------------------------------*/
   /*                                       ECC Register island                                   */
   /*---------------------------------------------------------------------------------------------*/
@@ -169,22 +182,59 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
     .reg_rsp_i      ( hci_ecc_rsp        )
   );
 
+  // Store fault detected o for one cycle so that there is no loop to this module's outputs
+  // Parallel faults should always be considered (If HW Redundancy is not enabled they will be wired to 0 in detectors).
+  logic parallel_fault_q;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : parallel_fault_unloop_register
+    if(~rst_ni) begin
+      parallel_fault_q <= '0;
+    end else begin
+      parallel_fault_q <= parallel_fault_i;
+    end
+  end
+
+  // Serial faults should only be considered if SW Redundancy is enabled
+  logic reasonable_serial_fault;
+  assign reasonable_serial_fault = serial_fault_i && (reg_file.hwpe_params[REDUNDANCY_SELECTION][15:0] != 16'hFF00);
+
+  // Regfile Faults should be considered if SW Redundancy enabled
+  // And always fault if SW Redundancy is neither enabled nor disabled e.g. regfile got corrupted or cleared
+  logic reasonable_regfile_fault;
+  always_comb begin
+    if (current == REDMULE_IDLE || current == REDMULE_FINISHED) begin
+      // Do not check regfile it could possibly be modified at the time
+      reasonable_regfile_fault = 0;
+    end else begin
+      if (reg_file.hwpe_params[REDUNDANCY_SELECTION][15:0] == 16'h00FF) begin: redundancy_enabled
+        reasonable_regfile_fault = regfile_fault;
+      end else begin
+        // Fault if register is not set to non-redundant mode but in any other state
+        reasonable_regfile_fault = (reg_file.hwpe_params[REDUNDANCY_SELECTION][15:0] != 16'hFF00);
+      end
+    end
+  end
+
+  // Combine faults
+  logic fault;
+  assign fault = parallel_fault_q | reasonable_serial_fault | reasonable_regfile_fault;
+
   hci_ecc_manager #(
     .N_CHUNK       ( ECC_N_CHUNK           ),
     .ParData       ( 1                     ),
-    .ParMeta       ( 1                     ),
+    .ParMeta       ( 2                     ),
     .hci_ecc_req_t ( hci_ecc_req_t         ),
     .hci_ecc_rsp_t ( hci_ecc_rsp_t         )
   ) i_hci_ecc_manager (
-    .clk_i                    ( clk_i                             ),
-    .rst_ni                   ( rst_ni                            ),
-    .hci_ecc_req_i            ( hci_ecc_req                       ),
-    .hci_ecc_rsp_o            ( hci_ecc_rsp                       ),
-    .data_correctable_err_i   ( errs_streamer_i.data_single_err   ),
-    .data_uncorrectable_err_i ( errs_streamer_i.data_multi_err    ),
-    .meta_correctable_err_i   ( errs_streamer_i.meta_single_err   ),
-    .meta_uncorrectable_err_i ( errs_streamer_i.meta_multi_err    )
-  );
+    .clk_i                    ( clk_i                                    ),
+    .rst_ni                   ( rst_ni                                   ),
+    .hci_ecc_req_i            ( hci_ecc_req                              ),
+    .hci_ecc_rsp_o            ( hci_ecc_rsp                              ),
+    .data_correctable_err_i   ( errs_streamer_i.data_single_err          ),
+    .data_uncorrectable_err_i ( errs_streamer_i.data_multi_err           ),
+    .meta_correctable_err_i   ( { errs_streamer_i.meta_single_err, 1'b0} ),
+    .meta_uncorrectable_err_i ( { errs_streamer_i.meta_multi_err, fault} )
+   );
 
 
   /*---------------------------------------------------------------------------------------------*/
@@ -436,6 +486,13 @@ localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
         storing_rst    = 1'b1;
       end
     endcase
+
+    // In case we get a fault_detected_i we abort the calculation
+    // If only one of the CTRL Instances does this then the output voters will set the 
+    // other one in next cycle, so CTRL will resynchronize
+    if (fault) begin
+      next = REDMULE_FINISHED;
+    end
   end
 
   /*---------------------------------------------------------------------------------------------*/

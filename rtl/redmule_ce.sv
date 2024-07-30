@@ -28,12 +28,15 @@ module redmule_ce
   parameter type                     TagType     = logic                        ,
   parameter type                     AuxType     = logic                        ,
   parameter logic                    Stallable   = 1'b0                         ,
-  localparam int unsigned            BITW        = fpnew_pkg::fp_width(FpFormat)
+  parameter bit                      W_PARITY    = 0                            ,
+  localparam int unsigned            BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+  parameter  int unsigned            PARW        = BITW / 8                       // Number of parity bits for the given format
 )(
   input  logic                               clk_i             ,
   input  logic                               rst_ni            ,
   input  logic                    [BITW-1:0] x_input_i         ,
   input  logic                    [BITW-1:0] w_input_i         ,
+  input  logic                    [PARW-1:0] w_parity_i         ,
   input  logic                    [BITW-1:0] y_bias_i          ,
   input  logic                    [2:0]      fma_is_boxed_i    ,
   input  logic                    [1:0]      noncomp_is_boxed_i,
@@ -57,14 +60,12 @@ module redmule_ce
   output AuxType                             aux_o             ,
   output logic                               out_valid_o       ,
   input  logic                               out_ready_i       ,
-  output logic                               busy_o
+  output logic                               busy_o            ,
+  output logic                               fault_o
 );
 
 // Internal logic binding
-logic [BITW-1:0] y_bias   ,
-                 fma_y    ,
-                 noncomp_y,
-                 noncomp_y_d;
+logic [BITW-1:0] fma_y, noncomp_y, noncomp_y_d;
 
 fpnew_pkg::operation_e op1_int;
 logic stage2_noncomp_clk_en        ,
@@ -197,6 +198,13 @@ logic [1:0][BITW-1:0] stage1_noncomp_operands;
 
 assign x_input = x_input_i;
 assign w_input = w_input_i;
+
+// Calculate parity 
+if (W_PARITY) begin
+  assign fault_o = ^w_input_i ^ ^w_parity_i;
+end else begin
+  assign fault_o = 1'b0;
+end
 
 /*******************************************************************************/
 /* Assigning input signals to the stage1 FMA and to the stage1 NONCOMP module  */

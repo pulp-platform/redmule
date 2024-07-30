@@ -46,21 +46,7 @@
 //   HWPE_WRITE(value, HWPE_BYTECODE+offs);
 // }
 
-static inline void redmule_x_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
-}
 
-static inline void redmule_w_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_W_PTR);
-}
-
-static inline void redmule_y_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Y_PTR);
-}
-
-static inline void redmule_z_add_set (unsigned int value) {
-  HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
-}
 
 static inline void hwpe_trigger_job() {
   HWPE_WRITE(0, REDMULE_TRIGGER);
@@ -103,7 +89,13 @@ static inline unsigned int redmule_get_meta_uncorrectable_count () {
   return HWPE_READ(REDMULE_ECC_REG_OFFS + METADATA_UNCORR_ERR);
 }
 
-void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops){
+void redmule_cfg (uint32_t x_address, uint32_t w_address, uint32_t y_address, uint32_t z_address, uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gemm_ops, uint32_t redundancy_enabled){
+
+   HWPE_WRITE(x_address, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
+   HWPE_WRITE(w_address, REDMULE_REG_OFFS + REDMULE_REG_W_PTR);
+   HWPE_WRITE(y_address, REDMULE_REG_OFFS + REDMULE_REG_Y_PTR);
+   HWPE_WRITE(z_address, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
+
    uint32_t x_iters        = 0;
    uint32_t w_iters        = 0;
    uint32_t leftovers      = 0;
@@ -119,6 +111,7 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    uint32_t tot_x_read     = 0;
    uint32_t x_buffer_slots = 0;
    uint32_t op_selection   = 0;
+   uint32_t redundancy_reg = 0;
    uint16_t tot_stores     = 0;
    uint16_t w_rows         = n_size;
    uint16_t depth          = DATA_WIDTH/(ARRAY_HEIGHT*FPFORMAT);
@@ -139,6 +132,11 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
             w_rows_lftovr,
             w_cols_lftovr,
             slots;
+
+   // In case we want to do the calculation redundantly, we virtually have 2x the matrix size
+   if (redundancy_enabled) {
+    m_size *= 2;
+   }
 
    // Calculating the number of iterations alng the two dimensions of the X matrix
    x_rows_iter_tmp = m_size/ARRAY_WIDTH;
@@ -241,6 +239,42 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    yz_d2_stride  = ARRAY_WIDTH*w_d0_stride;
    tot_x_read    = x_rows_iter*x_cols_iter*w_cols_iter;
 
+   if (redundancy_enabled) {
+      // In case we have redundancy enabled, tiles only have half the offset in row direction
+      // Since we use every element twice in a tile
+      x_rows_offs /= 2;
+      yz_d2_stride /= 2;
+
+      // XOR all registers for redundancy reg
+      redundancy_reg ^= x_address;
+      redundancy_reg ^= w_address;
+      redundancy_reg ^= y_address;
+      redundancy_reg ^= z_address;
+      redundancy_reg ^= x_iters;
+      redundancy_reg ^= w_iters;
+      redundancy_reg ^= leftovers;
+      redundancy_reg ^= left_params;
+      redundancy_reg ^= x_d1_stride;
+      redundancy_reg ^= x_rows_offs;
+      redundancy_reg ^= tot_x_read;
+      redundancy_reg ^= x_buffer_slots;
+      redundancy_reg ^= w_tot_len;
+      redundancy_reg ^= w_d0_stride;
+      redundancy_reg ^= yz_tot_len;
+      redundancy_reg ^= yz_d0_stride;
+      redundancy_reg ^= yz_d2_stride;
+      redundancy_reg ^= op_selection;
+
+      // Move parity to top 16 bits, clear bottom 16 bits
+      redundancy_reg ^= redundancy_reg << 16;
+      redundancy_reg &= 0xFFFF0000;
+
+      // Add that redundancy is on
+      redundancy_reg ^= 0x00FF00FF;
+   } else {
+      redundancy_reg = 0x0000FF00;
+   }
+
    // Writing the computations in configuration register
    HWPE_WRITE(x_iters       , REDMULE_REG_OFFS + REDMULE_REG_X_ITER_PTR         );
    HWPE_WRITE(w_iters       , REDMULE_REG_OFFS + REDMULE_REG_W_ITER_PTR         );
@@ -256,6 +290,7 @@ void redmule_cfg (uint16_t m_size, uint16_t n_size, uint16_t k_size, uint8_t gem
    HWPE_WRITE(yz_d0_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D0_STRIDE_PTR   );
    HWPE_WRITE(yz_d2_stride  , REDMULE_REG_OFFS + REDMULE_REG_YZ_D2_STRIDE_PTR   );
    HWPE_WRITE(op_selection  , REDMULE_REG_OFFS + REDMULE_REG_OP_SELECTION       );
+   HWPE_WRITE(redundancy_reg, REDMULE_REG_OFFS + REDMULE_REG_REDUNDANCY_ENABLED );
 }
 
 #endif /* __HAL_REDMULE_H__ */

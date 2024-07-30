@@ -29,7 +29,7 @@ package redmule_pkg;
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W - MemDw;
-  parameter int unsigned            REDMULE_REGS = 19;
+  parameter int unsigned            REDMULE_REGS = 20;
   parameter int unsigned            RegfileScm   = 0;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
@@ -88,6 +88,7 @@ package redmule_pkg;
   // [14:12] -> computing format
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 18; // 0x48
+  parameter int unsigned REDUNDANCY_SELECTION = 19; // 0x4C
 
   parameter int unsigned HCI_ECC_MASK = 4'b1001; // 0x90-0x9C
 

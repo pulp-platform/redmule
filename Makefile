@@ -25,7 +25,7 @@ QUESTA         ?= questa-2019.3-kgf
 BENDER_DIR     ?= .
 BENDER         ?= bender
 TEST_SRCS      ?= sw/redmule.c
-WAVES          ?= $(mkfile_path)/wave.do
+WAVES          ?= $(mkfile_path)/wave.tcl
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
@@ -38,10 +38,11 @@ INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(BUILD_DIR)
 
 # Useful Parameters
-gui      ?= 0
-ipstools ?= 0
-P_STALL  ?= 0.0
-USE_ECC  ?= 0
+gui            ?= 0
+ipstools       ?= 0
+P_STALL        ?= 0.0
+USE_ECC        ?= 0
+USE_REDUNDANCY ?= 0
 
 ifeq ($(verbose),1)
 FLAGS += -DVERBOSE
@@ -51,7 +52,7 @@ endif
 CC=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(PULP_RISCV_GCC_TOOLCHAIN)/bin/$(ISA)$(XLEN)-unknown-elf-gcc
 OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP -DUSE_REDUNDANCY=$(USE_REDUNDANCY)
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
 # Setup build object dirs
@@ -61,16 +62,12 @@ BIN=$(BUILD_DIR)/$(TEST_SRCS)/verif
 DUMP=$(BUILD_DIR)/$(TEST_SRCS)/verif.dump
 STIM_INSTR=$(BUILD_DIR)/$(TEST_SRCS)/stim_instr.txt
 STIM_DATA=$(BUILD_DIR)/$(TEST_SRCS)/stim_data.txt
-VSIM_INI=$(BUILD_DIR)/$(TEST_SRCS)/modelsim.ini
-VSIM_LIBS=$(BUILD_DIR)/$(TEST_SRCS)/work
 
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	sw/parse_s19.pl $(BIN).s19 > $(BIN).txt
 	python sw/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
-	ln -sfn $(INI_PATH) $(VSIM_INI)
-	ln -sfn $(WORK_PATH) $(VSIM_LIBS)
 
 $(BIN): $(CRT) $(OBJ) sw/link.ld
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -Tsw/link.ld
@@ -95,23 +92,59 @@ all: $(STIM_INSTR) $(STIM_DATA) dis
 # Run the simulation
 run: $(CRT)
 ifeq ($(gui), 0)
-	cd $(BUILD_DIR)/$(TEST_SRCS);          \
-	$(QUESTA) vsim -c vopt_tb -do "run -a" \
-	-gSTIM_INSTR=stim_instr.txt            \
-	-gSTIM_DATA=stim_data.txt              \
-	-gPROB_STALL=$(P_STALL)                \
-	-gUSE_ECC=$(USE_ECC)                   \
-		-suppress vsim-3009
+	$(QUESTA) vsim -c vopt_tb          \
+	-do "run -a"                       \
+    -do "exit"                         \
+	-gSTIM_INSTR=$(STIM_INSTR)         \
+	-gSTIM_DATA=$(STIM_DATA)           \
+	-gPROB_STALL=$(P_STALL)            \
+	-gUSE_ECC=$(USE_ECC)               \
+	-gUSE_REDUNDANCY=$(USE_REDUNDANCY) \
+	-suppress vsim-3009
 else
-	cd $(BUILD_DIR)/$(TEST_SRCS);      \
 	$(QUESTA) vsim vopt_tb             \
 	-do "add log -r sim:/redmule_tb/*" \
 	-do "source $(WAVES)"              \
-	-gSTIM_INSTR=stim_instr.txt        \
-	-gSTIM_DATA=stim_data.txt          \
+	-gSTIM_INSTR=$(STIM_INSTR)         \
+	-gSTIM_DATA=$(STIM_DATA)           \
 	-gPROB_STALL=$(P_STALL)            \
 	-gUSE_ECC=$(USE_ECC)               \
-		-suppress vsim-3009
+	-gUSE_REDUNDANCY=$(USE_REDUNDANCY) \
+	-suppress vsim-3009
+endif
+
+seed     ?= 42
+tests    ?= 100000
+
+# Run vulnerability analysis
+analysis: M=12
+analysis: N=16
+analysis: K=16 
+analysis: USE_REDUNDANCY=1
+analysis: golden all $(CRT)
+ifeq ($(gui), 0)
+	$(QUESTA) vsim -c vopt_tb                               \
+	-do "set ::initial_seed ${seed}"                        \
+	-do "set ::max_num_tests ${tests}"                      \
+	-do "vulnerability_analysis/vulnerability_analysis.tcl" \
+	-gSTIM_INSTR=$(STIM_INSTR)                              \
+	-gSTIM_DATA=$(STIM_DATA)                                \
+	-gPROB_STALL=$(P_STALL)                                 \
+	-gUSE_ECC=1                                             \
+	-gUSE_REDUNDANCY=1                                      \
+	-suppress vsim-3009
+else
+	$(QUESTA) vsim vopt_tb             \
+	-do "add log -r sim:/redmule_tb/*" \
+	-do "source $(WAVES)"              \
+	-do "set ::initial_seed ${seed}"   \
+	-do "set ::max_num_tests ${tests}" \
+	-gSTIM_INSTR=$(STIM_INSTR)         \
+	-gSTIM_DATA=$(STIM_DATA)           \
+	-gPROB_STALL=$(P_STALL)            \
+	-gUSE_ECC=1                        \
+	-gUSE_REDUNDANCY=1                 \
+	-suppress vsim-3009
 endif
 
 # Download bender
@@ -160,26 +193,26 @@ hw-clean-all:
 	rm -rf $(BUILD_DIR)
 	rm -rf .bender
 	rm -rf $(compile_script)
-	rm -rf modelsim.ini
+	rm -rf $(INI_PATH)
 	rm -rf *.log
 	rm -rf transcript
 	rm -rf .cached_ipdb.json
 
 hw-opt:
-	$(QUESTA) vopt +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
+	$(QUESTA) vopt -O0 +acc=npr -o vopt_tb redmule_tb -floatparameters+redmule_tb -work $(BUILD_DIR)
 
 hw-compile:
 	$(QUESTA) vsim -c +incdir+$(UVM_HOME) -do 'quit -code [source $(compile_script)]'
 
 hw-lib:
-	@touch modelsim.ini
+	@touch $(INI_PATH)
 	@mkdir -p $(BUILD_DIR)
 	@$(QUESTA) vlib $(BUILD_DIR)
 	@$(QUESTA) vmap work $(BUILD_DIR)
-	@chmod +w modelsim.ini
+	@chmod +w $(INI_PATH)
 
 hw-clean:
 	rm -rf transcript
-	rm -rf modelsim.ini
+	rm -rf $(INI_PATH)
 
 hw-all: hw-clean hw-lib hw-compile hw-opt

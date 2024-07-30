@@ -32,7 +32,7 @@
 
 #define IGNORE_BITS_COMPARE 0x00070007
 
-int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
+int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len, int break_size) {
   #define ERR 0x0011
   uint32_t actual_word = 0;
   uint16_t actual_MSHWord, actual_LSHWord;
@@ -44,10 +44,23 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   int errors = 0;
   int error;
 
+  #ifdef VERBOSE
+  int break_counter = 0;
+
+    tfp_printf ("Error Location in Matrix (blank if no errors):\n");
+  #endif
+
   for (int i=0; i<len; i++) {
     error = 0;
     actual_word = *(actual_z+i);
     golden_word = *(golden_z+i);
+
+    #ifdef VERBOSE
+      if (break_counter == 0) {
+        tfp_printf ("|");
+        break_counter = 0;
+      }
+    #endif
 
     // int error = ((actual_word ^ golden_word) & ~IGNORE_BITS_COMPARE) ? 1 : 0;
     uint16_t diff = 0;
@@ -70,11 +83,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     }
 
     if (diff > ERR) {
-      error = 1;
-      #ifdef VERBOSE
-        tfp_printf ("diff: 0x%08x\n", diff);
-        tfp_printf ("LSW: Error!\n");
-      #endif
+      error += 1;
     }
 
     // Checking Most Significant Half-Word
@@ -95,23 +104,26 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     }
 
     if (diff > ERR) {
-      error = 1;
-      #ifdef VERBOSE
-        tfp_printf ("diff: 0x%08x\n", diff);
-        tfp_printf ("MSW: Error!\n");
-      #endif
+      error += 1;
     }
-    
-    errors += error;
 
-    // tfp_printf("  Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
     #ifdef VERBOSE
-      if(error) {
-        if(errors==1) tfp_printf("  golden     <- actual     @ address    @ index\n");
-        tfp_printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_z+i), i*4);
+      if (error > 0) {
+        tfp_printf ("x");
+      } else {
+        tfp_printf (" ");
+      }
+      
+      break_counter += 1;
+      if (break_counter == break_size) {
+        tfp_printf ("|\n");
+        break_counter = 0;
       }
     #endif
+
+    errors += error;
   }
+
   return errors;
 }
 
@@ -252,16 +264,19 @@ int main() {
   uint16_t n_size = N_SIZE;
   uint16_t k_size = K_SIZE;
 
+  uint32_t redundancy = USE_REDUNDANCY;
+
   uint8_t *x = x_inp;
   uint8_t *w = w_inp;
   uint8_t *y = y_inp;
   uint8_t *z = z_oup; // golden_out //1c010000
 
   volatile int errors = 0;
+  int error_count = 0;
   int gold_sum = 0, check_sum = 0;
   int i,j;
 
-  volatile int data_correctable_cnt, data_uncorrectable_cnt = 0;
+  volatile int data_correctable_cnt, data_uncorrectable_cnt, meta_uncorrectable_cnt = 0;
 
   int offload_id_tmp, offload_id;
 
@@ -273,12 +288,8 @@ int main() {
   while( ( offload_id_tmp = hwpe_acquire_job() ) < 0);
   
   // job-dependent registers
-  redmule_x_add_set ((unsigned int) x);
-  redmule_w_add_set ((unsigned int) w);
-  redmule_y_add_set ((unsigned int) y);
-  redmule_z_add_set ((unsigned int) z);
   // _Bool is_gemm = 1;
-  redmule_cfg (m_size, n_size, k_size, gemm_ops);
+  redmule_cfg ((uint32_t) x, (uint32_t) w, (uint32_t) y, (uint32_t) z, m_size, n_size, k_size, gemm_ops, redundancy);
 
   // Start RedMulE operation
   hwpe_trigger_job();
@@ -289,13 +300,36 @@ int main() {
   // Disable RedMulE
   hwpe_cg_disable();
 
+  if (redundancy > 0)
+    tfp_printf ("Info: Redundancy is enabled.\n");
+  else
+    tfp_printf ("Info: Redundancy is disabled.\n");
+
   data_correctable_cnt = redmule_get_data_correctable_count();
   data_uncorrectable_cnt = redmule_get_data_uncorrectable_count();
-  tfp_printf ("errors corrected: %d \n", data_correctable_cnt);
-  tfp_printf ("errors uncorrectable: %d \n", data_uncorrectable_cnt);
+  meta_uncorrectable_cnt = redmule_get_meta_uncorrectable_count();
 
-  errors = redmule16_compare_int(z, golden, m_size*k_size/2);
-  // errors = redmule8_compare_int(z, golden, m_size*k_size/4);
+  tfp_printf ("Data errors corrected: %d \n", data_correctable_cnt);
+  tfp_printf ("Data errors uncorrectable: %d \n", data_uncorrectable_cnt);
+  tfp_printf ("Meta errors uncorrectable: %d \n", meta_uncorrectable_cnt);
+
+  error_count = redmule16_compare_int(z, golden, m_size*k_size/2, k_size/2);
+  // error_count = redmule8_compare_int(z, golden, m_size*k_size/4);
+
+  // Determine return code
+  if (error_count == 0) {
+    if (data_uncorrectable_cnt == 0 && meta_uncorrectable_cnt == 0 ) {
+      errors = 0;
+    } else {
+      errors = 1;
+    }
+  } else {
+    if (data_uncorrectable_cnt > 0 || meta_uncorrectable_cnt > 0 ) {
+      errors = 2;
+    } else {
+      errors = 3;
+    }
+  }
 
   *(int *) 0x80000000 = errors;
 }

@@ -28,7 +28,9 @@ module redmule_row
   parameter fpnew_pkg::pipe_config_t  PipeConfig  = fpnew_pkg::DISTRIBUTED,
   parameter type                      TagType     = logic,
   parameter type                      AuxType     = logic,
-  localparam int unsigned             BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+  parameter  bit                      W_PARITY    = 0                            , // If an extra parity bit is used on W Inputs
+  localparam int unsigned             BITW        = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format  
+  parameter  int unsigned             PARW        = BITW / 8                     , // Number of parity bits for the given format
   localparam int unsigned             H           = Height
 )(
   input  logic                                      clk_i             ,
@@ -36,6 +38,7 @@ module redmule_row
   // Input Elements                                                   
   input  logic                    [H-1:0][BITW-1:0] x_input_i         ,
   input  logic                    [H-1:0][BITW-1:0] w_input_i         ,
+  input  logic                    [H-1:0][PARW-1:0] w_parity_i        ,
   input  logic                           [BITW-1:0] y_bias_i          ,
   // Output Result                                                    
   output logic                           [BITW-1:0] z_output_o        ,
@@ -65,63 +68,64 @@ module redmule_row
   output logic                    [H-1:0]           out_valid_o    ,
   input  logic                                      out_ready_i    ,
   // fpnew_fma Indication of valid data in flight   
-  output logic                    [H-1:0]           busy_o
+  output logic                    [H-1:0]           busy_o         ,
+  output logic                                      fault_o
 );
 
-// Local signals for operands assign: elemnts 0 and 1 are addressed to multiplication,
-// element 2 is destined to accumulation.
-logic [H-1:0] [2:0][BITW-1:0]       input_operands;
-logic [H-1:0]      [BITW-1:0]       y_bias_int    ,
-                                    partial_result;
-logic              [BITW-1:0]       result;
+// Local signals for operands assign
+logic [H-1:0][BITW-1:0] y_bias_int, partial_result, output_q;
+logic        [BITW-1:0] result;
 
-// Signals for intermediate registers
-logic [H-1:0]      [BITW-1:0]       output_q;
+// Collect fault
+logic [H-1:0] fault;
+assign fault_o = |fault;
 
 // Generate PEs
 generate
   for (genvar index = 0; index < H; index++) begin : computing_element
-    assign input_operands [index][0] = x_input_i [index];
-    assign input_operands [index][1] = w_input_i [index];
     if (index > 0) 
-      assign input_operands [index][2] = output_q [index-1];
+      assign y_bias_int[index] = output_q[index-1];
     else
-      assign input_operands [index][2] = y_bias_i;
+      assign y_bias_int[index] = y_bias_i;
     
     redmule_ce         #(
     .FpFormat           ( FpFormat    ),
     .NumPipeRegs        ( NumPipeRegs ),
     .PipeConfig         ( PipeConfig  ),
-    .Stallable          ( 1'b1        )
+    .Stallable          ( 1'b1        ),
+    .W_PARITY           ( W_PARITY    ),
+    .PARW               ( PARW        )
     ) i_computing_element (
-      .clk_i              ( clk_i                     ),
-      .rst_ni             ( rst_ni                    ),
-      .x_input_i          ( input_operands [index][0] ),
-      .w_input_i          ( input_operands [index][1] ),
-      .y_bias_i           ( input_operands [index][2] ),
-      .fma_is_boxed_i     ( fma_is_boxed_i            ),
-      .noncomp_is_boxed_i ( noncomp_is_boxed_i        ),
-      .stage1_rnd_i       ( stage1_rnd_i              ),
-      .stage2_rnd_i       ( stage2_rnd_i              ),
-      .op1_i              ( op1_i                     ),
-      .op2_i              ( op2_i                     ),
-      .op_mod_i           ( op_mod_i                  ),
-      .tag_i              ( tag_i                     ),
-      .aux_i              ( aux_i                     ),
-      .in_valid_i         ( in_valid_i                ),
-      .in_ready_o         ( in_ready_o      [index]   ),
-      .reg_enable_i       ( reg_enable_i              ),
-      .flush_i            ( flush_i                   ),
-      .z_output_o         ( partial_result  [index]   ),
-      .status_o           ( status_o        [index]   ),
-      .extension_bit_o    ( extension_bit_o [index]   ),
-      .class_mask_o       ( class_mask_o    [index]   ),
-      .is_class_o         ( is_class_o      [index]   ),
-      .tag_o              ( tag_o           [index]   ),
-      .aux_o              ( aux_o           [index]   ),
-      .out_valid_o        ( out_valid_o     [index]   ),
-      .out_ready_i        ( out_ready_i               ),
-      .busy_o             ( busy_o          [index]   )
+      .clk_i              ( clk_i                   ),
+      .rst_ni             ( rst_ni                  ),
+      .x_input_i          ( x_input_i       [index] ),
+      .w_input_i          ( w_input_i       [index] ),
+      .w_parity_i         ( w_parity_i      [index] ),
+      .y_bias_i           ( y_bias_int      [index] ),
+      .fma_is_boxed_i     ( fma_is_boxed_i          ),
+      .noncomp_is_boxed_i ( noncomp_is_boxed_i      ),
+      .stage1_rnd_i       ( stage1_rnd_i            ),
+      .stage2_rnd_i       ( stage2_rnd_i            ),
+      .op1_i              ( op1_i                   ),
+      .op2_i              ( op2_i                   ),
+      .op_mod_i           ( op_mod_i                ),
+      .tag_i              ( tag_i                   ),
+      .aux_i              ( aux_i                   ),
+      .in_valid_i         ( in_valid_i              ),
+      .in_ready_o         ( in_ready_o      [index] ),
+      .reg_enable_i       ( reg_enable_i            ),
+      .flush_i            ( flush_i                 ),
+      .z_output_o         ( partial_result  [index] ),
+      .status_o           ( status_o        [index] ),
+      .extension_bit_o    ( extension_bit_o [index] ),
+      .class_mask_o       ( class_mask_o    [index] ),
+      .is_class_o         ( is_class_o      [index] ),
+      .tag_o              ( tag_o           [index] ),
+      .aux_o              ( aux_o           [index] ),
+      .out_valid_o        ( out_valid_o     [index] ),
+      .out_ready_i        ( out_ready_i             ),
+      .busy_o             ( busy_o          [index] ),
+      .fault_o            ( fault           [index] )
     );
   end : computing_element
 endgenerate
