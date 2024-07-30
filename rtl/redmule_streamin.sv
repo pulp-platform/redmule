@@ -129,7 +129,8 @@ module redmule_streamin
 
   hci_core_source #(
     .MISALIGNED_ACCESSES   ( MISALIGNED_ACCESSES     ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(source) )
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(source) ),
+    .DIM_ENABLE_1H         ( 3'b111                  )
   ) i_stream_source (
     .clk_i               ( clk_i       ),
     .rst_ni              ( rst_ni      ),

@@ -61,7 +61,7 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: de933b19896d3c460dd321da7e9c44dedc4b9df1
+    revision: cbfa4a809e1e15dd55610ee4662969b297af7e64
     version: null
     source:
       Git: https://github.com/Lynx005F/hci.git
@@ -80,7 +80,7 @@ packages:
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: 5e4813fb953c7d79af9c1b4ad9c3a09a91c011b1
+    revision: a39dd676f7f4594910306dfcd190ef0ff94e4381
     version: null
     source:
       Git: https://github.com/Lynx005F/hwpe-stream.git

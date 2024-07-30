@@ -3,7 +3,7 @@ overrides:
   fpnew: { git: "https://github.com/pulp-platform/cvfpu.git", rev: "pulp-v0.1.3" }
 
   # branch: itemm/redmule_features for new features
-  hwpe-stream       : { git: "https://github.com/Lynx005F/hwpe-stream.git" , rev: 5e4813fb953c7d79af9c1b4ad9c3a09a91c011b1 } 
+  hwpe-stream       : { git: "https://github.com/Lynx005F/hwpe-stream.git" , rev: a39dd676f7f4594910306dfcd190ef0ff94e4381 } 
 
   # branch: master, need newer version for voter macros
   redundancy_cells  : { git: "https://github.com/pulp-platform/redundancy_cells" , rev: 74749bdf83a8ceaaa99c5c73d2427020f54c70b0 } 

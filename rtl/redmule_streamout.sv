@@ -58,7 +58,8 @@ module redmule_streamout
 
   hci_core_sink #(
     .MISALIGNED_ACCESSES   ( MISALIGNED_ACCESSES     ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(source) )
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(source) ),
+    .DIM_ENABLE_1H         ( 3'b111                  )
   ) i_stream_sink (                             
     .clk_i               ( clk_i        ),
     .rst_ni              ( rst_ni       ),
