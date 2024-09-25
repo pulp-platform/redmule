@@ -1,0 +1,57 @@
+#############
+# Verilator #
+#############
+VERI_LOG_DIR      ?= $(mkfile_path)/vsim
+SIM_TEST_RESULTS  ?= $(VERI_LOG_DIR)
+TEST              ?= redmule
+BIN_DIR       = $(mkfile_path)/bin
+VERI_FLAGS    +=
+
+VLT_TOP_MODULE ?= redmule_tb
+#VLT_TOP_MODULE = tb_top_verilator
+
+.PHONY: veri-clean 
+
+# Clean all build directories and temporary files for Questasim simulation
+veri-clean: 
+	rm -f manifest.flist
+	make -C sim/core -f Makefile.verilator CV_CORE_MANIFEST=${CURDIR}/manifest.flist  SIM_RESULTS=$(BIN_DIR) $@
+
+verilate: $(BIN_DIR)/verilator_executable
+
+manifest.flist: Bender.yml
+	$(BENDER) script verilator $(common_targs) $(VLT_BENDER)  >$@
+	touch $@
+
+$(BIN_DIR)/verilator_executable: manifest.flist
+	mkdir -p $(dir $@)
+	make -C sim/core -f Makefile.verilator CV_CORE_MANIFEST=${CURDIR}/manifest.flist  SIM_RESULTS=$(BIN_DIR) VLT_TOP_MODULE=$(VLT_TOP_MODULE) verilate
+
+sanity-veri-run:
+	make -C sim/core -f Makefile.verilator CV_CORE_MANIFEST=${CURDIR}/manifest.flist  SIM_RESULTS=$(BIN_DIR) VLT_TOP_MODULE=$(VLT_TOP_MODULE) TEST=hello-world run-test
+
+
+.PHONY: run-test
+run-test: $(BIN_DIR)/verilator_executable 
+	@echo "$(BANNER)"
+	@echo "* Running with Verilator: logfile in $(SIM_TEST_RESULTS)/$(TEST).log"
+	@echo "$(BANNER)"
+	mkdir -p $(VERI_LOG_DIR)
+	$(BIN_DIR)/verilator_executable  \
+		$(VERI_FLAGS) \
+		"+firmware=$(SIM_TEST_RESULTS)/stim_instr.txt" \
+		"+simdata=$(SIM_TEST_RESULTS)/stim_data.txt" \
+		| tee $(VERI_LOG_DIR)/$(TEST).log
+
+.PHONY: help
+
+help:
+	@echo "verilator related available targets:"
+	@echo verilate          -- build verilator simulation, available here: $(BIN_DIR)/verilator_executable
+	@echo veri-clean        -- get a clean slate for simulation
+	@echo sanity-veri-run   -- smoke test for $(BIN_DIR)/verilator_executable
+
+
+
+
+

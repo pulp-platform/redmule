@@ -1,0 +1,13 @@
+.bender/
+bin/
+install/
+manifest.flist
+install
+sw/build/
+golden-model/FP16/net_parameters.h
+golden-model/FP16/scripts/__pycache__/
+golden-model/gemm/
+golden-model/venv/
+sw/inc/
+verilator_tb.vcd
+vsim/

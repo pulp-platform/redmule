@@ -7,17 +7,18 @@
 # Top-level Makefile
 
 # Paths to folders
-mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-SW             ?= $(mkfile_path)sw
+mkfile_path    := $(shell git rev-parse --show-toplevel)
+SW             ?= $(mkfile_path)/sw
 BUILD_DIR      ?= $(SW)/build
-VSIM_DIR       ?= $(mkfile_path)vsim
+VSIM_DIR       ?= $(mkfile_path)/vsim
 QUESTA         ?= questa-2023.4
 BENDER_DIR     ?= .
 BENDER         ?= bender
 ISA            ?= riscv
 ARCH           ?= rv
 XLEN           ?= 32
-XTEN           ?= imc
+XTEN           ?= imc_zicsr
+
 
 ifeq ($(REDMULE_COMPLEX),1)
 	TEST_SRCS := $(SW)/redmule_complex.c
@@ -25,11 +26,11 @@ else
 	TEST_SRCS := $(SW)/redmule.c
 endif
 
-compile_script ?= $(mkfile_path)scripts/compile.tcl
-compile_script_synth ?= $(mkfile_path)scripts/synth_compile.tcl
+compile_script ?= $(mkfile_path)/scripts/compile.tcl
+compile_script_synth ?= $(mkfile_path)/scripts/synth_compile.tcl
 compile_flag   ?= +acc -permissive -suppress 2583 -suppress 13314
 
-INI_PATH  = $(mkfile_path)modelsim.ini
+INI_PATH  = $(mkfile_path)/modelsim.ini
 WORK_PATH = $(VSIM_DIR)/work
 
 # Useful Parameters
@@ -53,11 +54,13 @@ INC += -I$(SW)/utils
 BOOTSCRIPT := $(SW)/kernel/crt0.S
 LINKSCRIPT := $(SW)/kernel/link.ld
 
-CC=$(ISA)$(XLEN)-unknown-elf-gcc
-LD=$(CC)
-OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
-CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
-LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+# Setup toolchain (from SDK) and options
+RV_CC=$(ISA)$(XLEN)-unknown-elf-gcc
+RV_LD=$(ISA)$(XLEN)-unknown-elf-gcc
+RV_OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+RV_CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+RV_LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+
 
 # Setup build object dirs
 CRT=$(BUILD_DIR)/crt0.o
@@ -70,17 +73,17 @@ STIM_DATA=$(VSIM_DIR)/stim_data.txt
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
-	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
-	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt 2>$(BUILD_DIR)/parse_s19.pl.log
+	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA) 
 
 $(BIN): $(CRT) $(OBJ)
-	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
+	$(RV_LD) $(RV_LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
 
 $(CRT): $(BUILD_DIR)
-	$(CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
+	$(RV_CC) $(CC_OPTS) -c $(BOOTSCRIPT) -o $(CRT)
 
 $(OBJ): $(TEST_SRCS)
-	$(CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
+	$(RV_CC) $(CC_OPTS) -c $(TEST_SRCS) $(FLAGS) $(INC) -o $(OBJ)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -88,7 +91,7 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Generate instructions and data stimuli
-sw-build: $(STIM_INSTR) $(STIM_DATA) dis
+sw-build: $(VSIM_DIR) $(STIM_INSTR) $(STIM_DATA) dis
 
 # Run the simulation
 run: $(CRT)
@@ -118,8 +121,9 @@ bender:
 include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
+include Makefile.verilator
 
-WAVES := $(mkfile_path)scripts/wave.tcl
+WAVES := $(mkfile_path)/scripts/wave.tcl
 
 ifeq ($(REDMULE_COMPLEX),1)
 	tb := redmule_complex_tb
@@ -149,12 +153,14 @@ synth-ips:
 
 sw-clean:
 	rm -rf $(BUILD_DIR)
+	@rm -vf $(STIM_INSTR)
+	@rm -vf $(STIM_DATA)
 
 hw-clean:
 	rm -rf $(VSIM_DIR)
 
 dis:
-	$(OBJDUMP) -d $(BIN) > $(DUMP)
+	$(RV_OBJDUMP) -d $(BIN) > $(DUMP)
 
 OP     ?= gemm
 fp_fmt ?= FP16
@@ -169,7 +175,8 @@ golden-clean:
 	$(MAKE) -C golden-model golden-clean
 
 clean-all: hw-clean sw-clean
-	rm -rf $(mkfile_path).bender
+	rm -rf $(mkfile_path)/.bender
+	rm -rf $(mkfile_path)/Bender.lock
 	rm -rf $(compile_script)
 
 hw-build: $(VSIM_DIR)
@@ -179,3 +186,4 @@ hw-build: $(VSIM_DIR)
 sw-all: sw-clean sw-build
 
 hw-all: hw-clean hw-build
+

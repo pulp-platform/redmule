@@ -1,0 +1,6 @@
+*.elf
+*.hex
+*.itb
+*.objdump
+*.yaml
+*.readelf

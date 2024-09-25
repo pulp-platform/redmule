@@ -19,8 +19,8 @@ module redmule_ctrl
   parameter  int unsigned Width         = 8                      ,
   parameter  int unsigned NumPipeRegs   = 3                      ,
   localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
-  localparam int unsigned W_ITERS       = W_ITERS                ,
-  localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
+  localparam int unsigned W_ITERS       = redmule_pkg::W_ITERS                ,
+  localparam int unsigned LEFT_PARAMS   = redmule_pkg::LEFT_PARAMS
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
