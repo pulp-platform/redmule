@@ -50,7 +50,7 @@ TOP_LEVEL_DUT *top;
 
 int main(int argc, char **argv, char **env)
 {
-
+uint32_t timeOut{207374};
 #ifdef MCY
     int mutidx = 0;
     for (int i = 1; i < argc; i++)
@@ -95,7 +95,7 @@ int main(int argc, char **argv, char **env)
     std::cout << "[tb_top_verilator] mutsel = " << idx.aval << "\n";
 #endif
 
-    while (!Verilated::gotFinish()) {
+    while (!Verilated::gotFinish() && t < timeOut) {
         if (t > 40)
             top->rst_ni = 1;
         top->clk_i = !top->clk_i;

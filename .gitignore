@@ -11,3 +11,4 @@ golden-model/venv/
 sw/inc/
 verilator_tb.vcd
 vsim/
+log/

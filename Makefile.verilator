@@ -1,14 +1,17 @@
 #############
 # Verilator #
 #############
-VERI_LOG_DIR      ?= $(mkfile_path)/vsim
-SIM_TEST_RESULTS  ?= $(VERI_LOG_DIR)
-TEST              ?= redmule
-BIN_DIR       = $(mkfile_path)/bin
-VERI_FLAGS    +=
 
 VLT_TOP_MODULE ?= redmule_tb
 #VLT_TOP_MODULE = tb_top_verilator
+
+VERI_LOG_DIR      ?= $(mkfile_path)/log/$(VLT_TOP_MODULE)
+SIM_TEST_INPUTS   ?= $(mkfile_path)/vsim
+TEST              ?= redmule
+BIN_DIR           = $(mkfile_path)/bin/$(VLT_TOP_MODULE)
+VERI_FLAGS        +=
+
+
 
 .PHONY: veri-clean 
 
@@ -27,30 +30,34 @@ $(BIN_DIR)/verilator_executable: manifest.flist
 	mkdir -p $(dir $@)
 	make -C sim/core -f Makefile.verilator CV_CORE_MANIFEST=${CURDIR}/manifest.flist  SIM_RESULTS=$(BIN_DIR) VLT_TOP_MODULE=$(VLT_TOP_MODULE) verilate
 
+sanity-veri-run: VLT_TOP_MODULE := tb_top_verilator
 sanity-veri-run:
+	mkdir -p $(VERI_LOG_DIR)
+	rm -f $(VERI_LOG_DIR)/verilator_tb.vcd
 	make -C sim/core -f Makefile.verilator CV_CORE_MANIFEST=${CURDIR}/manifest.flist  SIM_RESULTS=$(BIN_DIR) VLT_TOP_MODULE=$(VLT_TOP_MODULE) TEST=hello-world run-test
-
+	mv sim/core/verilator_tb.vcd $(VERI_LOG_DIR)/
 
 .PHONY: run-test
 run-test: $(BIN_DIR)/verilator_executable 
 	@echo "$(BANNER)"
-	@echo "* Running with Verilator: logfile in $(SIM_TEST_RESULTS)/$(TEST).log"
+	@echo "* Running with Verilator: logfile in $(VERI_LOG_DIR)/$(TEST).log"
 	@echo "$(BANNER)"
 	mkdir -p $(VERI_LOG_DIR)
+	rm -f $(VERI_LOG_DIR)/verilator_tb.vcd
 	$(BIN_DIR)/verilator_executable  \
 		$(VERI_FLAGS) \
-		"+firmware=$(SIM_TEST_RESULTS)/stim_instr.txt" \
-		"+simdata=$(SIM_TEST_RESULTS)/stim_data.txt" \
+		"+firmware=$(SIM_TEST_INPUTS)/stim_instr.txt" \
+		"+simdata=$(SIM_TEST_INPUTS)/stim_data.txt" \
 		| tee $(VERI_LOG_DIR)/$(TEST).log
-
+	mv verilator_tb.vcd $(VERI_LOG_DIR)/
 .PHONY: help
 
 help:
 	@echo "verilator related available targets:"
-	@echo verilate          -- build verilator simulation, available here: $(BIN_DIR)/verilator_executable
-	@echo veri-clean        -- get a clean slate for simulation
-	@echo sanity-veri-run   -- smoke test for $(BIN_DIR)/verilator_executable
-
+	@echo verilate                                 -- build verilator simulation, available here: $(BIN_DIR)/verilator_executable
+	@echo veri-clean                               -- get a clean slate for simulation
+	@echo verilate VLT_TOP_MODULE=tb_top_verilator
+	@echo sanity-veri-run                          -- smoke test for $(BIN_DIR)/verilator_executable, only with  VLT_TOP_MODULE=tb_top_verilator
 
 
 
