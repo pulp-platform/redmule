@@ -1,7 +1,14 @@
 # ISOLDE
+First time, install toolchain
+
 ```sh
-. ./eth.sh
+make -f Makefile.tools
 ```
+otherwise:  
+```sh
+. ./eth.sh 
+```
+
 ## build simulation
 top module can be configured in cmd line,VLT_TOP_MODULE=<top module name>, it defaults to **redmule_tb**, see [Makefile.verilator](Makefile.verilator)
 ```sh

@@ -3,7 +3,7 @@
 
 # Define environment variables
 MINICONDA=~/miniconda3/etc/profile.d/conda.sh
-MINICONDA_ENV=snitch
+MINICONDA_ENV=ibex
 # To activate this environment, use
 #
 #     $ conda activate snitch
@@ -17,7 +17,7 @@ export ROOT_DIR=$(git rev-parse --show-toplevel)
 
 export BENDER=~/eth/bin/bender
 export PULP_RISCV_GCC_TOOLCHAIN=$ROOT_DIR/install/riscv
-export GCC_TOOLCHAIN=$ROOT_DIR/install/riscv/bin
+export GCC_TOOLCHAIN=$ROOT_DIR/install/riscv-gcc/bin
 export CC=gcc-10
 export CXX=g++-10
 

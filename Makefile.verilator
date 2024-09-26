@@ -40,7 +40,9 @@ sanity-veri-run:
 .PHONY: run-test
 run-test: $(BIN_DIR)/verilator_executable 
 	@echo "$(BANNER)"
-	@echo "* Running with Verilator: logfile in $(VERI_LOG_DIR)/$(TEST).log"
+	@echo "* Running with Verilator: "
+	@echo "*                         logfile in $(VERI_LOG_DIR)/$(TEST).log"
+	@echo "*                         *.vcd   in $(VERI_LOG_DIR)"
 	@echo "$(BANNER)"
 	mkdir -p $(VERI_LOG_DIR)
 	rm -f $(VERI_LOG_DIR)/verilator_tb.vcd
@@ -54,8 +56,9 @@ run-test: $(BIN_DIR)/verilator_executable
 
 help:
 	@echo "verilator related available targets:"
-	@echo verilate                                 -- build verilator simulation, available here: $(BIN_DIR)/verilator_executable
-	@echo veri-clean                               -- get a clean slate for simulation
+	@echo verilate                                 -- builds verilator simulation, available here: $(BIN_DIR)/verilator_executable
+	@echo run-test                                 -- runs the test
+	@echo veri-clean                               -- gets a clean slate for simulation
 	@echo verilate VLT_TOP_MODULE=tb_top_verilator
 	@echo sanity-veri-run                          -- smoke test for $(BIN_DIR)/verilator_executable, only with  VLT_TOP_MODULE=tb_top_verilator
 

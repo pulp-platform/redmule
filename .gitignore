@@ -12,3 +12,5 @@ sw/inc/
 verilator_tb.vcd
 vsim/
 log/
+*.tar.gz
+verilator/
