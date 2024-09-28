@@ -28,3 +28,9 @@ conda activate $MINICONDA_ENV
 export PATH=~/eth/bin:~/verible/bin:$ROOT_DIR/install/verilator/bin:$GCC_TOOLCHAIN:$PATH
 source ~/vivado.sh
 echo  `verilator --version`
+#
+export CV_SIMULATOR=verilator
+export CV_SW_TOOLCHAIN=$ROOT_DIR/install/riscv-gcc
+export CV_SW_PREFIX=riscv32-unknown-elf-
+export CV_SW_MARCH=rv32im_zicsr
+export CV_SW_CC=gcc

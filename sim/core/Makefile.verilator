@@ -23,12 +23,18 @@ CV_CORE_PKG           :=  $(shell $(BENDER) path $(CV_CORE_LC))
 CV_CORE_MANIFEST    ?= $(CV_CORE_PKG)/cv32e40p_manifest.flist
 export DESIGN_RTL_DIR = $(CV_CORE_PKG)/rtl
 
-TEST         ?= 
+
+TEST         ?= hello-world
 # Test-Program directores.
 # Relative path is used for Verilator which cannot seem to handle loooong pathnames.
 TEST_PROGRAM_PATH    = $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs/custom
 TEST_PROGRAM_RELPATH = ../../$(CV_CORE_LC)/tests/programs/custom
 #TEST_PROGRAM_RELPATH = $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs/custom
+TEST_TEST_DIR        := $(TEST_PROGRAM_PATH)/$(TEST)
+
+#  -Core Firmware and the RISCV GCC Toolchain (SDK)
+include $(CORE_V_VERIF)/mk/Common.mk
+
 
 # Common output directories
 RUN_INDEX                ?= 0
@@ -36,7 +42,7 @@ SIM_RESULTS              ?= simulation_results
 SIM_TEST_RESULTS         = $(SIM_RESULTS)/$(TEST)
 SIM_RUN_RESULTS          = $(SIM_TEST_RESULTS)/$(RUN_INDEX)
 SIM_TEST_PROGRAM_RESULTS = $(SIM_RUN_RESULTS)/test_program
-SIM_BSP_RESULTS          = $(SIM_TEST_PROGRAM_RESULTS)/bsp
+SIM_BSP_RESULTS          = $(CORE_V_VERIF)/$(SIM_TEST_PROGRAM_RESULTS)/bsp
 
 # Compile compile flags for all simulators
 SV_CMP_FLAGS =
@@ -122,8 +128,8 @@ verilate-clean:
 	if [ -e memory_dump.bin  ]; then rm memory_dump.bin;    fi
 	if [ -e verilator_tb.vcd ]; then rm verilator_tb.vcd;   fi
 
-.PHONY: run-test
-run-test: verilate 
+
+run-test: verilate $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
 	@echo "$(BANNER)"
 	@echo "* Running with Verilator: logfile in $(SIM_TEST_RESULTS)/$(TEST).log"
 	@echo "$(BANNER)"
@@ -135,3 +141,12 @@ run-test: verilate
 ###############################################################################
 
 
+clean-test-programs:
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.o"       -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.hex"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.elf"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.map"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.readelf" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.objdump" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "corev_*.S" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.itb" -delete

@@ -14,3 +14,4 @@ vsim/
 log/
 *.tar.gz
 verilator/
+simulation_results/
