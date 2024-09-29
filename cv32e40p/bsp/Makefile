@@ -1,28 +1,57 @@
 CV_SW_TOOLCHAIN  ?= /opt/riscv
 RISCV            ?= $(CV_SW_TOOLCHAIN)
 RISCV_EXE_PREFIX ?= $(RISCV)/bin/riscv32-unknown-elf-
-RISCV_GCC = $(RISCV_EXE_PREFIX)gcc
-RISCV_AR = $(RISCV_EXE_PREFIX)ar
-SRC = crt0.S handlers.S syscalls.c vectors.S
-OBJ = crt0.o handlers.o syscalls.o vectors.o
-LIBCV-VERIF = libcv-verif.a 
-CFLAGS ?= -Os -g -static -mabi=ilp32 -march=$(CV_SW_MARCH) -Wall -pedantic
+RISCV_GCC        = $(RISCV_EXE_PREFIX)gcc
+RISCV_AR         = $(RISCV_EXE_PREFIX)ar
+OBJDUMP          = $(RISCV_EXE_PREFIX)objdump
 
+LD_FILE ?=
+# Source files
+APP_FILES ?=
+SRCS   += crt0.S simple_system_common.c startup.c tinyprintf.c 
+SRCS   += $(APP_FILES)
+
+SRC_C = $(filter %.c, $(SRCS))
+SRC_S = $(filter %.S, $(SRCS))
+
+# Generate object files automatically from source files
+OBJS += $(SRC_S:.S=.o)
+OBJS += $(SRC_C:.c=.o)
+
+DEPS = $(OBJS:.o=.d)
+
+# Library output
+LIBCV-VERIF = libcv-verif.a
+
+# Flags for tinyprintf
+TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_PRINTF
+TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_SPRINTF
+
+# Compiler flags
+CFLAGS ?= -march=$(CV_SW_MARCH) -mabi=ilp32 -static -mcmodel=medany -Wall -g -O3 \
+	-fvisibility=hidden -nostdlib -nostartfiles -ffreestanding $(TINY_PRINTF_FLAGS) $(RISCV_CFLAGS)
+
+# Build the library
 all: $(LIBCV-VERIF)
 
-$(LIBCV-VERIF): $(OBJ) 
-	$(RISCV_AR) rcs $@ $(OBJ)
+$(LIBCV-VERIF): $(OBJS)
+	@echo '***  packing ' $(OBJS) into $(CURDIR)/$@
+	$(RISCV_AR) rcs $@ $(OBJS)
 
+# Compilation rules
 %.o : %.c
 	$(RISCV_GCC) $(CFLAGS) -c $< -o $@
-	
+
 %.o : %.S
 	$(RISCV_GCC) $(CFLAGS) -c $< -o $@
 
+# Clean up the generated files
 clean:
-	rm -f $(OBJ) $(LIBCV-VERIF)
+	rm -f $(OBJS) 
+	rm -f $(DEPS)  
+	rm -f $(LIBCV-VERIF)
 
-
+# Print variables for debugging
 vars:
 	@echo "make bsp variables:"
 	@echo "   CV_SW_TOOLCHAIN  = $(CV_SW_TOOLCHAIN)"
@@ -32,3 +61,21 @@ vars:
 	@echo "   RISCV_GCC        = $(RISCV_GCC)"
 	@echo "   RISCV_MARCH      = $(RISCV_MARCH)"
 
+
+compile: $(OBJS)
+	@echo  '*** compiled: ' $(SRCS)
+
+
+%.elf: $(OBJS)
+#	mkdir -p $(SIM_TEST_PROGRAM_RESULTS)
+	@echo "*** TEST_FILES=$(TEST_FILES)"
+	@echo "*** linking $@"
+	@echo "$(BANNER)"
+	$(RISCV_EXE_PREFIX)$(RISCV_CC) \
+		$(CFLAGS) \
+		-o $@ \
+		$(OBJS) \
+		-T $(LD_FILE) \
+#	$(CC) $(CFLAGS) -T $(LINKER_SCRIPT) $(OBJS) -o $@ $(LIBS)
+	$(OBJDUMP) -dh  $@ >$@.headers
+	@echo   $(CURDIR)/$@.headers

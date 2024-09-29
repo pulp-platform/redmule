@@ -1,311 +1,90 @@
-/* Script for -z combreloc */
-/* Copyright (C) 2014-2020 Free Software Foundation, Inc.
-   Copyright (C) 2019 ETH Zürich and University of Bologna
-   Copyright (C) 2020 OpenHW Group
-   Copying and distribution of this script, with or without modification,
-   are permitted in any medium without royalty provided the copyright
-   notice and this notice are preserved.  */
+/* Copyright lowRISC contributors.
+   Licensed under the Apache License, Version 2.0, see LICENSE for details.
+   SPDX-License-Identifier: Apache-2.0 */
 
-/* This linker script is adapted from the default linker script for upstream
-   RISC-V GCC.  It has been modified for use in verification of CORE-V cores.
-*/
-
-OUTPUT_FORMAT("elf32-littleriscv", "elf32-littleriscv",
-	      "elf32-littleriscv")
 OUTPUT_ARCH(riscv)
-ENTRY(_start)
 
-/* CORE-V */
 MEMORY
 {
-	/* Our testbench is a bit weird in that we initialize the RAM (thus
-	   allowing initialized sections to be placed there). Infact we dump all
-	   sections to ram. */
-
-	ram (rwxai) : ORIGIN = 0x00000000, LENGTH = 0x400000
-	dbg (rwxai) : ORIGIN = 0x1A110800, LENGTH = 0x1000
+/* Change this if you'd like different sizes. Arty A7-100(35) has a maximum of 607.5KB(225KB)
+   BRAM space. Configuration below is for maximum BRAM capacity with Artya A7-35 while letting
+   CoreMark run (.vmem of 152.8KB).
+*/
+    ram         : ORIGIN = 0x00100000, LENGTH = 0x30000 /* 192 kB */
+    stack       : ORIGIN = 0x00130000, LENGTH = 0x8000  /* 32 kB */
 }
+
+/* Stack information variables */
+_min_stack      = 0x2000;   /* 8K - minimum stack space to reserve */
+_stack_len     = LENGTH(stack);
+_stack_start   = ORIGIN(stack) + LENGTH(stack);
+
+_entry_point = _vectors_start + 0x80;
+ENTRY(_entry_point)
+
+/* The tohost address is used by Spike for a magic "stop me now" message. This
+   is set to equal SIM_CTRL_CTRL (see simple_system_regs.h), which has that
+   effect in simple_system simulations. Note that it must be 8-byte aligned.
+
+   We don't read data back from Spike, so fromhost is set to some dummy value:
+   we place it just above the top of the stack.
+ */
+tohost   = 0x20008;
+fromhost = _stack_start + 0x10;
 
 SECTIONS
 {
-  /* CORE-V Debugger Code: This section address must be the same as the
-     DM_HaltAddress parameter in the RTL */
-  .debugger (ORIGIN(dbg)):
-  {
-    KEEP(*(.debugger));
-  } >dbg
-  .debugger_exception (0x1A111000):
-  {
-    KEEP(*(.debugger_exception));
-  } >dbg
-  /* Debugger Stack*/
-  .debugger_stack         : ALIGN(16)
-  {
-   PROVIDE(__debugger_stack_start = .);
-   . = 0x80;
-  } >dbg
-
-  /* CORE-V: we want a fixed entry point */
-  PROVIDE(__boot_address = 0x80);
-
-  /* CORE-V: interrupt vectors */
-  .vectors (ORIGIN(ram)):
-  {
-    PROVIDE(__vector_start = .);
-    KEEP(*(.vectors));
-  } >ram
-
-  /* CORE-V: crt0 init code */
-  .init (__boot_address):
-  {
-    KEEP (*(SORT_NONE(.init)))
-    KEEP (*(.text.start))
-  } >ram
-
-  /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x10000)); . = SEGMENT_START("text-segment", 0x10000) + SIZEOF_HEADERS;
-  .interp         : { *(.interp) } >ram
-  .note.gnu.build-id  : { *(.note.gnu.build-id) } >ram
-  .hash           : { *(.hash) } >ram
-  .gnu.hash       : { *(.gnu.hash) } >ram
-  .dynsym         : { *(.dynsym) } >ram
-  .dynstr         : { *(.dynstr) } >ram
-  .gnu.version    : { *(.gnu.version) } >ram
-  .gnu.version_d  : { *(.gnu.version_d) } >ram
-  .gnu.version_r  : { *(.gnu.version_r) } >ram
-  .rela.dyn       :
+    .vectors :
     {
-      *(.rela.init)
-      *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
-      *(.rela.fini)
-      *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
-      *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
-      *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
-      *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
-      *(.rela.ctors)
-      *(.rela.dtors)
-      *(.rela.got)
-      *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*)
-      *(.rela.sbss .rela.sbss.* .rela.gnu.linkonce.sb.*)
-      *(.rela.sdata2 .rela.sdata2.* .rela.gnu.linkonce.s2.*)
-      *(.rela.sbss2 .rela.sbss2.* .rela.gnu.linkonce.sb2.*)
-      *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
-      PROVIDE_HIDDEN (__rela_iplt_start = .);
-      *(.rela.iplt)
-      PROVIDE_HIDDEN (__rela_iplt_end = .);
-    } >ram
-  .rela.plt       :
+        . = ALIGN(4);
+		_vectors_start = .;
+        KEEP(*(.vectors))
+		_vectors_end = .;
+    } > ram
+
+    .text : {
+        . = ALIGN(4);
+        *(.text)
+        *(.text.*)
+    }  > ram
+
+    .rodata : {
+        . = ALIGN(4);
+        /* Small RO data before large RO data */
+        *(.srodata)
+        *(.srodata.*)
+        *(.rodata);
+        *(.rodata.*)
+    } > ram
+
+    .data : {
+        . = ALIGN(4);
+        /* Small data before large data */
+        *(.sdata)
+        *(.sdata.*)
+        *(.data);
+        *(.data.*)
+    } > ram
+
+    .bss :
     {
-      *(.rela.plt)
-    } >ram
+        . = ALIGN(4);
+        _bss_start = .;
+        /* Small BSS before large BSS */
+        *(.sbss)
+        *(.sbss.*)
+        *(.bss)
+        *(.bss.*)
+        *(COMMON)
+        _bss_end = .;
+    } > ram
 
-  .plt            : { *(.plt) }
-  .iplt           : { *(.iplt) }
-  .text           :
-  {
-    *(.text.unlikely .text.*_unlikely .text.unlikely.*)
-    *(.text.exit .text.exit.*)
-    *(.text.startup .text.startup.*)
-    *(.text.hot .text.hot.*)
-    *(SORT(.text.sorted.*))
-    *(.text .stub .text.* .gnu.linkonce.t.*)
-    /* .gnu.warning sections are handled specially by elf.em.  */
-    *(.gnu.warning)
-  } >ram
-  .fini           :
-  {
-    KEEP (*(SORT_NONE(.fini)))
-  } >ram
-  PROVIDE (__etext = .);
-  PROVIDE (_etext = .);
-  PROVIDE (etext = .);
-  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } >ram
-  .rodata1        : { *(.rodata1) } >ram
-  .sdata2         :
-  {
-    *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
-  } >ram
-  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) } >ram
-  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) } >ram
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) *(.eh_frame.*) } >ram
-  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) } >ram
-  .gnu_extab   : ONLY_IF_RO { *(.gnu_extab*) } >ram
-  /* These sections are generated by the Sun/Oracle C++ compiler.  */
-  .exception_ranges   : ONLY_IF_RO { *(.exception_ranges*) }
-  /* Adjust the address for the data segment.  We want to adjust up to
-     the same address within the page on the next page up.  */
-  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
-  /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) *(.eh_frame.*) } >ram
-  .gnu_extab      : ONLY_IF_RW { *(.gnu_extab) } >ram
-  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } >ram
-  .exception_ranges   : ONLY_IF_RW { *(.exception_ranges*) } >ram
-  /* Thread Local Storage sections  */
-  .tdata	  :
-   {
-     PROVIDE_HIDDEN (__tdata_start = .);
-     *(.tdata .tdata.* .gnu.linkonce.td.*)
-   } >ram
-  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } >ram
-  .preinit_array    :
-  {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
-    KEEP (*(.preinit_array))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >ram
-  .init_array    :
-  {
-    PROVIDE_HIDDEN (__init_array_start = .);
-    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-    KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
-    PROVIDE_HIDDEN (__init_array_end = .);
-  } >ram
-  .fini_array    :
-  {
-    PROVIDE_HIDDEN (__fini_array_start = .);
-    KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
-    KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
-    PROVIDE_HIDDEN (__fini_array_end = .);
-  } >ram
-  .ctors          :
-  {
-    /* gcc uses crtbegin.o to find the start of
-       the constructors, so we make sure it is
-       first.  Because this is a wildcard, it
-       doesn't matter if the user does not
-       actually link against crtbegin.o; the
-       linker won't look for a file to match a
-       wildcard.  The wildcard also means that it
-       doesn't matter which directory crtbegin.o
-       is in.  */
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
-    /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
-       The .ctor section from the crtend file contains the
-       end of ctors marker and it must be last */
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
-    KEEP (*(SORT(.ctors.*)))
-    KEEP (*(.ctors))
-  } >ram
-  .dtors          :
-  {
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
-    KEEP (*(SORT(.dtors.*)))
-    KEEP (*(.dtors))
-  } >ram
-  .jcr            : { KEEP (*(.jcr)) }
-  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
-  .dynamic        : { *(.dynamic) }
-  . = DATA_SEGMENT_RELRO_END (0, .);
-  .data           :
-  {
-    __DATA_BEGIN__ = .;
-    *(.data .data.* .gnu.linkonce.d.*)
-    SORT(CONSTRUCTORS)
-  } >ram
-  .data1          : { *(.data1) } >ram
-  .got            : { *(.got.plt) *(.igot.plt) *(.got) *(.igot) }
-  /* We want the small data sections together, so single-instruction offsets
-     can access them all, and initialized data all before uninitialized, so
-     we can shorten the on-disk segment size.  */
-  .sdata          :
-  {
-    __SDATA_BEGIN__ = .;
-    *(.srodata.cst16) *(.srodata.cst8) *(.srodata.cst4) *(.srodata.cst2) *(.srodata .srodata.*)
-    *(.sdata .sdata.* .gnu.linkonce.s.*)
-  } >ram
-  _edata = .; PROVIDE (edata = .);
-  . = .;
-  __bss_start = .;
-  .sbss           :
-  {
-    *(.dynsbss)
-    *(.sbss .sbss.* .gnu.linkonce.sb.*)
-    *(.scommon)
-  } >ram
-  .bss            :
-  {
-   *(.dynbss)
-   *(.bss .bss.* .gnu.linkonce.b.*)
-   *(COMMON)
-   /* Align here to ensure that the .bss section occupies space up to
-      _end.  Align after .bss to ensure correct alignment even if the
-      .bss section disappears because there are no input sections.
-      FIXME: Why do we need it? When there is no .bss section, we do not
-      pad the .data section.  */
-   . = ALIGN(. != 0 ? 32 / 8 : 1);
-  } >ram
-  . = ALIGN(32 / 8);
-  . = SEGMENT_START("ldata-segment", .);
-  . = ALIGN(32 / 8);
-  __bss_end = .;
-    __global_pointer$ = MIN(__SDATA_BEGIN__ + 0x800,
-		            MAX(__DATA_BEGIN__ + 0x800, __bss_end - 0x800));
-  _end = .; PROVIDE (end = .);
-  . = DATA_SEGMENT_END (.);
-
-  /* Heap grows upward towards end of ram */
-  .heap                    : ALIGN(16)
-  {
-   PROVIDE(__heap_start = .);
-   /* If end of ram is not 16-byte aligned, align to previous 16-byte
-      boundary */
-   PROVIDE(__heap_end = ALIGN(ORIGIN(ram) + LENGTH(ram) - __heap_start - 15, 16));
-   . = __heap_end;
-  } >ram
-
-  /* Stack grows downward from end of ram */
-  .stack (__heap_start)    : ALIGN(16) /* this is a requirement of the ABI(?) */
-  {
-   PROVIDE(__stack_start = __heap_start);
-   . = __heap_end;
-   PROVIDE(__stack_end = .);
-  } >ram
-
-  /* Stabs debugging sections.  */
-  .stab          0 : { *(.stab) }
-  .stabstr       0 : { *(.stabstr) }
-  .stab.excl     0 : { *(.stab.excl) }
-  .stab.exclstr  0 : { *(.stab.exclstr) }
-  .stab.index    0 : { *(.stab.index) }
-  .stab.indexstr 0 : { *(.stab.indexstr) }
-  .comment       0 : { *(.comment) }
-  .gnu.build.attributes : { *(.gnu.build.attributes .gnu.build.attributes.*) }
-  /* DWARF debug sections.
-     Symbols in the DWARF debugging sections are relative to the beginning
-     of the section so we begin them at 0.  */
-  /* DWARF 1 */
-  .debug          0 : { *(.debug) }
-  .line           0 : { *(.line) }
-  /* GNU DWARF 1 extensions */
-  .debug_srcinfo  0 : { *(.debug_srcinfo) }
-  .debug_sfnames  0 : { *(.debug_sfnames) }
-  /* DWARF 1.1 and DWARF 2 */
-  .debug_aranges  0 : { *(.debug_aranges) }
-  .debug_pubnames 0 : { *(.debug_pubnames) }
-  /* DWARF 2 */
-  .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
-  .debug_abbrev   0 : { *(.debug_abbrev) }
-  .debug_line     0 : { *(.debug_line .debug_line.* .debug_line_end) }
-  .debug_frame    0 : { *(.debug_frame) }
-  .debug_str      0 : { *(.debug_str) }
-  .debug_loc      0 : { *(.debug_loc) }
-  .debug_macinfo  0 : { *(.debug_macinfo) }
-  /* SGI/MIPS DWARF 2 extensions */
-  .debug_weaknames 0 : { *(.debug_weaknames) }
-  .debug_funcnames 0 : { *(.debug_funcnames) }
-  .debug_typenames 0 : { *(.debug_typenames) }
-  .debug_varnames  0 : { *(.debug_varnames) }
-  /* DWARF 3 */
-  .debug_pubtypes 0 : { *(.debug_pubtypes) }
-  .debug_ranges   0 : { *(.debug_ranges) }
-  /* DWARF Extension.  */
-  .debug_macro    0 : { *(.debug_macro) }
-  .debug_addr     0 : { *(.debug_addr) }
-  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
-  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+    /* ensure there is enough room for stack */
+    .stack (NOLOAD): {
+        . = ALIGN(4);
+        . = . + _min_stack ;
+        . = ALIGN(4);
+        stack = . ;
+        _stack = . ;
+    } > stack
 }
-

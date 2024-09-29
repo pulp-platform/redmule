@@ -72,6 +72,7 @@ $(warning RISCV_CFLAGS set to $(RISCV_CFLAGS))
 
 BSP                                  = $(CORE_V_VERIF)/$(CV_CORE_LC)/bsp
 
+RISCV_CFLAGS += -I $(BSP)
 
 %.hex: %.elf
 	@echo "$(BANNER)"
@@ -82,31 +83,25 @@ BSP                                  = $(CORE_V_VERIF)/$(CV_CORE_LC)/bsp
 		$@
 	$(RISCV_EXE_PREFIX)readelf -a $< > $*.readelf
 	$(RISCV_EXE_PREFIX)objdump \
-		-d \
+		-fhSD \
 		-M no-aliases \
 		-M numeric \
 		-S \
 		$*.elf > $*.objdump
-	$(RISCV_EXE_PREFIX)objdump \
-    	-d \
-        -S \
-		-M no-aliases \
-		-M numeric \
-        -l \
-		$*.elf | ${CORE_V_VERIF}/bin/objdump2itb - > $*.itb
 
-# Patterned targets to generate ELF.  Used only if explicit targets do not match.
-#
-.PRECIOUS : %.elf
 
-# Single rule for compiling test source into an ELF file
-# For directed tests, TEST_FILES gathers all of the .S and .c files in a test directory
-# For corev_ tests, TEST_FILES will only point to the specific .S for the RUN_INDEX and TEST_NAME provided to make
-ifeq ($(shell echo $(TEST) | head -c 6),corev_)
-TEST_FILES        = $(filter %.c %.S,$(wildcard  $(SIM_TEST_PROGRAM_RESULTS)/$(TEST_NAME)$(OPT_RUN_INDEX_SUFFIX).S))
-else
-TEST_FILES        = $(filter %.c %.S,$(wildcard  $(TEST_TEST_DIR)/*))
-endif
+
+TEST_FILES_FULL   = $(filter %.c %.S,$(wildcard $(TEST_TEST_DIR)/*))
+TEST_FILES        = $(notdir $(TEST_FILES_FULL))
+
+
+# Separate object file lists for .c and .S files
+C_OBJS := $(patsubst %.c,%.o,$(filter %.c,$(TEST_FILES)))
+S_OBJS := $(patsubst %.S,%.o,$(filter %.S,$(TEST_FILES)))
+
+# Combine them to get TEST_OBJS
+TEST_OBJS := $(C_OBJS) $(S_OBJS)
+
 
 # If a test defines "default_cflags" in its yaml, then it is responsible to define ALL flags
 # Otherwise add the default cflags in the variable CFLAGS defined above
@@ -126,37 +121,11 @@ LD_LIBRARY 	= $(if $(wildcard $(TEST_RESULTS_LD)),-L $(SIM_TEST_PROGRAM_RESULTS)
 LD_FILE 	= $(if $(wildcard $(TEST_RESULTS_LD)),$(TEST_RESULTS_LD),$(if $(wildcard $(TEST_LD)),$(TEST_LD),$(BSP)/link.ld))
 LD_LIBRARY += -L $(SIM_BSP_RESULTS)
 
-ifeq ($(TEST_FIXED_ELF),1)
-%.elf:
-	@echo "$(BANNER)"
-	@echo "* Copying fixed ELF test program to $(@)"
-	@echo "$(BANNER)"
-	mkdir -p $(SIM_TEST_PROGRAM_RESULTS)
-	cp $(TEST_TEST_DIR)/$(TEST).elf $@
-else
-%.elf: $(TEST_FILES) bsp
-	mkdir -p $(SIM_TEST_PROGRAM_RESULTS)
-	@echo "$(BANNER)"
-	@echo "* Compiling test-program $@"
-	@echo "$(BANNER)"
-	$(RISCV_EXE_PREFIX)$(RISCV_CC) \
-		$(CFG_CFLAGS) \
-		$(TEST_CFLAGS) \
-		$(RISCV_CFLAGS) \
-		-I $(BSP) \
-		-o $@ \
-		-nostartfiles \
-		-nostdlib \
-		$(TEST_FILES) \
-		-T $(LD_FILE) \
-		$(LD_LIBRARY) \
-		-lcv-verif
-endif
 
-.PHONY: hex
+#.PHONY: hex
 
 # Shorthand target to only build the firmware using the hex and elf suffix rules above
-hex: $(SIM_TEST_PROGRAM_RESULTS)/$(TEST_PROGRAM)$(OPT_RUN_INDEX_SUFFIX).hex
+#hex: $(SIM_TEST_PROGRAM_RESULTS)/$(TEST_PROGRAM)$(OPT_RUN_INDEX_SUFFIX).hex
 
 bsp:
 	@echo "$(BANNER)"
@@ -174,7 +143,42 @@ bsp:
 		RISCV_CFLAGS="$(RISCV_CFLAGS)" \
 		all
 
+compile:
+	@echo "$(BANNER)"
+	@echo "* Compiling the test"
+	@echo "$(BANNER)"
+	mkdir -p $(SIM_BSP_RESULTS)
+	cp $(BSP)/Makefile $(SIM_BSP_RESULTS)
+	make -C $(SIM_BSP_RESULTS) \
+		SRCS=$(TEST_FILES)     \
+		VPATH=$(TEST_TEST_DIR) \
+		RISCV=$(RISCV) \
+		RISCV_PREFIX=$(RISCV_PREFIX) \
+		RISCV_EXE_PREFIX=$(RISCV_EXE_PREFIX) \
+		RISCV_MARCH=$(RISCV_MARCH) \
+		RISCV_CC=$(RISCV_CC) \
+		RISCV_CFLAGS="$(RISCV_CFLAGS)" \
+		compile
+
+%.elf:
+	@echo "$(BANNER)"
+	@echo "* Compiling the test"
+	@echo "$(BANNER)"
+	mkdir -p $(SIM_BSP_RESULTS)
+	cp $(BSP)/Makefile $(SIM_BSP_RESULTS)
+	make -C $(SIM_BSP_RESULTS) \
+		APP_FILES=$(TEST_FILES)    \
+		VPATH=$(TEST_TEST_DIR):$(BSP) \
+		RISCV=$(RISCV) \
+		RISCV_PREFIX=$(RISCV_PREFIX) \
+		RISCV_EXE_PREFIX=$(RISCV_EXE_PREFIX) \
+		RISCV_MARCH=$(RISCV_MARCH) \
+		RISCV_CC=$(RISCV_CC) \
+		RISCV_CFLAGS="$(RISCV_CFLAGS)" \
+		LD_FILE=$(BSP)/link.ld \
+		$@
+
 
 clean_bsp:
-	make -C $(BSP) clean
+#	make -C $(BSP) clean
 	rm -rf $(SIM_BSP_RESULTS)

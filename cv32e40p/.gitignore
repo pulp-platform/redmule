@@ -4,3 +4,5 @@
 *.objdump
 *.yaml
 *.readelf
+bsp.old/
+bsp.cv/

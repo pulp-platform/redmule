@@ -1,72 +1,105 @@
-/* Copyright (c) 2017  SiFive Inc. All rights reserved.
- * Copyright (c) 2019  ETH Zürich and University of Bologna
- * This copyrighted material is made available to anyone wishing to use,
- * modify, copy, or redistribute it subject to the terms and conditions
- * of the FreeBSD License.   This program is distributed in the hope that
- * it will be useful, but WITHOUT ANY WARRANTY expressed or implied,
- * including the implied warranties of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE.  A copy of this license is available at
- * http://www.opensource.org/licenses.
- */
-/* Make sure the vector table gets linked into the binary.  */
-.global vector_table
+# Copyright lowRISC contributors.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
 
-/* Entry point for bare metal programs */
-.section .text.start
-.global _start
-.type _start, @function
+#include "simple_system_regs.h"
+
+.section .text
+
+default_exc_handler:
+  jal x0, simple_exc_handler
+
+timer_handler:
+  jal x0, simple_timer_handler
+
+reset_handler:
+  /* set all registers to zero */
+  mv  x1, x0
+  mv  x2, x1
+  mv  x3, x1
+  mv  x4, x1
+  mv  x5, x1
+  mv  x6, x1
+  mv  x7, x1
+  mv  x8, x1
+  mv  x9, x1
+  mv x10, x1
+  mv x11, x1
+  mv x12, x1
+  mv x13, x1
+  mv x14, x1
+  mv x15, x1
+  mv x16, x1
+  mv x17, x1
+  mv x18, x1
+  mv x19, x1
+  mv x20, x1
+  mv x21, x1
+  mv x22, x1
+  mv x23, x1
+  mv x24, x1
+  mv x25, x1
+  mv x26, x1
+  mv x27, x1
+  mv x28, x1
+  mv x29, x1
+  mv x30, x1
+  mv x31, x1
+
+  /* stack initilization */
+  la   x2, _stack_start
 
 _start:
-/* initialize global pointer */
-.option push
-.option norelax
-1:	auipc gp, %pcrel_hi(__global_pointer$)
-	addi  gp, gp, %pcrel_lo(1b)
-.option pop
+  .global _start
 
-/* initialize stack pointer */
-	la sp, __stack_end
+  /* clear BSS */
+  la x26, _bss_start
+  la x27, _bss_end
 
-/* set vector table address */
-	la a0, __vector_start
-	ori a0, a0, 1 /*vector mode = vectored */
-	csrw mtvec, a0
+  bge x26, x27, zero_loop_end
 
-/* clear the bss segment */
-	la a0, _edata
-	la a2, _end
-	sub a2, a2, a0
-	li a1, 0
-	call memset
+zero_loop:
+  sw x0, 0(x26)
+  addi x26, x26, 4
+  ble x26, x27, zero_loop
+zero_loop_end:
 
-/* new-style constructors and destructors */
-	la a0, __libc_fini_array
-	call atexit
-	call __libc_init_array
 
-/* call main */
-//	lw a0, 0(sp)                    /* a0 = argc */
-//	addi a1, sp, __SIZEOF_POINTER__ /* a1 = argv */
-//	li a2, 0                        /* a2 = envp = NULL */
-// Initialize these variables to 0. Cannot use argc or argv
-// since the stack is not initialized
-	li a0, 0
-	li a1, 0
-	li a2, 0
+main_entry:
+  /* jump to startup program entry  */
+//  addi x10, x0, 0
+//  addi x11, x0, 0
+  jal x1, startup
+  /* Halt simulation */
+    li  a1, 0
+    li  a2, 0
+    li  a3, 0
+    li  a4, 0
+    li  a5, 0
+    li  a7, 93
+    ecall
 
-	call main
-	tail exit
+  /* If execution ends up here just put the core to sleep */
+sleep_loop:
+  wfi
+  j sleep_loop
 
-.size  _start, .-_start
+/* =================================================== [ exceptions ] === */
+/* This section has to be down here, since we have to disable rvc for it  */
 
-.global _init
-.type   _init, @function
-.global _fini
-.type   _fini, @function
-_init:
-_fini:
- /* These don't have to do anything since we use init_array/fini_array. Prevent
-    missing symbol error */
-	ret
-.size  _init, .-_init
-.size _fini, .-_fini
+  .section .vectors, "ax"
+  .option norvc;
+
+  // All unimplemented interrupts/exceptions go to the default_exc_handler.
+  .org 0x00
+  .rept 7
+  jal x0, default_exc_handler
+  .endr
+  jal x0, timer_handler
+  .rept 23
+  jal x0, default_exc_handler
+  .endr
+
+  // reset vector
+  .org 0x80
+  jal x0, reset_handler

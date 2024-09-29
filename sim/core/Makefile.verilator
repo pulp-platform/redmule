@@ -42,7 +42,7 @@ SIM_RESULTS              ?= simulation_results
 SIM_TEST_RESULTS         = $(SIM_RESULTS)/$(TEST)
 SIM_RUN_RESULTS          = $(SIM_TEST_RESULTS)/$(RUN_INDEX)
 SIM_TEST_PROGRAM_RESULTS = $(SIM_RUN_RESULTS)/test_program
-SIM_BSP_RESULTS          = $(CORE_V_VERIF)/$(SIM_TEST_PROGRAM_RESULTS)/bsp
+SIM_BSP_RESULTS          = $(CORE_V_VERIF)/sw/build/bsp
 
 # Compile compile flags for all simulators
 SV_CMP_FLAGS =
@@ -141,12 +141,24 @@ run-test: verilate $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
 ###############################################################################
 
 
-clean-test-programs:
+clean-test-programs: clean_bsp
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.o"       -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.hex"     -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.elf"     -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.map"     -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.readelf" -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.objdump" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.headers" -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "corev_*.S" -delete
 	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.itb" -delete
+
+
+
+elf:   $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+	@echo Built $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+
+clean-elf:
+	rm -f  $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+
+hex:   $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
+	@echo Built $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).objdump

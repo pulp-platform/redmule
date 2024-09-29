@@ -4,6 +4,13 @@
 make -f Makefile.verilator verilate
 ```
 ## Run test
+### smoke test
+
+```sh
+cd sim/core
+make -f Makefile.verilator clean-test-programs
+make -f Makefile.verilator run-test
+```
 ```sh
 make -f Makefile.verilator  TEST=hello-world run-test
 ```
