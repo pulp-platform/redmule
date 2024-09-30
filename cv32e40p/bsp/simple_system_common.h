@@ -12,7 +12,17 @@
 #define DEV_READ(addr, val) (*((volatile uint32_t *)(addr)))
 #define PCOUNT_READ(name, dst) asm volatile("csrr %0, " #name ";" : "=r"(dst))
 
-extern  void _putcf (void * unused, char c);
+/**
+* tinyprintf callback function, see tinyprintf.h for details
+*/
+void _putcf (void * unused, char c);
+
+/**
+* called upon main return
+*/
+void _Exit(int exit_code) __attribute__ ((noreturn,noinline));
+
+
 /**
  * Writes character to simulator out log. Signature matches c stdlib function
  * of the same name.

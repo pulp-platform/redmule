@@ -24,8 +24,8 @@ DEPS = $(OBJS:.o=.d)
 LIBCV-VERIF = libcv-verif.a
 
 # Flags for tinyprintf
-TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_PRINTF
-TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_SPRINTF
+TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_PRINTF=1
+TINY_PRINTF_FLAGS += -DTINYPRINTF_DEFINE_TFP_SPRINTF=0
 
 # Compiler flags
 CFLAGS ?= -march=$(CV_SW_MARCH) -mabi=ilp32 -static -mcmodel=medany -Wall -g -O3 \
@@ -68,8 +68,7 @@ compile: $(OBJS)
 
 %.elf: $(OBJS)
 #	mkdir -p $(SIM_TEST_PROGRAM_RESULTS)
-	@echo "*** TEST_FILES=$(TEST_FILES)"
-	@echo "*** linking $@"
+	@echo "*** linking $(OBJS) into $@"
 	@echo "$(BANNER)"
 	$(RISCV_EXE_PREFIX)$(RISCV_CC) \
 		$(CFLAGS) \

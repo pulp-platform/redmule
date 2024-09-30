@@ -6,6 +6,25 @@
 #include "tinyprintf.h"
 
 
+
+// see tb/core/mm_ram.sv
+void _Exit(int exit_code){
+
+  DEV_WRITE(MMADDR_EXIT, (uint32_t)exit_code); 
+ while (1) {
+        asm volatile ("wfi");
+    }
+}
+
+ void _putcf (void *, char c) {
+  DEV_WRITE(MMADDR_PRINT, (uint32_t)c); 
+}
+
+
+int putchar(char c){
+  _putcf (0,  c);
+  return 1;
+}
 void puthex(uint32_t h) {
   int cur_digit;
   // Iterate through h taking top 4 bits each time and outputting ASCII of hex
