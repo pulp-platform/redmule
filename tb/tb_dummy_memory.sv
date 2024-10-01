@@ -9,7 +9,7 @@ timeunit 1ps;
 timeprecision 1ps;
 
 `ifdef VERILATOR
-  `define clk_verilated clk_delayed_i
+  `define clk_verilated clk_i
 `else
   `define clk_verilated clk_delayed
 `endif
