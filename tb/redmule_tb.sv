@@ -391,7 +391,8 @@ module redmule_tb (
 
     // #(100 * TCP);
     // end WFI + returned != -1 signals end-of-computation
-    while (~core_sleep || errors == -1) #(TCP);
+    //while (~core_sleep || errors == -1) #(TCP);
+    do @(posedge clk_i); while (~core_sleep || errors==-1);
     cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] + redmule_tb.i_dummy_dmemory.cnt_rd[1] + redmule_tb.i_dummy_dmemory.cnt_rd[2] + redmule_tb.i_dummy_dmemory.cnt_rd[3] + redmule_tb.i_dummy_dmemory.cnt_rd[4] + redmule_tb.i_dummy_dmemory.cnt_rd[5] + redmule_tb.i_dummy_dmemory.cnt_rd[6] + redmule_tb.i_dummy_dmemory.cnt_rd[7] + redmule_tb.i_dummy_dmemory.cnt_rd[8];
     cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] + redmule_tb.i_dummy_dmemory.cnt_wr[1] + redmule_tb.i_dummy_dmemory.cnt_wr[2] + redmule_tb.i_dummy_dmemory.cnt_wr[3] + redmule_tb.i_dummy_dmemory.cnt_wr[4] + redmule_tb.i_dummy_dmemory.cnt_wr[5] + redmule_tb.i_dummy_dmemory.cnt_wr[6] + redmule_tb.i_dummy_dmemory.cnt_wr[7] + redmule_tb.i_dummy_dmemory.cnt_wr[8];
     $display("[TB] - cnt_rd=%-8d", cnt_rd);

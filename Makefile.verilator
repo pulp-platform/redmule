@@ -52,6 +52,25 @@ run-test: $(BIN_DIR)/verilator_executable
 		"+simdata=$(SIM_TEST_INPUTS)/stim_data.txt" \
 		| tee $(VERI_LOG_DIR)/$(TEST).log
 	mv verilator_tb.vcd $(VERI_LOG_DIR)/
+
+
+.PHONY: veri-test
+veri-test: $(BIN_DIR)/verilator_executable 
+	@echo "$(BANNER)"
+	@echo "* Running with Verilator: "
+	@echo "*                         logfile in $(VERI_LOG_DIR)/$(TEST).log"
+	@echo "*                         *.vcd   in $(VERI_LOG_DIR)"
+	@echo "$(BANNER)"
+	mkdir -p $(VERI_LOG_DIR)
+	rm -f $(VERI_LOG_DIR)/verilator_tb.vcd
+	$(BIN_DIR)/verilator_executable  \
+		$(VERI_FLAGS) \
+		"+firmware=$(SIM_TEST_INPUTS)/stim_instr.txt" \
+		"+simdata=$(SIM_TEST_INPUTS)/stim_data.txt" \
+		| tee $(VERI_LOG_DIR)/$(TEST).log
+	mv verilator_tb.vcd $(VERI_LOG_DIR)/	
+
+	
 .PHONY: help
 
 help:
