@@ -45,7 +45,7 @@ module redmule_streamer
   hwpe_stream_intf_stream.sink   z_stream_i,
   // TCDM interface between the streamer and the memory
   hci_core_intf.master           tcdm      ,
-  
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
@@ -116,7 +116,7 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 redmule_castout #(
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
-  .src_format    ( FPFORMAT     ),
+  .SrcFormat     ( FPFORMAT     ),
   .data_w        ( DW           )
 ) i_store_cast   (
   .clk_i                                     ,
@@ -232,7 +232,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   redmule_castin #(
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
-    .dst_format   ( FPFORMAT     ),
+    .DstFormat    ( FPFORMAT     ),
     .data_w       ( DW           )
   ) i_load_cast   (
     .clk_i                                     ,
