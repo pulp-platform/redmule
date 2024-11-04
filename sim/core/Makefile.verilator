@@ -1,0 +1,163 @@
+
+CV_CORE      ?= CV32E40P
+
+num_cores := $(shell nproc)
+num_cores_half := $(shell echo "$$(($(num_cores) / 2))")
+
+PRJ_HOME      := $(shell git rev-parse --show-toplevel)
+CORE_V_VERIF  := $(PRJ_HOME)
+TBSRC_HOME    := $(PRJ_HOME)/tb
+TBSRC_CORE    := $(TBSRC_HOME)/core
+TBSRC_VERI    := $(TBSRC_CORE)/tb_top_verilator.sv \
+                 $(TBSRC_CORE)/cv32e40p_tb_wrapper.sv \
+                 $(TBSRC_CORE)/tb_riscv/riscv_rvalid_stall.sv \
+                 $(TBSRC_CORE)/tb_riscv/riscv_gnt_stall.sv \
+                 $(TBSRC_CORE)/mm_ram.sv \
+                 $(TBSRC_CORE)/dp_ram.sv
+
+
+CV_CORE_LC     = $(shell echo $(CV_CORE) | tr A-Z a-z)
+CV_CORE_UC     = $(shell echo $(CV_CORE) | tr a-z A-Z)
+
+CV_CORE_PKG           :=  $(shell $(BENDER) path $(CV_CORE_LC))
+CV_CORE_MANIFEST    ?= $(CV_CORE_PKG)/cv32e40p_manifest.flist
+export DESIGN_RTL_DIR = $(CV_CORE_PKG)/rtl
+
+
+TEST         ?= hello-world
+# Test-Program directores.
+# Relative path is used for Verilator which cannot seem to handle loooong pathnames.
+TEST_PROGRAM_PATH    = $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs/custom
+TEST_PROGRAM_RELPATH = ../../$(CV_CORE_LC)/tests/programs/custom
+#TEST_PROGRAM_RELPATH = $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs/custom
+TEST_TEST_DIR        := $(TEST_PROGRAM_PATH)/$(TEST)
+
+#  -Core Firmware and the RISCV GCC Toolchain (SDK)
+include $(CORE_V_VERIF)/mk/Common.mk
+
+
+# Common output directories
+RUN_INDEX                ?= 0
+SIM_RESULTS              ?= simulation_results
+SIM_TEST_RESULTS         = $(SIM_RESULTS)/$(TEST)
+SIM_RUN_RESULTS          = $(SIM_TEST_RESULTS)/$(RUN_INDEX)
+SIM_TEST_PROGRAM_RESULTS = $(SIM_RUN_RESULTS)/test_program
+SIM_BSP_RESULTS          = $(CORE_V_VERIF)/sw/build/bsp
+
+# Compile compile flags for all simulators
+SV_CMP_FLAGS =
+
+#top module
+VLT_TOP_MODULE     ?= tb_top_verilator
+
+# verilator configuration
+VERILATOR           = verilator
+VERILATOR_ROOT ?= $(dir $(shell which $(VLT)))/../share/verilator
+VLT_ROOT	   ?= ${VERILATOR_ROOT}
+
+VERI_FLAGS         +=
+VERI_COMPILE_FLAGS += -Wno-BLKANDNBLK $(SV_CMP_FLAGS) # hope this doesn't hurt us in the long run
+VERI_TRACE         ?=
+VERI_OBJ_DIR       ?= cobj_dir
+#VERI_LOG_DIR       ?= cobj_dir/logs
+VERI_LOG_DIR       ?= $(SIM_TEST_PROGRAM_RESULTS)
+VERI_CFLAGS        += -O2
+
+###############################################################################
+# Verilator
+
+# We first test if the user wants to to vcd dumping. This hacky part is required
+# because we need to conditionally compile the testbench (-DVCD_TRACE) and pass
+# the --trace flags to the verilator call
+#ifeq ($(findstring +vcd,$(VERI_FLAGS)),+vcd)
+
+VLT_FLAGS    += -Wno-fatal
+VLT_CFLAGS   += -DTOPLEVEL_NAME=$(VLT_TOP_MODULE)
+VLT_CFLAGS   += -std=c++17 
+
+ifneq (${WAVES}, 0)
+VERI_TRACE="--trace"
+VLT_CFLAGS  += -DVCD_TRACE
+endif
+
+VLT_FLAGS    += --timing
+VLT_CFLAGS   += -g  -I $(VLT_ROOT)/include -I $(VLT_ROOT)/include/vltstd  
+
+verilate: testbench_verilator
+
+sanity-veri-run:
+	make veri-test TEST=hello-world
+
+testbench_verilator:  $(TBSRC_VERI) 
+	@echo "$(BANNER)"
+	@echo "* Compiling CORE TB and CV32E40P with Verilator"
+	@echo "$(BANNER)"
+	$(VERILATOR) --cc --sv --exe \
+		$(VERI_TRACE) \
+		$(VLT_FLAGS)   \
+		--Wno-lint --Wno-UNOPTFLAT \
+		--Wno-MODDUP --top-module \
+		$(VLT_TOP_MODULE) $(TBSRC_VERI) \
+		-f $(CV_CORE_MANIFEST) \
+		$(CV_CORE_PKG)/bhv/$(CV_CORE_LC)_core_log.sv \
+		$(TBSRC_CORE)/tb_top_verilator.cpp --Mdir $(VERI_OBJ_DIR) \
+		-CFLAGS "$(VLT_CFLAGS)"  \
+		$(VERI_COMPILE_FLAGS)
+	$(MAKE) -C $(VERI_OBJ_DIR) -j$(num_cores_half) -f V$(VLT_TOP_MODULE).mk
+	mkdir -p $(SIM_RESULTS)
+	mv $(VERI_OBJ_DIR)/V$(VLT_TOP_MODULE) $(SIM_RESULTS)/verilator_executable
+
+veri-test: verilate $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
+	@echo "$(BANNER)"
+	@echo "* Running with Verilator: logfile in $(SIM_TEST_RESULTS)/$(TEST).log"
+	@echo "$(BANNER)"
+	mkdir -p $(VERI_LOG_DIR)
+	$(SIM_RESULTS)/verilator_executable \
+		$(VERI_FLAGS) \
+		"+firmware=$(TEST_PROGRAM_RELPATH)/$(TEST)/$(TEST).hex" \
+		| tee $(VERI_LOG_DIR)/$(TEST).log
+
+# verilator specific cleanup
+veri-clean: verilate-clean
+
+verilate-clean: 
+	if [ -d $(SIM_RESULTS)   ]; then rm -r $(SIM_RESULTS);  fi
+	if [ -d $(VERI_OBJ_DIR)  ]; then rm -r $(VERI_OBJ_DIR); fi
+	rm -rf testbench_verilator
+	if [ -e memory_dump.bin  ]; then rm memory_dump.bin;    fi
+	if [ -e verilator_tb.vcd ]; then rm verilator_tb.vcd;   fi
+
+
+run-test: verilate $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
+	@echo "$(BANNER)"
+	@echo "* Running with Verilator: logfile in $(SIM_TEST_RESULTS)/$(TEST).log"
+	@echo "$(BANNER)"
+	mkdir -p $(VERI_LOG_DIR)
+	$(SIM_TEST_RESULTS)/verilator_executable \
+		$(VERI_FLAGS) \
+		"+firmware=$(TEST_PROGRAM_RELPATH)/$(TEST)/$(TEST).hex" \
+		| tee $(VERI_LOG_DIR)/$(TEST).log
+###############################################################################
+
+
+clean-test-programs: clean_bsp
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.o"       -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.hex"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.elf"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.map"     -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.readelf" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.objdump" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.headers" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "corev_*.S" -delete
+	find $(CORE_V_VERIF)/$(CV_CORE_LC)/tests/programs -name "*.itb" -delete
+
+
+
+elf:   $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+	@echo Built $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+
+clean-elf:
+	rm -f  $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).elf
+
+hex:   $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).hex
+	@echo Built $(TEST_PROGRAM_PATH)/$(TEST)/$(TEST).objdump

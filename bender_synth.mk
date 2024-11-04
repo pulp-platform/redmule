@@ -8,7 +8,9 @@
 synth_targs +=
 
 ifeq ($(REDMULE_COMPLEX),1)
-	synth_defs += -D REDMULE_COMPLEX_SYNTH
+	synth_defs  += -D REDMULE_COMPLEX_SYNTH
+	VLT_FLAGS   +=  -DREDMULE_COMPLEX_SYNTH
 else
-	synth_defs += -D REDMULE_HWPE_SYNTH
+	synth_defs  += -D REDMULE_HWPE_SYNTH
+	VLT_FLAGS   +=  -DREDMULE_HWPE_SYNTH
 endif

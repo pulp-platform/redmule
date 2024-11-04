@@ -9,7 +9,7 @@ timeunit 1ps;
 timeprecision 1ps;
 
 `ifdef VERILATOR
-  `define clk_verilated clk_delayed_i
+  `define clk_verilated clk_i
 `else
   `define clk_verilated clk_delayed
 `endif
@@ -155,16 +155,16 @@ module tb_dummy_memory
     end
   end
 
-`ifdef VERILATOR
-  always_ff @(posedge `clk_verilated)
-  begin
-    tcdm_r_data  <= tcdm_r_data_int;
-    tcdm_r_valid <= tcdm_r_valid_int;
-  end
-`else
+//`ifdef VERILATOR
+//  always_ff @(posedge `clk_verilated)
+//  begin
+//     tcdm_r_data  <= tcdm_r_data_int;
+//     tcdm_r_valid <= tcdm_r_valid_int;
+//   end
+// `else
   assign tcdm_r_data  = tcdm_r_data_int;
   assign tcdm_r_valid = tcdm_r_valid_int;
-`endif
+// `endif
 
   generate
 
