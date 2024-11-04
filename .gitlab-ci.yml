@@ -18,18 +18,16 @@ init:
   stage: init
   extends: .base
   script:
-    - cd golden-model; source setup-py.sh
+    - cd golden-model; source setup-py.sh; cd ..
   artifacts:
     when: always
     expire_in: 1 week
-    paths:
-      - ./golden-model/venv
+    paths: [./golden-model/venv]
 
 .redmule-build-tpl:
   extends: .base
   stage: build
-  dependencies:
-    - init
+  needs: [init]
   script:
     - SETUP_CONFIG=${SETUP_CONFIG}
     - source scripts/${SETUP_CONFIG}.sh
@@ -38,10 +36,7 @@ init:
   artifacts:
     when: always
     expire_in: 1 week
-    paths:
-      - ./.bender
-      - ./scripts/compile.tcl
-      - ./vsim/*
+    paths: [./.bender, ./scripts/compile.tcl, ./vsim/*]
 
 redmule-build-hwpe:
   extends: .redmule-build-tpl
@@ -56,6 +51,7 @@ redmule-build-complex:
 .redmule-vsim-tpl:
   extends: .base
   stage: test
+  needs: [build]
   script:
     - SETUP_CONFIG=${SETUP_CONFIG}
     - source scripts/${SETUP_CONFIG}.sh
@@ -67,8 +63,7 @@ redmule-build-complex:
 
 hwpe-test:
   extends: .redmule-vsim-tpl
-  dependencies:
-    - redmule-build-hwpe
+  needs: [init, redmule-build-hwpe]
   variables:
     SETUP_CONFIG: "setup-hwpe"
   parallel:
@@ -91,11 +86,24 @@ hwpe-test:
       - { OP: gemm, M: 23, N: 31, K: 31, FMT: FP16 }
       - { OP: gemm, M: 24, N: 17, K: 32, FMT: FP16 }
       - { OP: gemm, M: 24, N: 20, K: 32, FMT: FP16 }
+      - { OP: gemm, M: 96, N: 96, K: 96, FMT: FP8 }
+      - { OP: gemm, M: 128, N: 128, K: 128, FMT: FP8 }
+      - { OP: gemm, M: 12, N: 16, K: 16, FMT: FP8 }
+      - { OP: gemm, M: 24, N: 16, K: 16, FMT: FP8 }
+      - { OP: gemm, M: 48, N: 32, K: 32, FMT: FP8 }
+      - { OP: gemm, M: 30, N: 32, K: 17, FMT: FP8 }
+      - { OP: gemm, M: 24, N: 32, K: 1, FMT: FP8 }
+      - { OP: gemm, M: 31, N: 32, K: 16, FMT: FP8 }
+      - { OP: gemm, M: 17, N: 32, K: 16, FMT: FP8 }
+      - { OP: gemm, M: 5, N: 32, K: 17, FMT: FP8 }
+      - { OP: gemm, M: 36, N: 31, K: 32, FMT: FP8 }
+      - { OP: gemm, M: 12, N: 31, K: 16, FMT: FP8 }
+      - { OP: gemm, M: 24, N: 17, K: 32, FMT: FP8 }
+      - { OP: gemm, M: 24, N: 20, K: 32, FMT: FP8 }
 
 complex-test:
   extends: .redmule-vsim-tpl
-  dependencies:
-    - redmule-build-complex
+  needs: [init, redmule-build-complex]
   variables:
     SETUP_CONFIG: "setup-complex"
   parallel:
