@@ -11,55 +11,150 @@ Red="\e[31m"
 Green="\e[32m"
 EndColor="\e[0m"
 
-BASE_TIMEOUT=100
+BASE_TIMEOUT=45
 
-PARAMS=(
-    96 96 96
-    128 128 128
-    12 16 16
-    24 16 16
-    48 32 32
-    30 32 17
-    24 32 1
-    31 32 16
-    17 32 16
-    31 32 31
-    17 32 3
-    5  32 17
-    5  32 3
-    36 31 32
-    12 31 16
-    23 31 31 
-    24 17 32
-    24 20 32
-    #23 17 33
-    #23 20 33
-    #3  11 32
-    #17 13 16
-    #17 13 17
+# Print the matrix when there are errors
+VERBOSE=1
+
+M_STEP=12
+N_STEP=4
+K_STEP=16
+
+M_RANGE=(0 1 2)
+N_RANGE=(0 1 3 4 5 7)
+K_RANGE=(0 1 2)
+
+# The possible values of M, N and K are computed as STEP * RANGE + PATTERN
+PATTERNS=(
+    '0' 
+    '1' 
+    'STEP-1' 
+    'STEP/2'
+    'STEP/2+1'
+    'STEP/2-1'
 )
 
-i=0
+LINE=""
+OLDOFFS=0
 
-while [[ $i -lt ${#PARAMS[@]} ]]
-do
-
-    M=${PARAMS[$i]}
-    N=${PARAMS[$(( $i + 1 ))]}
-    K=${PARAMS[$(( $i + 2 ))]}
-
-    i=$(( $i + 3 ))
-    
-    make hw-clean hw-build 1>/dev/null 2>&1
-    make golden M=$M N=$N K=$K 1>/dev/null 2>&1
-    make sw-clean sw-build 1>/dev/null 2>&1
-    timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
-    grep -rn "Success!" $PWD/vsim/transcript 1>/dev/null 2>&1
-    if [[ $? -eq 0 ]]
-    then
-       echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
-    else
-       echo -e "${Red}ERROR ${EndColor}: M=$M N=$N K=$K"
+function build_matrix {
+    NUM_GREEN=$(($OFFSET - $OLDOFFS - 2))
+         
+    if [[ $NUM_GREEN -gt 0 ]]; then
+        LINE="$LINE"$(printf O'%.0s' $(seq $NUM_GREEN))
     fi
-    
+
+    case $MSW$LSW in
+        01)
+            LINE="$LINE"XO
+        ;;
+
+        10)
+            LINE="$LINE"OX
+        ;;
+
+        11)
+            LINE="$LINE"XX
+        ;;
+    esac
+
+    OLDOFFS=$OFFSET
+}
+
+function print_matrix {
+    if [[ $(($OFFSET + 2)) -ne $(($M*$K)) ]]; then
+        LINE="$LINE"$(printf O'%.0s' $(seq $(($M*$K - $OFFSET - 2))))
+    fi
+
+    MAT=$(echo -e $LINE | fold -w $K | sed s/'\(O\|X\)'/" \\0"/g | sed s/'\(O\+\)'/"\\$Green"\\0"\\$EndColor"/g | sed s/'\(X\+\)'/"\\$Red"\\0"\\$EndColor"/g)
+
+    echo -e "$MAT"
+}
+
+for param in M N K
+do
+    RANGE_NAME="$param"_RANGE
+    LIST="$RANGE_NAME[@]"
+    STEP="$param"_STEP
+    VALS="$param"_VALS
+    VALS_LIST="$VALS[@]"
+
+    k=0
+
+    for i in ${!LIST}
+    do
+        for  offs in ${PATTERNS[@]}
+        do
+            EXPR=${offs//STEP/${!STEP}}
+
+            if ! (printf '%s\0' ${!VALS_LIST} | grep -Fxqz -- $((i*$STEP+$EXPR)) || [[ $((i*$STEP+$EXPR)) -lt 1 ]]); then
+                (($VALS[$k]=$((i*$STEP+$EXPR))))
+            fi
+
+            k=$(($k+1))
+        done
+    done
+done
+
+echo M={${M_VALS[@]}}
+echo N={${N_VALS[@]}}
+echo K={${K_VALS[@]}}
+
+make hw-clean hw-build 1>/dev/null 2>&1
+
+for M in ${M_VALS[@]}
+do
+    for N in ${N_VALS[@]}
+    do
+        for K in ${K_VALS[@]}
+        do
+            LEN=$(($M * $K))
+        
+            make golden M=$M N=$N K=$K 1>/dev/null 2>&1
+
+            make sw-clean sw-build verbose=$VERBOSE 1>/dev/null 2>&1
+
+            timeout $BASE_TIMEOUT make run 1>/dev/null 2>&1
+
+            if [[ $? -eq 124 ]]; then
+                echo -e "${Red}TIMEOUT\t${EndColor}: M=$M N=$N K=$K"
+            else
+                grep -rn "Success!" $PWD/vsim/transcript 1>/dev/null 2>&1
+            
+                if [[ $? -eq 0 ]]; then
+                    echo -e "${Green}OK\t${EndColor}: M=$M N=$N K=$K"
+                else
+                    echo -e "${Red}ERROR\t${EndColor}: M=$M N=$N K=$K"
+
+                    if [[ $VERBOSE -eq 1 ]]; then
+                        ERRORS=$(grep -Eo "(MSW|LSW|@ 0x[0-f]*$)" $PWD/vsim/transcript | grep -Eo "(MSW|LSW|0x[0-f]+)")
+
+                        MSW=0
+                        LSW=0
+
+                        for S in $ERRORS
+                        do
+                            if [[ $S == "MSW" ]]; then
+                                MSW=1
+                            elif [[ $S == "LSW" ]]; then
+                                LSW=1
+                            else
+                                OFFSET=$(($S / 2))
+                                
+                                build_matrix                                
+
+                                MSW=0
+                                LSW=0
+                            fi
+                        done
+
+                        print_matrix
+
+                        LINE=""
+                        OLDOFFS=0
+                    fi
+                fi
+            fi
+        done
+    done
 done
