@@ -18,9 +18,7 @@ module redmule_ctrl
   parameter  int unsigned Height        = 4                      ,
   parameter  int unsigned Width         = 8                      ,
   parameter  int unsigned NumPipeRegs   = 3                      ,
-  localparam int unsigned TILE          = (NumPipeRegs +1)*Height,
-  localparam int unsigned W_ITERS       = W_ITERS                ,
-  localparam int unsigned LEFT_PARAMS   = LEFT_PARAMS
+  localparam int unsigned TILE          = (NumPipeRegs +1)*Height
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -248,8 +246,8 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
-  assign w_rows_iter = reg_file_q.hwpe_params [W_ITERS    ][31:16];
-  assign tot_stores  = reg_file_q.hwpe_params [LEFT_PARAMS][31:16];
+  assign w_rows_iter = reg_file_q.hwpe_params [redmule_pkg::W_ITERS    ][31:16];
+  assign tot_stores  = reg_file_q.hwpe_params [redmule_pkg::LEFT_PARAMS][31:16];
   assign reg_file_o = reg_file_q;
   assign z_buffer_clk_en_o = z_buffer_clk_en;
 
