@@ -5,11 +5,15 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
-timeunit 1ps;
-timeprecision 1ps;
+timeunit 1ps; timeprecision 1ps;
 
-module redmule_tb;
-import redmule_pkg::*;
+module redmule_tb
+  import redmule_pkg::*;
+(
+  input logic clk_i,
+  input logic rst_ni,
+  input logic fetch_enable_i
+);
 
   // parameters
   parameter int unsigned PROB_STALL = 0;
@@ -24,20 +28,17 @@ import redmule_pkg::*;
   parameter int unsigned PULP_ZFINX = 0;
   parameter logic [31:0] BASE_ADDR = 32'h1c000000;
   parameter logic [31:0] HWPE_ADDR_BASE_BIT = 20;
-  parameter string STIM_INSTR = "./stim_instr.txt";
-  parameter string STIM_DATA  = "./stim_data.txt";
+  parameter string STIM_INSTR = "/scratch2/ytortorella/verilator/redmule/vsim/stim_instr.txt";
+  parameter string STIM_DATA  = "/scratch2/ytortorella/verilator/redmule/vsim/stim_data.txt";
 
   // global signals
-  logic clk;
-  logic rst_n;
   logic test_mode;
-  logic fetch_enable;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
 
-  hwpe_stream_intf_tcdm instr[0:0]  (.clk(clk));
-  hwpe_stream_intf_tcdm stack[0:0]  (.clk(clk));
-  hwpe_stream_intf_tcdm tcdm [MP:0] (.clk(clk));
+  hwpe_stream_intf_tcdm instr[0:0]  (.clk(clk_i));
+  hwpe_stream_intf_tcdm stack[0:0]  (.clk(clk_i));
+  hwpe_stream_intf_tcdm tcdm [MP:0] (.clk(clk_i));
 
   logic [NC-1:0][1:0] evt;
 
@@ -85,28 +86,6 @@ import redmule_pkg::*;
   localparam TA  = 0.2ns; // application time
   localparam TT  = 0.8ns; // test time
 
-  // Performs one entire clock cycle.
-  task cycle;
-    clk <= #(TCP/2) 0;
-    clk <= #TCP 1;
-    #TCP;
-  endtask
-
-  // The following task schedules the clock edges for the next cycle and
-  // advances the simulation time to that cycles test time (localparam TT)
-  // according to ATI timings.
-  task cycle_start;
-    clk <= #(TCP/2) 0;
-    clk <= #TCP 1;
-    #TT;
-  endtask
-
-  // The following task finishes a clock cycle previously started with
-  // cycle_start by advancing the simulation time to the end of the cycle.
-  task cycle_end;
-    #(TCP-TT);
-  endtask
-
   // bindings
   always_comb
   begin : bind_periph
@@ -140,8 +119,8 @@ import redmule_pkg::*;
   end
 
   logic other_r_valid;
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (~rst_n)
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (~rst_ni)
       other_r_valid <= '0;
     else
       other_r_valid <= data_req & (data_addr[31:24] == 8'h80);
@@ -182,8 +161,8 @@ import redmule_pkg::*;
     .DW                 ( DW                 ),
     .MP                 ( DW/32              )
   ) i_redmule_wrap      (
-    .clk_i              ( clk                ),
-    .rst_ni             ( rst_n              ),
+    .clk_i              ( clk_i              ),
+    .rst_ni             ( rst_ni             ),
     .test_mode_i        ( test_mode          ),
     .evt_o              ( evt                ),
     .busy_o             ( redmule_busy       ),
@@ -218,8 +197,8 @@ import redmule_pkg::*;
     .TA             ( TA            ),
     .TT             ( TT            )
   ) i_dummy_dmemory (
-    .clk_i          ( clk           ),
-    .rst_ni         ( rst_n         ),
+    .clk_i          ( clk_i         ),
+    .rst_ni         ( rst_ni        ),
     .clk_delayed_i  ( '0            ),
     .randomize_i    ( 1'b0          ),
     .enable_i       ( 1'b1          ),
@@ -236,8 +215,8 @@ import redmule_pkg::*;
     .TA             ( TA          ),
     .TT             ( TT          )
   ) i_dummy_imemory (
-    .clk_i          ( clk         ),
-    .rst_ni         ( rst_n       ),
+    .clk_i          ( clk_i       ),
+    .rst_ni         ( rst_ni      ),
     .clk_delayed_i  ( '0          ),
     .randomize_i    ( 1'b0        ),
     .enable_i       ( 1'b1        ),
@@ -254,8 +233,8 @@ import redmule_pkg::*;
     .TA                  ( TA                ),
     .TT                  ( TT                )
   ) i_dummy_stack_memory (
-    .clk_i               ( clk               ),
-    .rst_ni              ( rst_n             ),
+    .clk_i               ( clk_i             ),
+    .rst_ni              ( rst_ni            ),
     .clk_delayed_i       ( '0                ),
     .randomize_i         ( 1'b0              ),
     .enable_i            ( 1'b1              ),
@@ -269,8 +248,8 @@ import redmule_pkg::*;
     .PULP_ZFINX     ( PULP_ZFINX )
   ) i_cv32e40p_core (
     // Clock and Reset
-    .clk_i               ( clk            ),
-    .rst_ni              ( rst_n          ),
+    .clk_i               ( clk_i          ),
+    .rst_ni              ( rst_ni         ),
     .pulp_clock_en_i     ( 1'b1           ),  // PULP clock enable (only used if PULP_CLUSTER = 1)
     .scan_cg_en_i        ( 1'b0           ),  // Enable all clock gates for testing
     // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
@@ -316,38 +295,17 @@ import redmule_pkg::*;
     .debug_running_o     (              ),
     .debug_halted_o      (              ),
     // CPU Control Signals
-    .fetch_enable_i      ( fetch_enable ),
-    .core_sleep_o        ( core_sleep   )
+    .fetch_enable_i      ( fetch_enable_i ),
+    .core_sleep_o        ( core_sleep     )
   );
-
-  initial begin
-    clk <= 1'b0;
-    rst_n <= 1'b0;
-    core_boot_addr = 32'h0;
-    for (int i = 0; i < 20; i++)
-      cycle();
-    rst_n <= #TA 1'b1;
-    core_boot_addr = 32'h1C000084;
-
-    for (int i = 0; i < 10; i++)
-      cycle();
-    rst_n <= #TA 1'b0;
-    for (int i = 0; i < 10; i++)
-      cycle();
-    rst_n <= #TA 1'b1;
-
-    while(1) begin
-      cycle();
-    end
-
-  end
   
   integer f_t0, f_t1;
   integer f_x, f_W, f_y, f_tau;
   logic start;
+  int cnt_rd, cnt_wr;
 
   int errors = -1;
-  always_ff @(posedge clk)
+  always_ff @(posedge clk_i)
   begin
     if((data_addr == 32'h80000000 ) && (data_we & data_req == 1'b1)) begin
       errors = data_wdata;
@@ -358,26 +316,18 @@ import redmule_pkg::*;
   end
 
   initial begin
-    integer id;
-    int cnt_rd, cnt_wr;
-
     test_mode = 1'b0;
-    fetch_enable = 1'b0;
+    core_boot_addr = 32'h1C000084;
 
     f_t0 = $fopen("time_start.txt");
     f_t1 = $fopen("time_stop.txt");
 
-    // load instruction memory
+    // Load instruction and data memory
     $readmemh(STIM_INSTR, redmule_tb.i_dummy_imemory.memory);
     $readmemh(STIM_DATA,  redmule_tb.i_dummy_dmemory.memory);
 
-    #(100*TCP);
-    fetch_enable = 1'b1;
-
-    #(100*TCP);
-    // end WFI + returned != -1 signals end-of-computation
-    while(~core_sleep || errors==-1)
-      #(TCP);
+    // End: WFI + returned != -1 signals end-of-computation
+    while(~core_sleep || errors==-1) @(posedge clk_i);
     cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] + redmule_tb.i_dummy_dmemory.cnt_rd[1] + redmule_tb.i_dummy_dmemory.cnt_rd[2] + redmule_tb.i_dummy_dmemory.cnt_rd[3] + redmule_tb.i_dummy_dmemory.cnt_rd[4] + redmule_tb.i_dummy_dmemory.cnt_rd[5] + redmule_tb.i_dummy_dmemory.cnt_rd[6] + redmule_tb.i_dummy_dmemory.cnt_rd[7] + redmule_tb.i_dummy_dmemory.cnt_rd[8];
     cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] + redmule_tb.i_dummy_dmemory.cnt_wr[1] + redmule_tb.i_dummy_dmemory.cnt_wr[2] + redmule_tb.i_dummy_dmemory.cnt_wr[3] + redmule_tb.i_dummy_dmemory.cnt_wr[4] + redmule_tb.i_dummy_dmemory.cnt_wr[5] + redmule_tb.i_dummy_dmemory.cnt_wr[6] + redmule_tb.i_dummy_dmemory.cnt_wr[7] + redmule_tb.i_dummy_dmemory.cnt_wr[8];
     $display("[TB] - cnt_rd=%-8d", cnt_rd);
@@ -390,7 +340,6 @@ import redmule_pkg::*;
       $display("[TB] - Success!");
     end
     $finish;
-
   end
 
 endmodule // redmule_tb
