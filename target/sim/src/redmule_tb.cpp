@@ -42,18 +42,18 @@
 
 vluint64_t sim_time = 0;
 
-void dut_reset(Vredmule_tb *dut, vluint64_t &sim_time, vluint64_t rst_time, vluint64_t rst_cycles){
+void dut_reset(Vredmule_tb *dut, vluint64_t &sim_time, vluint64_t rst_time, vluint64_t rst_cycles) {
   dut->rst_ni = 0;
-  if(sim_time > rst_time && sim_time < rst_time + rst_cycles) dut->rst_ni = 1;
+  if (sim_time > rst_time && sim_time < rst_time + rst_cycles) dut->rst_ni = 1;
 
-  if(sim_time > rst_time + rst_cycles && sim_time < rst_time + 2*rst_cycles) dut->rst_ni = 0;
-  
-  if(sim_time > rst_time + 2*rst_cycles) dut->rst_ni = 1;
+  if (sim_time > rst_time + rst_cycles && sim_time < rst_time + 2 * rst_cycles) dut->rst_ni = 0;
+
+  if (sim_time > rst_time + 2 * rst_cycles) dut->rst_ni = 1;
 }
 
-void dut_set_fetch_en(Vredmule_tb *dut, vluint64_t &sim_time, bool value){
+void dut_set_fetch_en(Vredmule_tb *dut, vluint64_t &sim_time, bool value) {
   dut->fetch_enable_i = 0;
-  if(sim_time > 100){
+  if (sim_time > 100) {
     dut->fetch_enable_i = value;
   }
 }
