@@ -85,8 +85,7 @@ module redmule_tb
   logic          core_sleep;
 
   // bindings
-  always_comb
-  begin : bind_periph
+  always_comb begin : bind_periph
     periph_req  = data_req & data_addr[HWPE_ADDR_BASE_BIT];
     periph_add  = data_addr;
     periph_wen  = ~data_we;
@@ -95,8 +94,7 @@ module redmule_tb
     periph_id   = '0;
   end
 
-  always_comb
-  begin : bind_instrs
+  always_comb begin : bind_instrs
     instr[0].req  = instr_req;
     instr[0].add  = instr_addr;
     instr[0].wen  = 1'b1;
@@ -107,8 +105,7 @@ module redmule_tb
     instr_rvalid = instr[0].r_valid;
   end
 
-  always_comb
-  begin : bind_stack
+  always_comb begin : bind_stack
     stack[0].req  = data_req & (data_addr[31:24] == '0) & ~data_addr[HWPE_ADDR_BASE_BIT];
     stack[0].add  = data_addr;
     stack[0].wen  = ~data_we;
@@ -124,7 +121,7 @@ module redmule_tb
       other_r_valid <= data_req & (data_addr[31:24] == 8'h80);
   end
 
-  for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
+  for (genvar ii = 0; ii < MP; ii++) begin : tcdm_binding
     assign tcdm[ii].req  = tcdm_req  [ii];
     assign tcdm[ii].add  = tcdm_add  [ii];
     assign tcdm[ii].wen  = tcdm_wen  [ii];
@@ -326,8 +323,24 @@ module redmule_tb
 
     // End: WFI + returned != -1 signals end-of-computation
     while(~core_sleep || errors==-1) @(posedge clk_i);
-    cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] + redmule_tb.i_dummy_dmemory.cnt_rd[1] + redmule_tb.i_dummy_dmemory.cnt_rd[2] + redmule_tb.i_dummy_dmemory.cnt_rd[3] + redmule_tb.i_dummy_dmemory.cnt_rd[4] + redmule_tb.i_dummy_dmemory.cnt_rd[5] + redmule_tb.i_dummy_dmemory.cnt_rd[6] + redmule_tb.i_dummy_dmemory.cnt_rd[7] + redmule_tb.i_dummy_dmemory.cnt_rd[8];
-    cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] + redmule_tb.i_dummy_dmemory.cnt_wr[1] + redmule_tb.i_dummy_dmemory.cnt_wr[2] + redmule_tb.i_dummy_dmemory.cnt_wr[3] + redmule_tb.i_dummy_dmemory.cnt_wr[4] + redmule_tb.i_dummy_dmemory.cnt_wr[5] + redmule_tb.i_dummy_dmemory.cnt_wr[6] + redmule_tb.i_dummy_dmemory.cnt_wr[7] + redmule_tb.i_dummy_dmemory.cnt_wr[8];
+    cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[1] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[2] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[3] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[4] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[5] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[6] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[7] +
+             redmule_tb.i_dummy_dmemory.cnt_rd[8];
+    cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[1] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[2] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[3] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[4] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[5] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[6] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[7] +
+             redmule_tb.i_dummy_dmemory.cnt_wr[8];
     $display("[TB] - cnt_rd=%-8d", cnt_rd);
     $display("[TB] - cnt_wr=%-8d", cnt_wr);
     if(errors != 0) begin
