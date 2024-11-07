@@ -1,5 +1,24 @@
-// Verilator Example
-// Norbertas Kremeris 2021
+// Copyright 2023 ETH Zurich and University of Bologna.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Yvan Tortorella <yvan.tortorella@unibo.it>
+//
+
+#define Stringify(x) #x
+#define ToString(x) Stringify(x)
+
+#define ConcatenatePrim(a, b) a##b
+#define Concatenate(a, b) ConcatenatePrim(a, b)
+
+#ifndef TbName
+#error "TbName must be set to the name of the toplevel."
+#else
+#pragma message ("TbName is set to: " ToString(TbName))
+#endif
+
+#define TbHeader TbName.h
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -11,7 +30,15 @@
 #include <cerrno>
 #include <verilated.h>
 #include <verilated_vcd_c.h>
-#include "Vredmule_tb.h"
+#include ToString(TbHeader)
+
+// Path to the waveform dump
+#ifndef WafeformPath
+  #define WafeformPath "./target/sim/verilator/redmule.vcd"
+#else
+  #pragma message ("Wave dump is set to: " ToString(WafeformPath))
+#endif
+#define Waveforms ToString(WafeformPath)
 
 vluint64_t sim_time = 0;
 
@@ -42,7 +69,7 @@ int main(int argc, char** argv, char** env) {
   Verilated::traceEverOn(true);
   VerilatedVcdC *m_trace = new VerilatedVcdC;
 	dut->trace(m_trace, 5);
-	m_trace->open("waveform.vcd");
+	m_trace->open(Waveforms);
 
 	while (!Verilated::gotFinish()) {
     // Reset DUT

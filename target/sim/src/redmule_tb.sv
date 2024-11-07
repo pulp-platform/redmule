@@ -9,29 +9,32 @@ timeunit 1ps; timeprecision 1ps;
 
 module redmule_tb
   import redmule_pkg::*;
-(
+#(
+  parameter TCP = 1.0ns, // clock period, 1 GHz clock
+  parameter TA  = 0.2ns, // application time
+  parameter TT  = 0.8ns  // test time
+)(
   input logic clk_i,
   input logic rst_ni,
   input logic fetch_enable_i
 );
 
   // parameters
-  parameter int unsigned PROB_STALL = 0;
-  parameter int unsigned NC = 1;
-  parameter int unsigned ID = 10;
-  parameter int unsigned DW = redmule_pkg::DATA_W;
-  parameter int unsigned MP = DW/32;
-  parameter int unsigned MEMORY_SIZE = 192*1024;
-  parameter int unsigned STACK_MEMORY_SIZE = 192*1024;
-  parameter int unsigned PULP_XPULP = 1;
-  parameter int unsigned FPU = 0;
-  parameter int unsigned PULP_ZFINX = 0;
-  parameter logic [31:0] BASE_ADDR = 32'h1c000000;
-  parameter logic [31:0] HWPE_ADDR_BASE_BIT = 20;
-  parameter string STIM_INSTR = "/scratch2/ytortorella/verilator/redmule/vsim/stim_instr.txt";
-  parameter string STIM_DATA  = "/scratch2/ytortorella/verilator/redmule/vsim/stim_data.txt";
+  localparam int unsigned PROB_STALL = 0;
+  localparam int unsigned NC = 1;
+  localparam int unsigned ID = 10;
+  localparam int unsigned DW = redmule_pkg::DATA_W;
+  localparam int unsigned MP = DW/32;
+  localparam int unsigned MEMORY_SIZE = 192*1024;
+  localparam int unsigned STACK_MEMORY_SIZE = 192*1024;
+  localparam int unsigned PULP_XPULP = 1;
+  localparam int unsigned FPU = 0;
+  localparam int unsigned PULP_ZFINX = 0;
+  localparam logic [31:0] BASE_ADDR = 32'h1c000000;
+  localparam logic [31:0] HWPE_ADDR_BASE_BIT = 20;
 
   // global signals
+  string stim_instr, stim_data;
   logic test_mode;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
@@ -80,11 +83,6 @@ module redmule_tb
   logic [31:0]   data_rdata;
   logic          data_err;
   logic          core_sleep;
-
-  // ATI timing parameters.
-  localparam TCP = 1.0ns; // clock period, 1 GHz clock
-  localparam TA  = 0.2ns; // application time
-  localparam TT  = 0.8ns; // test time
 
   // bindings
   always_comb
@@ -298,8 +296,7 @@ module redmule_tb
     .fetch_enable_i      ( fetch_enable_i ),
     .core_sleep_o        ( core_sleep     )
   );
-  
-  integer f_t0, f_t1;
+
   integer f_x, f_W, f_y, f_tau;
   logic start;
   int cnt_rd, cnt_wr;
@@ -316,15 +313,16 @@ module redmule_tb
   end
 
   initial begin
+
+    if (!$value$plusargs("STIM_INSTR=%s", stim_instr)) stim_instr = "../../../sw/build/stim_instr.txt";
+    if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
+
     test_mode = 1'b0;
     core_boot_addr = 32'h1C000084;
 
-    f_t0 = $fopen("time_start.txt");
-    f_t1 = $fopen("time_stop.txt");
-
     // Load instruction and data memory
-    $readmemh(STIM_INSTR, redmule_tb.i_dummy_imemory.memory);
-    $readmemh(STIM_DATA,  redmule_tb.i_dummy_dmemory.memory);
+    $readmemh(stim_instr, redmule_tb.i_dummy_imemory.memory);
+    $readmemh(stim_data,  redmule_tb.i_dummy_dmemory.memory);
 
     // End: WFI + returned != -1 signals end-of-computation
     while(~core_sleep || errors==-1) @(posedge clk_i);
