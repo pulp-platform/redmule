@@ -219,7 +219,9 @@ asm volatile(
 The `sw/redmule_complex.c` provides an example of code for programming RedMulE through a dedicate ISA extension.
 
 ### Getting Started
-If you are working on ETH Lagrev servers, sourcing one of the setup scripts located under the `scripts` folder suffice to export all the required environment variables. Otherwise, it ise recommanded to install a riscv [toolchain](https://github.com/pulp-platform/pulp-riscv-gnu-toolchain) and do the following:
+The RedMulE repository offers support for different simulation targets. At the moment, the support is for Questasim (`vsim`) and Verilator (`verilator`).
+
+If you are working on ETH Lagrev servers, sourcing one of the setup scripts located under the `scripts` folder suffice to export all the required environment variables. Otherwise, it is recommanded to install a riscv [toolchain](https://github.com/pulp-platform/pulp-riscv-gnu-toolchain) and do the following:
 ```bash
 export PATH=/absolute/path/to/riscv/toolchain/bin:$PATH
 export PULP_RISCV_GCC_TOOLCHAIN=/absolute/path/to/riscv/toolchain
@@ -234,22 +236,24 @@ make bender
 ```
 Bender installation is not mandatory. If any bender version is already installed, it is just needed to add the absolute path to the `bender` binary to the `PATH` variable. 
 
-Clone the dependencies and generate the compilation script by running:
+To clone the dependencies and generate the compilation script we need to define the target we intend to use to simulate the accelerator testbench. The target selection is done by using the `target = <target_type>` at compilation time. Let's assume we want to use Verilator. To clone the dependencies and create the compilation scripts for hardware simulation, run:
 ```bash
-make update-ips
+make hw-scripts target=verilator
 ```
 
-Build the hardware:
+The compiled hardware is then built with the command:
 ```bash
-make hw-build
+make hw-build target=verilator
 ```
+
+In case one wants to run a simulation using Questasim, it sufficient to re-run the above commands replacing the `target=vsim` string.
 
 ### Run the test
 
 To run the available tests, just do:
 ```bash
 make sw-build
-make run (gui=1 to open the Questasim Graphic User Interface)
+make hw-run target=verilator (gui=1 to open the GtkWave tool or the Questasim Graphic User Interface depending on the value of `target`)
 ```
 It is possible to run the test introducing a parametric probability of stall by explicitly passing the `P_STALL` parameter while running the test (`P_STALL=0.1` means a stall probability of the 10%).
 If the `scripts/setup-hwpe.sh` was sourced, the above commands will execute the `sw/redmule.c` example, while if the `scripts/setup-complex.sh` was source, the above commands will execute the `sw/redmule_complex.c` test.
