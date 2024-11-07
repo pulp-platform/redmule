@@ -12,10 +12,6 @@ VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
 
-include $(RootDir)bender_common.mk
-include $(RootDir)bender_sim.mk
-include $(RootDir)bender_synth.mk
-
 Tb := redmule_tb_wrap
 CompileFlags := +acc -permissive -suppress 2583 -suppress 13314
 

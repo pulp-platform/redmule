@@ -6,9 +6,9 @@
 #
 # Makefragment for Verilator simulation.
 
-Verilator ?= verilator-5.020
+Verilator ?= $(RootDir)vendor/install/bin/verilator
 GtkWave ?= gtkwave
-VerilatorRoot := /usr/pack/verilator-5.006-zr/verilator-5.006
+VerilatorRoot ?= $(RootDir)vendor/install/share/verilator
 Module := redmule
 ObjDirName := obj_dir
 Vmodule := V$(Module)
@@ -18,10 +18,6 @@ VerilatorObjDir := $(VerilatorPath)/$(ObjDirName)
 VerilatorAbsObjDir := $(VerilatorDir)/$(ObjDirName)
 VerilatorCompileScript := $(VerilatorDir)/compile.$(target).tcl
 VerilatorWaves := $(VerilatorDir)/redmule.vcd
-
-include $(RootDir)bender_common.mk
-include $(RootDir)bender_sim.mk
-include $(RootDir)bender_synth.mk
 
 hw-clean:
 	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves)

@@ -142,6 +142,7 @@ clean-all: sw-clean
 sw-all: sw-clean sw-build
 
 # Install tools
+CXX ?= g++
 NumCores := $(shell nproc)
 NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
 VendorDir ?= $(RootDir)vendor
@@ -158,6 +159,7 @@ $(InstallDir)/bin/verilator:
 	# Checkout the right version
 	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
 	# Compile verilator
+	sudo apt install libfl-dev help2man
 	mkdir -p $(InstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
-	./configure --prefix=$(InstallDir) CXX=g++-13.2.0  && make -j$(NumCoresHalf)  && make install
+	./configure --prefix=$(InstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
 	touch $(InstallDir)/bin/verilator
