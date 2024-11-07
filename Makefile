@@ -140,3 +140,24 @@ clean-all: sw-clean
 	rm -rf $(compile_script)
 
 sw-all: sw-clean sw-build
+
+# Install tools
+NumCores := $(shell nproc)
+NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
+VendorDir ?= $(RootDir)vendor
+InstallDir ?= $(VendorDir)/install
+# Verilator
+VerilatorVersion ?= v5.028
+# GCC
+
+verilator: $(InstallDir)/bin/verilator
+
+$(InstallDir)/bin/verilator:
+	rm -rf $(VendorDir)/verilator
+	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
+	# Checkout the right version
+	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
+	# Compile verilator
+	mkdir -p $(InstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
+	./configure --prefix=$(InstallDir) CXX=g++-13.2.0  && make -j$(NumCoresHalf)  && make install
+	touch $(InstallDir)/bin/verilator
