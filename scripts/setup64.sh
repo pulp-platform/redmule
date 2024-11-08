@@ -13,5 +13,10 @@ echo "Exporting SDK and GCC Toolchain paths"
 export PATH=/usr/pack/riscv-1.0-kgf/riscv64-gcc-12.2.0/bin:$PATH
 export PULP_RISCV_GCC_TOOLCHAIN=/usr/pack/riscv-1.0-kgf/riscv64-gcc-12.2.0
 export PATH=/usr/pack/gcc-5.2.0-af/x86_64-rhe6-linux/bin:$PATH
-export XTEN = im_ziscr
-export XLEN = 64
+export CXX=g++-13.2.0
+export Questa=questa-2023.4
+export Verilator=verilator-5.020 verilator
+export VerilatorRoot=/usr/pack/verilator-5.006-zr/verilator-5.006
+export Gcc=
+export XTEN=im_ziscr
+export XLEN=64

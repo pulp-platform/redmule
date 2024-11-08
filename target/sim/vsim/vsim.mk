@@ -6,7 +6,7 @@
 #
 # Makefragment for Verilator simulation.
 
-Questa ?= questa-2023.4
+Questa ?=
 Module := redmule
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl

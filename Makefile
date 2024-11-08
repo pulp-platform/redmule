@@ -19,10 +19,12 @@ SIM_DIR    ?= $(RootDir)vsim
 QUESTA     ?= questa-2023.4
 BENDER_DIR ?= .
 BENDER     ?= bender
+Gcc        ?= $(GccInstallDir)/bin
 ISA        ?= riscv
 ARCH       ?= rv
 XLEN       ?= 32
-XTEN       ?= imc
+XTEN       ?= imc_zicsr
+PYTHON     ?= python3
 
 target ?= verilator
 TargetPath := $(SimDir)/$(target)
@@ -65,9 +67,9 @@ INC += -I$(SW)/utils
 BOOTSCRIPT := $(SW)/kernel/crt0.S
 LINKSCRIPT := $(SW)/kernel/link.ld
 
-CC=$(ISA)$(XLEN)-unknown-elf-gcc
+CC=$(Gcc)/$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(CC)
-OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+OBJDUMP=$(Gcc)/$(ISA)$(XLEN)-unknown-elf-objdump
 CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
@@ -83,7 +85,7 @@ STIM_DATA=$(BUILD_DIR)/stim_data.txt
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
-	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
@@ -149,7 +151,11 @@ VendorDir ?= $(RootDir)vendor
 InstallDir ?= $(VendorDir)/install
 # Verilator
 VerilatorVersion ?= v5.028
+VerilatorInstallDir := $(InstallDir)/verilator
 # GCC
+GccInstallDir := $(InstallDir)/riscv
+RiscvTarDir := riscv.tar.gz
+GccUrl := https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/riscv32-elf-ubuntu-20.04-gcc-nightly-2024.08.28-nightly.tar.gz
 
 verilator: $(InstallDir)/bin/verilator
 
@@ -160,6 +166,14 @@ $(InstallDir)/bin/verilator:
 	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
 	# Compile verilator
 	sudo apt install libfl-dev help2man
-	mkdir -p $(InstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
-	./configure --prefix=$(InstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
-	touch $(InstallDir)/bin/verilator
+	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
+	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
+
+riscv32-gcc: $(GccInstallDir)
+
+$(GccInstallDir):
+	rm -rf $(GccInstallDir) $(VendorDir)/$(RiscvTarDir)
+	mkdir -p $(InstallDir)
+	cd $(VendorDir) && \
+	wget $(GccUrl) -O $(RiscvTarDir) && \
+	tar -xzvf $(RiscvTarDir) -C $(InstallDir) riscv

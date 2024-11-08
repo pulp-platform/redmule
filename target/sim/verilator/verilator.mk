@@ -6,9 +6,9 @@
 #
 # Makefragment for Verilator simulation.
 
-Verilator ?= $(RootDir)vendor/install/bin/verilator
+Verilator ?= $(VerilatorInstallDir)/bin/verilator
 GtkWave ?= gtkwave
-VerilatorRoot ?= $(RootDir)vendor/install/share/verilator
+VerilatorRoot ?= $(VerilatorInstallDir)/share/verilator
 Module := redmule
 ObjDirName := obj_dir
 Vmodule := V$(Module)
@@ -30,7 +30,7 @@ hw-script:
 	> $(VerilatorCompileScript)
 
 hw-build: hw-script
-	$(Verilator) $(target) --trace --timing --bbox-unsup \
+	$(Verilator) --trace --timing --bbox-unsup \
 	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK \
 	--x-assign unique --x-initial unique --top-module $(Module)_tb --Mdir $(VerilatorAbsObjDir) \
 	-CFLAGS "-DTbName=$(Vmodule)_tb -DWafeformPath=$(VerilatorWaves)" \
@@ -38,7 +38,7 @@ hw-build: hw-script
 	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb
 
 hw-run:
-	cd $(VerilatorDir);                \
+	cd $(VerilatorDir);           \
 	./$(ObjDirName)/$(Vmodule)_tb
 ifeq ($(gui),1)
 	$(GtkWave) $(VerilatorWaves)
