@@ -21,95 +21,20 @@ jobs:
       run: |
         make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
 
-  # execute-redmule-tests:
-  #   name: execute-redmule-tests
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     REDMULE_COMPLEX: 0
-  #   strategy:
-  #     
-  #   needs:
-  #     install-tools
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #     with:
-  #       submodules: recursive
-  # 
-  #   - name: Run Tests
-  #     run: |
-  #       make golden M=12 N=16 K=16
-  #       make sw-all
-  #       make hw-all
+  run-tests:
+    name: run-tests
+    runs-on: ubuntu-latest
+    env:
+      REDMULE_COMPLEX: 0
+    needs:
+      install-tools
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
-    # - name: Upload Lint Report to Github
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: ${{matrix.simulator}}.${{matrix.testcase}}.${{matrix.config}}
-    #     path: 'verif/sim/out*'
-    #     retention-days: 10
-
-#
-#   execute-riscv32-tests:
-#     name: execute-riscv32-tests
-#     runs-on: ubuntu-latest
-#     env:
-#       SPIKE_TANDEM: 1
-#     strategy:
-#       matrix:
-#         testcase:  [ dv-riscv-arch-test, cv32a6_tests ]
-#         config:    [ cv32a65x ]
-#         simulator: [ veri-testharness ]
-#     needs:
-#       build-riscv-tests
-#     steps:
-#     - uses: actions/checkout@v4
-#       with:
-#         submodules: recursive
-#
-#     - name: Get specific submodule hash
-#       id: core-v-submodule-hash
-#       run: |
-#         cd verif/core-v-verif
-#         echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-#
-#     - name: Cache toolchain
-#       id: cache-toolchain
-#       uses: actions/cache@v3
-#       env:
-#           cache-name: cache-toolchain
-#       with:
-#           path: tools/riscv-toolchain/
-#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('ci/install-toolchain.sh') }}
-#
-#     - name: Cache verilator
-#       id: cache-verilator
-#       uses: actions/cache@v3
-#       env:
-#           cache-name: cache-verilator
-#       with:
-#           path: tools/verilator/
-#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('verif/regress/install-verilator.sh') }}
-#
-#     - name: Cache Spike
-#       id: cache-spike
-#       uses: actions/cache@v3
-#       env:
-#           cache-name: cache-spike
-#       with:
-#           path: tools/spike/
-#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('verif/regress/install-spike.sh')}}-${{ steps.core-v-submodule-hash.outputs.hash }}
-#
-#     - name: Run Tests
-#       run: |
-#           set -x
-#           export RISCV=$(pwd)/tools/riscv-toolchain/
-#           source ci/install-prereq.sh
-#           source verif/sim/setup-env.sh
-#           DV_SIMULATORS=${{matrix.simulator}},spike DV_TARGET=${{matrix.config}} bash verif/regress/${{matrix.testcase}}.sh
-#
-#     - name: Upload Lint Report to Github
-#       uses: actions/upload-artifact@v4
-#       with:
-#         name: ${{matrix.simulator}}.${{matrix.testcase}}.${{matrix.config}}
-#         path: 'verif/sim/out*'
-#         retention-days: 10
+    - name: Run Tests
+      run: |
+        make golden M=12 N=16 K=16
+        make sw-all
+        make hw-all
