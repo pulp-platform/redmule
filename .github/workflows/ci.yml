@@ -39,6 +39,7 @@ jobs:
         name: riscv32-gcc-install
         path: |
           vendor/install/riscv/*
+        retention-days: 1
 
     - name: Install bender
       run: |
@@ -50,6 +51,7 @@ jobs:
         name: bender-install
         path: |
           ./bender
+        retention-days: 1
 
     - name: Install Python tools
       run: |
@@ -61,6 +63,7 @@ jobs:
         name: python-install
         path: |
           ./golden-model*
+        retention-days: 1
 
     # - name: Install
     #   run: |
