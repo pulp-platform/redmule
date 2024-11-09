@@ -37,11 +37,38 @@ jobs:
     #   run: |
     #     make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
 
-  run-tests:
-    name: run-tests
+  run-hwpe-tests:
+    name: run-hwpe-tests
     runs-on: ubuntu-latest
     env:
       REDMULE_COMPLEX: 0
+      BENDER: ./bender
+    needs:
+      install-tools
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install required tools
+      run: |
+        make bender
+        make riscv32-gcc
+        make verilator
+        pip3 install numpy
+        cd golden-model && source setup-py.sh && cd ..
+
+    - name: Run Tests
+      run: |
+        make golden M=12 N=16 K=16
+        make sw-all
+        make hw-all
+
+  run-complex-tests:
+    name: run-complex-tests
+    runs-on: ubuntu-latest
+    env:
+      REDMULE_COMPLEX: 1
       BENDER: ./bender
     needs:
       install-tools
