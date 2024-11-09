@@ -5,14 +5,7 @@
 // Francesco Conti <f.conti@unibo.it>
 //
 
-timeunit 1ps;
-timeprecision 1ps;
-
-`ifdef VERILATOR
-  `define clk_verilated clk_delayed_i
-`else
-  `define clk_verilated clk_delayed
-`endif
+timeunit 1ps; timeprecision 1ps;
 
 module tb_dummy_memory
 #(
@@ -20,17 +13,10 @@ module tb_dummy_memory
   parameter MEMORY_SIZE = 1024,
   parameter BASE_ADDR   = 0,
   parameter PROB_STALL  = 0.0,
-`ifndef VERILATOR
-  parameter time TCP = 1.0ns, // clock period, 1GHz clock
-  parameter time TA  = 0.2ns, // application time
-  parameter time TT  = 0.8ns  // test time
-`else
   parameter time TCP = 1.0,   // clock period, 1GHz clock
   parameter time TA  = 0.2,   // application time
   parameter time TT  = 0.8    // test time
-`endif
-)
-(
+) (
   input  logic                clk_i,
   input  logic                rst_ni,
   input  logic                clk_delayed_i,
@@ -98,14 +84,6 @@ module tb_dummy_memory
 
   endgenerate
 
-  // assign clk_delayed = #(TA) clk_i;
-`ifndef VERILATOR
-  always @(clk_i)
-  begin
-    clk_delayed <= #(TA) clk_i;
-  end
-`endif
-
   logic [MP-1:0][31:0] write_data;
 
   generate
@@ -155,16 +133,8 @@ module tb_dummy_memory
     end
   end
 
-`ifdef VERILATOR
-  always_ff @(posedge `clk_verilated)
-  begin
-    tcdm_r_data  <= tcdm_r_data_int;
-    tcdm_r_valid <= tcdm_r_valid_int;
-  end
-`else
   assign tcdm_r_data  = tcdm_r_data_int;
   assign tcdm_r_valid = tcdm_r_valid_int;
-`endif
 
   generate
 
@@ -176,7 +146,7 @@ module tb_dummy_memory
         cnt_rd[ii] = 0;
       end
 
-      always @(posedge `clk_verilated) begin
+      always @(posedge clk_i) begin
         if(tcdm_req[ii])
           cnt_req[ii] ++;
         if(tcdm_r_valid[ii])

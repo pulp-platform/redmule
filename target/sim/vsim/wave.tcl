@@ -7,10 +7,11 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 
-if {$Testbench == {redmule_tb}} {
+set Testbench redmule_tb_wrap/i_redmule_tb
+if {$TbType == {redmule_tb}} {
   set TopLevelPath i_redmule_wrap/i_redmule_top
-  set CorePath $Testbench/i_cv32e40p_core
-} elseif {$Testbench == {redmule_complex_tb}} {
+  set CorePath i_cv32e40p_core
+} elseif {$TbType == {redmule_complex_tb}} {
   set DutPath i_dut
   set TopLevelPath $DutPath/i_redmule_top
   set CorePath $DutPath/gen_cv32e40x/i_core
@@ -20,7 +21,7 @@ set MaxHeight 32
 set WavesRadix hexadecimal
 
 # Core
-add wave -noupdate -group Core -group top -color {} -height $MinHeight -max $MaxHeight -radix $WavesRadix $CorePath/*
+add wave -noupdate -group Core -group top -color {} -height $MinHeight -max $MaxHeight -radix $WavesRadix $Testbench/$CorePath/*
 # Top level
 add wave -noupdate -group RedMulE -group top -color {} -height $MinHeight -max $MaxHeight -radix $WavesRadix $Testbench/$TopLevelPath/*
 add wave -noupdate -group RedMulE -group periph -color {} -height $MinHeight -max $MaxHeight -radix $WavesRadix $Testbench/$TopLevelPath/periph/*
