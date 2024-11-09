@@ -7,27 +7,72 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  install-tools:
-    name: install-tools
-    runs-on: ubuntu-latest
-    env:
-      NUM_JOBS: 8
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+#   install-tools:
+#     name: install-tools
+#     runs-on: ubuntu-latest
+#     env:
+#       NUM_JOBS: 8
+#     steps:
+#     - uses: actions/checkout@v4
+#       with:
+#         submodules: recursive
+# 
+#     - name: Install Verilator
+#       run: |
+#         make verilator
+# 
+#     - name: Save Verilator artifacts
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: verilator-install
+#         path: |
+#           vendor/install/verilator/*
+#         retention-days: 1
+# 
+#     - name: Install GCC
+#       run: |
+#         make riscv32-gcc
+# 
+#     - name: Save GCC artifacts
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: riscv32-gcc-install
+#         path: |
+#           vendor/install/riscv/*
+# 
+#     - name: Install bender
+#       run: |
+#         make bender
+# 
+#     - name: Save bender artifacts
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: bender-install
+#         path: |
+#           ./bender
+# 
+#     - name: Install Python tools
+#       run: |
+#         cd golden-model && source setup-py.sh
+# 
+#     - name: Save Python artifacts
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: python-install
+#         path: |
+#           ./golden-model*
 
-    - name: Install
-      run: |
-        make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
+    # - name: Install
+    #   run: |
+    #     make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
 
   run-tests:
     name: run-tests
     runs-on: ubuntu-latest
     env:
       REDMULE_COMPLEX: 0
-    needs:
-      install-tools
+    # needs:
+    #   install-tools
     steps:
     - uses: actions/checkout@v4
       with:
@@ -36,6 +81,7 @@ jobs:
     - name: Run Tests
       run: |
         make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh && cd ..
+        pip3 install numpy
         make golden M=12 N=16 K=16
         make sw-all
         make hw-all
