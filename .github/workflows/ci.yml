@@ -35,7 +35,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
+        make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh && cd ..
         make golden M=12 N=16 K=16
         make sw-all
         make hw-all
