@@ -62,7 +62,7 @@ jobs:
       with:
         name: python-install
         path: |
-          ./golden-model*
+          ./golden-model/venv/*
         retention-days: 1
 
     # - name: Install
