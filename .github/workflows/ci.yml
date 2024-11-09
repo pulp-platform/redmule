@@ -114,7 +114,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        make golden ${{matrix.M}} ${{matrix.N}} ${{matrix.K}}
+        make golden M=${{matrix.M}} N=${{matrix.N}} K=${{matrix.K}}
         make sw-all
         make hw-all
 
@@ -195,6 +195,6 @@ jobs:
 
     - name: Run Tests
       run: |
-        make golden ${{matrix.M}} ${{matrix.N}} ${{matrix.K}}
+        make golden M=${{matrix.M}} N=${{matrix.N}} K=${{matrix.K}}
         make sw-all
         make hw-all
