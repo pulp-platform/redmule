@@ -17,35 +17,19 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Verilator
+    - name: Verify Verilator installation
       run: |
         make verilator
 
-    - name: Save Verilator artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: vendor/install/verilator
-        path: |
-          vendor/install/verilator/*
-        retention-days: 1
-
-    - name: Install GCC
+    - name: Verify GCC installation
       run: |
         make riscv32-gcc
 
-    - name: Save GCC artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: vendor/install/riscv
-        path: |
-          vendor/install/riscv/*
-        retention-days: 1
-
-    - name: Install bender
+    - name: Verify bender installation
       run: |
         make bender
 
-    - name: Install Python tools
+    - name: Verify Python tools installation
       run: |
         cd golden-model && source setup-py.sh
 
@@ -66,17 +50,16 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Download all workflow run artifacts
-      uses: actions/download-artifact@v4
-
-    - name: Install Python tools and bender
+    - name: Install required tools
       run: |
-        cd golden-model && source setup-py.sh && cd ..
         make bender
+        make riscv32-gcc
+        make verilatir
+        pip3 install numpy
+        cd golden-model && source setup-py.sh && cd ..
 
     - name: Run Tests
       run: |
-        pip3 install numpy
         make golden M=12 N=16 K=16
         make sw-all
         make hw-all
