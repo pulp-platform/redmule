@@ -84,7 +84,7 @@ STIM_DATA=$(BUILD_DIR)/stim_data.txt
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
-	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
+	$(PYTHON) scripts/parse_s19.py < $(BIN).s19 > $(BIN).txt
 	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 
 $(BIN): $(CRT) $(OBJ)
