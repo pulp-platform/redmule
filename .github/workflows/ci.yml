@@ -71,6 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REDMULE_COMPLEX: 0
+      BENDER: ./bender
     # needs:
     #   install-tools
     steps:
