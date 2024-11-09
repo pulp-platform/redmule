@@ -24,7 +24,7 @@ jobs:
     - name: Save Verilator artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: verilator-install
+        name: vendor/install/verilator
         path: |
           vendor/install/verilator/*
         retention-days: 1
@@ -36,7 +36,7 @@ jobs:
     - name: Save GCC artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: riscv32-gcc-install
+        name: vendor/install/riscv
         path: |
           vendor/install/riscv/*
         retention-days: 1
@@ -44,14 +44,6 @@ jobs:
     - name: Install bender
       run: |
         make bender
-
-    - name: Save bender artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: bender-install
-        path: |
-          ./bender
-        retention-days: 1
 
     - name: Install Python tools
       run: |
@@ -77,8 +69,10 @@ jobs:
     - name: Download all workflow run artifacts
       uses: actions/download-artifact@v4
 
-    - name: Install Python tools
-      run: cd golden-model && source setup-py.sh && cd ..
+    - name: Install Python tools and bender
+      run: |
+        cd golden-model && source setup-py.sh && cd ..
+        make bender
 
     - name: Run Tests
       run: |
