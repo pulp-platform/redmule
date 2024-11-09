@@ -54,7 +54,7 @@ jobs:
       run: |
         make bender
         make riscv32-gcc
-        make verilatir
+        make verilator
         pip3 install numpy
         cd golden-model && source setup-py.sh && cd ..
 
