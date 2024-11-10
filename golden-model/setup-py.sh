@@ -5,7 +5,7 @@
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 #
 
-export PYTHON=python3.6
+export PYTHON=python3
 export PENV=$(pwd)/venv
 $PYTHON -m venv $PENV
 source $PENV/bin/activate

@@ -54,12 +54,16 @@ sources:
 
     - target: any(redmule_test_complex, redmule_test_hwpe)
       files:
-        - tb/tb_dummy_memory.sv
+        - target/sim/src/tb_dummy_memory.sv
 
     - target: redmule_test_complex
       files:
-        - tb/redmule_complex_tb.sv
+        - target/sim/src/redmule_complex_tb.sv
 
     - target: redmule_test_hwpe
       files:
-        - tb/redmule_tb.sv
+        - target/sim/src/redmule_tb.sv
+
+    - target: vsim
+      files:
+        - target/sim/src/redmule_tb_wrap.sv

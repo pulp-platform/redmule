@@ -1,0 +1,92 @@
+# Copyright 2021 OpenHW Group
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+# Run functional regression checks
+name: ci
+on: [push, pull_request]
+
+jobs:
+  install-tools:
+    name: install-tools
+    runs-on: ubuntu-latest
+    env:
+      NUM_JOBS: 8
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Verify Verilator installation
+      run: |
+        make verilator
+
+    - name: Verify GCC installation
+      run: |
+        make riscv32-gcc
+
+    - name: Verify bender installation
+      run: |
+        make bender
+
+    - name: Verify Python tools installation
+      run: |
+        cd golden-model && source setup-py.sh
+
+    # - name: Install
+    #   run: |
+    #     make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
+
+  run-hwpe-tests:
+    name: run-hwpe-tests
+    runs-on: ubuntu-latest
+    env:
+      Target: verilator
+      REDMULE_COMPLEX: 0
+      BENDER: ./bender
+
+    needs:
+      install-tools
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install required tools
+      run: |
+        make bender
+        make riscv32-gcc
+        make verilator
+        pip3 install numpy
+        cd golden-model && source setup-py.sh && cd ..
+
+    - name: Run Tests
+      run: |
+        source scripts/regression-list.sh
+
+  run-complex-tests:
+    name: run-complex-tests
+    runs-on: ubuntu-latest
+    env:
+      Target: verilator
+      REDMULE_COMPLEX: 1
+      BENDER: ./bender
+
+    needs:
+      install-tools
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install required tools
+      run: |
+        make bender
+        make riscv32-gcc
+        make verilator
+        pip3 install numpy
+        cd golden-model && source setup-py.sh && cd ..
+
+    - name: Run Tests
+      run: |
+        source scripts/regression-list.sh

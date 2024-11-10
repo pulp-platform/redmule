@@ -7,17 +7,33 @@
 # Top-level Makefile
 
 # Paths to folders
-mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-SW             ?= $(mkfile_path)sw
-BUILD_DIR      ?= $(SW)/build
-VSIM_DIR       ?= $(mkfile_path)vsim
-QUESTA         ?= questa-2023.4
-BENDER_DIR     ?= .
-BENDER         ?= bender
-ISA            ?= riscv
-ARCH           ?= rv
-XLEN           ?= 32
-XTEN           ?= imc
+RootDir    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+TargetDir  := $(RootDir)target
+SimDir     := $(TargetDir)/sim
+ScriptsDir := $(RootDir)scripts
+VerilatorPath := target/sim/verilator
+VsimPath      := target/sim/vsim
+SW         ?= $(RootDir)sw
+BUILD_DIR  ?= $(SW)/build
+SIM_DIR    ?= $(RootDir)vsim
+QUESTA     ?= questa-2023.4
+BENDER_DIR ?= .
+BENDER     ?= bender
+Gcc        ?= $(GccInstallDir)/bin/
+ISA        ?= riscv
+ARCH       ?= rv
+XLEN       ?= 32
+XTEN       ?= imc_zicsr
+PYTHON     ?= python3
+
+target ?= verilator
+TargetPath := $(SimDir)/$(target)
+
+# Included makefrags
+include $(TargetPath)/$(target).mk
+include bender_common.mk
+include bender_sim.mk
+include bender_synth.mk
 
 ifeq ($(REDMULE_COMPLEX),1)
 	TEST_SRCS := $(SW)/redmule_complex.c
@@ -25,12 +41,10 @@ else
 	TEST_SRCS := $(SW)/redmule.c
 endif
 
-compile_script ?= $(mkfile_path)scripts/compile.tcl
-compile_script_synth ?= $(mkfile_path)scripts/synth_compile.tcl
-compile_flag   ?= +acc -permissive -suppress 2583 -suppress 13314
+compile_script_synth ?= $(RootDir)scripts/synth_compile.tcl
 
-INI_PATH  = $(mkfile_path)modelsim.ini
-WORK_PATH = $(VSIM_DIR)/work
+INI_PATH  = $(RootDir)modelsim.ini
+WORK_PATH = $(SIM_DIR)/work
 
 # Useful Parameters
 gui      ?= 0
@@ -53,9 +67,9 @@ INC += -I$(SW)/utils
 BOOTSCRIPT := $(SW)/kernel/crt0.S
 LINKSCRIPT := $(SW)/kernel/link.ld
 
-CC=$(ISA)$(XLEN)-unknown-elf-gcc
+CC=$(Gcc)$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(CC)
-OBJDUMP=$(ISA)$(XLEN)-unknown-elf-objdump
+OBJDUMP=$(Gcc)$(ISA)$(XLEN)-unknown-elf-objdump
 CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
@@ -64,14 +78,14 @@ CRT=$(BUILD_DIR)/crt0.o
 OBJ=$(BUILD_DIR)/verif.o
 BIN=$(BUILD_DIR)/verif
 DUMP=$(BUILD_DIR)/verif.dump
-STIM_INSTR=$(VSIM_DIR)/stim_instr.txt
-STIM_DATA=$(VSIM_DIR)/stim_data.txt
+STIM_INSTR=$(BUILD_DIR)/stim_instr.txt
+STIM_DATA=$(BUILD_DIR)/stim_data.txt
 
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
-	scripts/parse_s19.pl $(BIN).s19 > $(BIN).txt
-	python scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	$(PYTHON) scripts/parse_s19.py < $(BIN).s19 > $(BIN).txt
+	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
@@ -90,55 +104,13 @@ SHELL := /bin/bash
 # Generate instructions and data stimuli
 sw-build: $(STIM_INSTR) $(STIM_DATA) dis
 
-# Run the simulation
-run: $(CRT)
-ifeq ($(gui), 0)
-	cd $(VSIM_DIR);             \
-	$(QUESTA) vsim -c $(tb)_opt \
-	-do "run -a"                \
-	-gSTIM_INSTR=$(STIM_INSTR)  \
-	-gSTIM_DATA=$(STIM_DATA)    \
-	-gPROB_STALL=$(P_STALL)
-else
-	cd $(VSIM_DIR);            \
-	$(QUESTA) vsim $(tb)_opt   \
-	-do "set Testbench $(tb)"  \
-	-do "log -r /*"            \
-	-do "source $(WAVES)"      \
-	-gSTIM_INSTR=$(STIM_INSTR) \
-	-gSTIM_DATA=$(STIM_DATA)   \
-	-gPROB_STALL=$(P_STALL)
-endif
-
 # Download bender
 bender:
 	curl --proto '=https'  \
 	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.24.0
 
-include bender_common.mk
-include bender_sim.mk
-include bender_synth.mk
-
-WAVES := $(mkfile_path)scripts/wave.tcl
-
-ifeq ($(REDMULE_COMPLEX),1)
-	tb := redmule_complex_tb
-else
-	tb := redmule_tb
-endif
-
-$(VSIM_DIR):
-	mkdir -p $(VSIM_DIR)
-
-update-ips: $(VSIM_DIR)
-	$(BENDER) update
-	$(BENDER) script vsim          \
-	--vlog-arg="$(compile_flag)"   \
-	--vcom-arg="-pedanticerrors"   \
-	$(common_targs) $(common_defs) \
-	$(sim_targs)                   \
-	> ${compile_script}
-	echo 'vopt $(compile_flag) $(tb) -o $(tb)_opt' >> ${compile_script}
+$(SIM_DIR):
+	mkdir -p $(SIM_DIR)
 
 synth-ips:
 	$(BENDER) update
@@ -149,9 +121,6 @@ synth-ips:
 
 sw-clean:
 	rm -rf $(BUILD_DIR)
-
-hw-clean:
-	rm -rf $(VSIM_DIR)
 
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
@@ -168,14 +137,43 @@ golden: golden-clean
 golden-clean:
 	$(MAKE) -C golden-model golden-clean
 
-clean-all: hw-clean sw-clean
-	rm -rf $(mkfile_path).bender
+clean-all: sw-clean
+	rm -rf $(RootDir).bender
 	rm -rf $(compile_script)
-
-hw-build: $(VSIM_DIR)
-	cd $(VSIM_DIR); \
-	$(QUESTA) vsim -c -do 'quit -code [source $(compile_script)]'
 
 sw-all: sw-clean sw-build
 
-hw-all: hw-clean hw-build
+# Install tools
+CXX ?= g++
+NumCores := $(shell nproc)
+NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
+VendorDir ?= $(RootDir)vendor
+InstallDir ?= $(VendorDir)/install
+# Verilator
+VerilatorVersion ?= v5.028
+VerilatorInstallDir := $(InstallDir)/verilator
+# GCC
+GccInstallDir := $(InstallDir)/riscv
+RiscvTarDir := riscv.tar.gz
+GccUrl := https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/riscv32-elf-ubuntu-20.04-gcc-nightly-2024.08.28-nightly.tar.gz
+
+verilator: $(InstallDir)/bin/verilator
+
+$(InstallDir)/bin/verilator:
+	rm -rf $(VendorDir)/verilator
+	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
+	# Checkout the right version
+	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
+	# Compile verilator
+	sudo apt install libfl-dev help2man
+	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
+	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
+
+riscv32-gcc: $(GccInstallDir)
+
+$(GccInstallDir):
+	rm -rf $(GccInstallDir) $(VendorDir)/$(RiscvTarDir)
+	mkdir -p $(InstallDir)
+	cd $(VendorDir) && \
+	wget $(GccUrl) -O $(RiscvTarDir) && \
+	tar -xzvf $(RiscvTarDir) -C $(InstallDir) riscv
