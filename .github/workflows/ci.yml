@@ -41,61 +41,9 @@ jobs:
     name: run-hwpe-tests
     runs-on: ubuntu-latest
     env:
+      Target: verilator
       REDMULE_COMPLEX: 0
       BENDER: ./bender
-    strategy:
-      matrix:
-        M: [ 12 ]
-        N: [ 16 ]
-        K: [ 16 ]
-        include:
-          - M: 96
-            N: 96
-            K: 96
-          - M: 128
-            N: 128
-            K: 128
-          - M: 24
-          - M: 48
-            N: 32
-            K: 32
-          - M: 30
-            N: 32
-            K: 17
-          - M: 24
-            N: 32
-            K: 1
-          - M: 31
-            N: 32
-            K: 16
-          - M: 17
-            N: 32
-            K: 16
-          - M: 31
-            N: 32
-            K: 31
-          - M: 17
-            N: 32
-            K: 3
-          - M: 5
-            N: 32
-            K: 17
-          - M: 5
-            N: 32
-            K: 3
-          - M: 36
-            N: 31
-            K: 32
-          - N: 31
-          - M: 23
-            N: 31
-            K: 31
-          - M: 24
-            N: 17
-            K: 32
-          - M: 24
-            N: 20
-            K: 32
 
     needs:
       install-tools
@@ -114,69 +62,15 @@ jobs:
 
     - name: Run Tests
       run: |
-        make golden M=${{matrix.M}} N=${{matrix.N}} K=${{matrix.K}}
-        make sw-all
-        make hw-all
+        source scripts/regression-list.sh
 
   run-complex-tests:
     name: run-complex-tests
     runs-on: ubuntu-latest
     env:
+      Target: verilator
       REDMULE_COMPLEX: 1
       BENDER: ./bender
-    strategy:
-      matrix:
-        M: [ 12 ]
-        N: [ 16 ]
-        K: [ 16 ]
-        include:
-          - M: 96
-            N: 96
-            K: 96
-          - M: 128
-            N: 128
-            K: 128
-          - M: 24
-          - M: 48
-            N: 32
-            K: 32
-          - M: 30
-            N: 32
-            K: 17
-          - M: 24
-            N: 32
-            K: 1
-          - M: 31
-            N: 32
-            K: 16
-          - M: 17
-            N: 32
-            K: 16
-          - M: 31
-            N: 32
-            K: 31
-          - M: 17
-            N: 32
-            K: 3
-          - M: 5
-            N: 32
-            K: 17
-          - M: 5
-            N: 32
-            K: 3
-          - M: 36
-            N: 31
-            K: 32
-          - N: 31
-          - M: 23
-            N: 31
-            K: 31
-          - M: 24
-            N: 17
-            K: 32
-          - M: 24
-            N: 20
-            K: 32
 
     needs:
       install-tools
@@ -195,6 +89,4 @@ jobs:
 
     - name: Run Tests
       run: |
-        make golden M=${{matrix.M}} N=${{matrix.N}} K=${{matrix.K}}
-        make sw-all
-        make hw-all
+        source scripts/regression-list.sh
