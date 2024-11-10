@@ -230,11 +230,20 @@ export PATH=/absolute/path/to/gcc/bin:$PATH
 
 The `scripts/setup-hwpe.sh` offers an example of bash script to export the required environment variables to test the HWPE memory-mapped configuration of the thesbench, while the `scripts/setup-complex.sh` does the same for the ISA extension-based configuration. There is also a `scripts/setup64.sh` that shows how the same can be done for a 64-bit toolchain.
 
-Install bender by executing:
+#### Install requirements
+
+A fully-open-source simulation environment is available for RedMulE, based on GCC and Verilator. To install the needed tools, run:
+```bash
+make verilator # Installs verilator
+make riscv32-gcc # Installs GCC
+```
+The compiler and Verilator are installed under a `vendor/install` directory.
+
+RedMulE relies on [Bender](https://github.com/pulp-platform/bender) to handle hardware dependencies. Install bender by executing:
 ```bash
 make bender
 ```
-Bender installation is not mandatory. If any bender version is already installed, it is just needed to add the absolute path to the `bender` binary to the `PATH` variable. 
+Bender installation is not mandatory. If any bender version is already installed, it is just needed to add the absolute path to the `bender` binary to the `PATH` variable, or by exporting the `BENDER` environment variable to where you installed the bender binary.
 
 To clone the dependencies and generate the compilation script we need to define the target we intend to use to simulate the accelerator testbench. The target selection is done by using the `target = <target_type>` at compilation time. Let's assume we want to use Verilator. To clone the dependencies and create the compilation scripts for hardware simulation, run:
 ```bash
