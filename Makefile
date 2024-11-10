@@ -19,7 +19,7 @@ SIM_DIR    ?= $(RootDir)vsim
 QUESTA     ?= questa-2023.4
 BENDER_DIR ?= .
 BENDER     ?= bender
-Gcc        ?= $(GccInstallDir)/bin
+Gcc        ?= $(GccInstallDir)/bin/
 ISA        ?= riscv
 ARCH       ?= rv
 XLEN       ?= 32
@@ -67,9 +67,9 @@ INC += -I$(SW)/utils
 BOOTSCRIPT := $(SW)/kernel/crt0.S
 LINKSCRIPT := $(SW)/kernel/link.ld
 
-CC=$(Gcc)/$(ISA)$(XLEN)-unknown-elf-gcc
+CC=$(Gcc)$(ISA)$(XLEN)-unknown-elf-gcc
 LD=$(CC)
-OBJDUMP=$(Gcc)/$(ISA)$(XLEN)-unknown-elf-objdump
+OBJDUMP=$(Gcc)$(ISA)$(XLEN)-unknown-elf-objdump
 CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
 LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
 
