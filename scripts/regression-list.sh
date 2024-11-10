@@ -44,10 +44,10 @@ else
   )
 
   i=0
+  error=0
 
   while [[ $i -lt ${#PARAMS[@]} ]]
   do
-
       M=${PARAMS[$i]}
       N=${PARAMS[$(( $i + 1 ))]}
       K=${PARAMS[$(( $i + 2 ))]}
@@ -62,7 +62,12 @@ else
           echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
       else
           echo -e "${Red}ERROR ${EndColor}: M=$M N=$N K=$K"
+          ((error++))
       fi
-
   done
+
+  if [ "$error" -gt 0 ]; then
+    exit 1
+  fi
+
 fi
