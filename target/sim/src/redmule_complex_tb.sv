@@ -332,11 +332,11 @@ module redmule_tb
     $display("[TB] - cnt_rd=%-8d", cnt_rd);
     $display("[TB] - cnt_wr=%-8d", cnt_wr);
     if(errors != 0) begin
-      $error("[TB] - errors=%08x", errors);
       $display("[TB] - Fail!");
+      $error("[TB] - errors=%08x", errors);
     end else begin
-      $display("[TB] - errors=%08x", errors);
       $display("[TB] - Success!");
+      $display("[TB] - errors=%08x", errors);
     end
     $finish;
   end

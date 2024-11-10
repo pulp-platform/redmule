@@ -20,7 +20,7 @@ VerilatorCompileScript := $(VerilatorDir)/compile.$(target).tcl
 VerilatorWaves := $(VerilatorDir)/redmule.vcd
 
 hw-clean:
-	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves)
+	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves) $(VerilatorDir)/transcript
 
 hw-script:
 	$(BENDER) update
