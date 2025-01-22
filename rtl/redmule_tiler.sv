@@ -46,12 +46,17 @@ tc_clk_gating i_tiler_clockg (
 assign config_d.x_addr          = reg_file_i.hwpe_params[X_ADDR];
 assign config_d.w_addr          = reg_file_i.hwpe_params[W_ADDR];
 assign config_d.z_addr          = reg_file_i.hwpe_params[Z_ADDR];
+assign config_d.gidx_addr       = reg_file_i.hwpe_params[GIDX_ADDR_R];
+assign config_d.scales_addr     = reg_file_i.hwpe_params[SCALES_ADDR_R];
+assign config_d.zeros_addr      = reg_file_i.hwpe_params[ZEROS_ADDR_R];
 assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
 assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
+assign config_d.dequant_enable  = reg_file_i.hwpe_params[MACFG][16];
+assign config_d.q_int_fmt       = qint_fmt_e'(reg_file_i.hwpe_params[MACFG][18:17]);
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
@@ -259,5 +264,11 @@ assign reg_file_o.hwpe_params[OP_SELECTION][15:13] = config_q.input_format;
 assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
 assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
 assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
+assign reg_file_o.hwpe_params[DEQUANT_MODE][31:3]  = '0;
+assign reg_file_o.hwpe_params[DEQUANT_MODE][2:1]   = config_d.q_int_fmt;
+assign reg_file_o.hwpe_params[DEQUANT_MODE][0]     = config_d.dequant_enable;
+assign reg_file_o.hwpe_params[GIDX_ADDR]           = config_d.gidx_addr;
+assign reg_file_o.hwpe_params[SCALES_ADDR]         = config_d.scales_addr;
+assign reg_file_o.hwpe_params[ZEROS_ADDR]          = config_d.zeros_addr;
 
 endmodule: redmule_tiler
