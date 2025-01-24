@@ -43,11 +43,14 @@ logic [H-1:0][W-1:0][BITW-1:0]  x_buffer_q;
 logic [$clog2(TOT_DEPTH)-1:0]   pad_r_addr_d, pad_r_addr_q;
 logic                           buf_r_addr, buf_w_addr;
 
+logic pad_read_en,
+      buf_read_en;
+
+logic [$clog2(TOT_DEPTH)-1:0] pad_read_addr;
+
 logic h_shift_del;
 
 logic first_block, refilling;
-
-logic pad_read_enable;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : first_block_register
   if(~rst_ni) begin
@@ -82,41 +85,41 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_delay
   end
 end
 
-for (genvar w = 0; w < W; w++) begin : gen_x_pad
-  redmule_fifo_scm #(
-    .ADDR_WIDTH ( $clog2(TOT_DEPTH) ),
-    .DATA_WIDTH ( BITW              ),
-    .N_INPUTS   ( TOT_DEPTH         ) 
-  ) (
-    .clk          ( clk_i                                                                          ),
-    .rst_n        ( rst_ni                                                                         ),
-    .ReadEnable   ( ctrl_i.h_shift && ~refilling || h_shift_del && first_block || ctrl_i.pad_setup ),
-    .ReadAddr     ( ctrl_i.dequant ? next_wrow_i : ctrl_i.pad_setup ? '0 : pad_r_addr_d            ),
-    .ReadData     ( x_pad_q[w]                                                                     ),
-    .WriteEnable  ( w_index == w && ctrl_i.load                                                    ),
-    .WriteAddr    ( '0                                                                             ),
-    .WriteData    ( x_buffer_i                                                                     )
-  );
-end
+assign pad_read_en   = ctrl_i.h_shift && ~refilling || h_shift_del && first_block || ctrl_i.pad_setup;
+assign pad_read_addr = ctrl_i.dequant ? next_wrow_i : ctrl_i.pad_setup ? '0 : pad_r_addr_d;
 
-assign pad_read_enable = ctrl_i.h_shift && ~refilling || h_shift_del && first_block || ctrl_i.pad_setup;
+redmule_x_pad_scm #(
+  .WORD_SIZE ( BITW      ),
+  .ROWS      ( W         ),
+  .COLS      ( TOT_DEPTH )     
+) i_x_pad (
+  .clk_i        ( clk_i         ),
+  .rst_ni       ( rst_ni        ),
+  .write_en_i   ( ctrl_i.load   ),
+  .write_addr_i ( w_index       ),
+  .wdata_i      ( x_buffer_i    ),
+  .read_en_i    ( pad_read_en   ),
+  .read_addr_i  ( pad_read_addr ),  
+  .rdata_o      ( x_pad_q       )      
+);
 
-for (genvar h = 0; h < H; h++) begin : gen_x_buf
-  redmule_fifo_scm #(
-    .ADDR_WIDTH ( 1       ),
-    .DATA_WIDTH ( W*BITW  ),
-    .N_INPUTS   ( 1       ) 
-  ) (
-    .clk          ( clk_i                                                                           ),
-    .rst_n        ( rst_ni                                                                          ),
-    .ReadEnable   ( ctrl_i.h_shift && h_index_r == h                                                ),
-    .ReadAddr     ( buf_r_addr                                                                      ),
-    .ReadData     ( x_buffer_q[h]                                                                   ),
-    .WriteEnable  ( (ctrl_i.h_shift && ~refilling || h_shift_del && first_block) && h_index_w == h  ),
-    .WriteAddr    ( buf_w_addr                                                                      ),
-    .WriteData    ( x_pad_q                                                                         )
-  );
-end
+assign buf_write_en = ctrl_i.h_shift && ~refilling || h_shift_del && first_block;
+
+redmule_x_buffer_scm #(
+  .WORD_SIZE ( BITW ),
+  .WIDTH     ( W    ),
+  .HEIGHT    ( 2    ),
+  .N_OUTPUTS ( H    )
+) i_x_buf (
+  .clk_i        ( clk_i                   ),
+  .rst_ni       ( rst_ni                  ),
+  .write_en_i   ( buf_write_en            ),
+  .write_addr_i ( {buf_w_addr, h_index_w} ),
+  .wdata_i      ( x_pad_q                 ),
+  .read_en_i    ( ctrl_i.h_shift          ),
+  .read_addr_i  ( {buf_r_addr, h_index_r} ),
+  .rdata_o      ( x_buffer_q              )      
+);
 
 assign buf_w_addr = (first_block && pad_r_addr_q < H) ? buf_r_addr : ~buf_r_addr;
 assign h_index_w  = first_block ? 2*h_index_r - h_shift_del : h_index_r;
@@ -127,7 +130,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : x_pad_read_pointer
   end else begin
     if (clear_i || rst_h_shift)
       pad_r_addr_q <= '0;
-    else if (ctrl_i.h_shift && ~refilling || h_shift_del && first_block /*|| ctrl_i.pad_setup*/)
+    else if (buf_write_en)
       pad_r_addr_q <= pad_r_addr_d;
   end
 end
@@ -243,7 +246,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_counter
   end
 end
 
-assign next_wrow_ready_o = pad_read_enable;
+assign next_wrow_ready_o = pad_read_en;
 
 // Output assignment
 // verilog_lint: waive-start generate-label
