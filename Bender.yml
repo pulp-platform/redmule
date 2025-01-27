@@ -35,7 +35,8 @@ sources:
     - rtl/x_buffer/redmule_x_buffer.sv
     - rtl/x_buffer/redmule_x_pad_scm.sv      
     - rtl/x_buffer/redmule_x_buffer_scm.sv
-    - rtl/redmule_w_buffer.sv      
+    - rtl/w_buffer/redmule_w_buffer.sv      
+    - rtl/w_buffer/redmule_w_buffer_scm.sv
     - rtl/redmule_z_buffer.sv
     - rtl/redmule_fma.sv
     - rtl/redmule_noncomp.sv

@@ -33,17 +33,17 @@ module redmule_w_buffer
   input  logic     [$clog2(GID_WIDTH)-1:0] next_gidx_i   //Tentative name
 );
 
-localparam int unsigned S       = (D + N_REGS)/(N_REGS + 1);
-localparam int unsigned S_ADDR_W = $clog2(N_REGS + 1);
-localparam int unsigned S_DATA_W = (N_REGS + 1) * BITW;
+localparam int unsigned C         = (D+N_REGS)/(N_REGS+1);
+localparam int unsigned EL_ADDR_W = $clog2(N_REGS+1);
+localparam int unsigned EL_DATA_W = (N_REGS+1)*BITW;
 
 logic [$clog2(H):0]            w_row;
 logic [$clog2(H):0]            count_limit;
 logic [$clog2(D):0]            depth;
 logic [H-1:0][H-1:0][BITW-1:0] w_buffer_q;
 
-logic [S_ADDR_W-1:0]           el_addr_d, el_addr_q;
-logic [H-1:0][$clog2(S)-1:0]   sec_addr_d, sec_addr_q;
+logic [EL_ADDR_W-1:0]          el_addr_d, el_addr_q;
+logic [$clog2(C)-1:0]          col_addr_d, col_addr_q;
 
 logic [D-1:0][BITW-1:0]        w_data;
 
@@ -58,31 +58,35 @@ logic [$clog2(H)-1:0]                        evict_pointer;
 
 logic gidx_present;
 
+logic                 buf_write_en;
+logic [$clog2(H)-1:0] buf_write_addr;
+
+logic [H-1:0][$clog2(N_REGS+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
+
 for (genvar d = 0; d < D; d++) begin : zero_padding
   assign w_data[d] = (d < depth && w_row < count_limit) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
 end
 
-//FIXME THIS IS SUBOPTIMAL!
-for (genvar r = 0; r < H; r++) begin : gen_rows
-  for (genvar s = 0; s < S; s++) begin : gen_sections
-    redmule_fifo_scm #(
-      .ADDR_WIDTH ( S_ADDR_W    ),
-      .DATA_WIDTH ( BITW        ),
-      .N_INPUTS   ( N_REGS + 1  ) 
-    ) i_section (
-      .clk          ( clk_i                                                                                                                ),
-      .rst_n        ( rst_ni                                                                                                               ),
-      .ReadEnable   ( (ctrl_i.dequant ? buffer_r_addr_d[sec_addr_d[s]] == r && buffer_r_addr_valid_d[sec_addr_d[s]] : sec_addr_d[r] == s) && ctrl_i.shift ),
-      .ReadAddr     ( el_addr_d                                                                                                            ),
-      .ReadData     ( w_buffer_q[r][s]                                                                                                     ),
-      .WriteEnable  ( (ctrl_i.dequant ? evict_pointer == r && ~gidx_present : w_row == r) && ctrl_i.load                                   ),
-      .WriteAddr    ( '0                                                                                                                   ),
-      .WriteData    ( w_data[(s+1)*(N_REGS+1)-1:s*(N_REGS+1)]                                                                              )
-    );
-  end
+assign buf_write_en   = ctrl_i.load && (~ctrl_i.dequant || ~gidx_present);
+assign buf_write_addr = ctrl_i.dequant ? evict_pointer : w_row;
 
-  assign w_buffer_o[r] = ctrl_i.dequant ? w_buffer_q[buffer_r_addr_q[r]][sec_addr_q[r]] : w_buffer_q[r][sec_addr_q[r]];
-end 
+redmule_w_buffer_scm #(
+  .WORD_SIZE ( BITW     ),
+  .ROWS      ( H        ),
+  .COLS      ( C        ),
+  .ELMS      ( N_REGS+1 )
+) i_w_buf (
+  .clk_i            ( clk_i           ),
+  .rst_ni           ( rst_ni          ),
+  .write_en_i       ( buf_write_en    ),
+  .write_addr_i     ( buf_write_addr  ),
+  .wdata_i          ( w_data          ),
+  .read_en_i        ( ctrl_i.shift    ),
+  .elms_read_addr_i ( el_addr_q       ),
+  .cols_read_offs_i ( col_addr_q      ),
+  .rows_read_addr_i ( buffer_r_addr_d ),
+  .rdata_o          ( w_buffer_o      )
+);
 
 // Read side
 for (genvar h = 0; h < H; h++) begin : gen_r_id_registers
@@ -111,21 +115,29 @@ always_comb begin : buffer_r_addr_assignment
   buffer_r_addr_valid_d = '0;
 
   for (int h = 0; h < H; h++) begin
-    for (int hh = 0; hh < H; hh++) begin
-      if (cache_r_id_q[h] == cache_w_id_q[hh]) begin
-        buffer_r_addr_q[h]       = hh;
-        buffer_r_addr_valid_q[h] = cache_w_id_valid_q[hh] && cache_r_id_valid_q[h];
-        break;
+    if (~ctrl_i.dequant) begin
+      buffer_r_addr_q[h] = h;
+    end else begin
+      for (int hh = 0; hh < H; hh++) begin
+        if (cache_r_id_q[h] == cache_w_id_q[hh]) begin
+          buffer_r_addr_q[h]       = hh;
+          buffer_r_addr_valid_q[h] = cache_w_id_valid_q[hh] && cache_r_id_valid_q[h];
+          break;
+        end
       end
     end
   end
 
   for (int h = 0; h < H; h++) begin
-    for (int hh = 0; hh < H; hh++) begin
-      if (cache_r_id_d[h] == cache_w_id_d[hh]) begin
-        buffer_r_addr_d[h]       = hh;
-        buffer_r_addr_valid_d[h] = cache_w_id_valid_d[hh] && cache_r_id_valid_d[h];
-        break;
+    if (~ctrl_i.dequant) begin
+      buffer_r_addr_d[h] = h;
+    end else begin
+      for (int hh = 0; hh < H; hh++) begin
+        if (cache_r_id_d[h] == cache_w_id_d[hh]) begin
+          buffer_r_addr_d[h]       = hh;
+          buffer_r_addr_valid_d[h] = cache_w_id_valid_d[hh] && cache_r_id_valid_d[h];
+          break;
+        end
       end
     end
   end
@@ -141,7 +153,7 @@ for (genvar h = 0; h < H; h++) begin : gen_w_id_registers
       if (clear_i) begin
         cache_w_id_q[h]       <= '0;
         cache_w_id_valid_q[h] <= '0;
-      end else if (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) begin   // This is loaded at the same time as the W row //FIXME (fixed?)
+      end else if (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) begin   // This is loaded at the same time as the W row
         cache_w_id_q[h]       <= next_gidx_i;
         cache_w_id_valid_q[h] <= '1;
       end
@@ -194,10 +206,10 @@ end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : element_counter
   if(~rst_ni) begin
-    el_addr_q <= N_REGS;
+    el_addr_q <= '0;
   end else begin
     if (clear_i)
-      el_addr_q <= N_REGS;
+      el_addr_q <= '0;
     else if (ctrl_i.shift)
       el_addr_q <= el_addr_d;
   end
@@ -205,22 +217,17 @@ end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : section_counter
   if(~rst_ni) begin
-    sec_addr_q[0] <= S-1;
+    col_addr_q <= '0;
   end else begin
     if (clear_i)
-      sec_addr_q[0] <= S-1;
+      col_addr_q <= '0;
     else if (ctrl_i.shift)
-      sec_addr_q[0] <= sec_addr_d[0];
+      col_addr_q <= col_addr_d;
   end
 end
 
-assign el_addr_d = (el_addr_q == N_REGS) ? '0 : el_addr_q + 1;
-assign sec_addr_d[0] = (el_addr_q == N_REGS) ? (sec_addr_q[0] == (S-1) ? '0 : sec_addr_q[0] + 1) : sec_addr_q[0];
-
-for (genvar r = 1; r < H; r++) begin : assign_sec_addr
-  assign sec_addr_d[r] = sec_addr_d[0] >= r ? sec_addr_d[0] - r : H - (r - sec_addr_d[0]);
-  assign sec_addr_q[r] = sec_addr_q[0] >= r ? sec_addr_q[0] - r : H - (r - sec_addr_q[0]);
-end
+assign el_addr_d  = (el_addr_q == N_REGS) ? '0 : el_addr_q + 1;
+assign col_addr_d = (el_addr_q == N_REGS) ? (col_addr_q == (C-1) ? '0 : col_addr_q + 1) : col_addr_q;
 
 // Counter to track the number of shifts per row
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
