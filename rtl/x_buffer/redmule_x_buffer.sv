@@ -32,25 +32,36 @@ localparam int unsigned          TOT_DEPTH = H*D
   output logic                                               next_wrow_ready_o 
 );
 
-logic                           rst_w_load, rst_d_shift, rst_h_shift, empty_rst;
-logic [$clog2(W):0]             w_index, w_limit;
+typedef enum logic [1:0] {
+  FAST_FILL,
+  WAIT_FIRST_READ,
+  FILL,
+  PAD_EMPTY
+} redmule_x_state_e;
+
+logic [$clog2(W):0]             w_index_d, w_index_q;
 logic [$clog2(H)-1:0]           h_index_r, h_index_w;
-logic [$clog2(D):0]             d_shift, empty_count, empty_count_q;
-logic [$clog2(TOT_DEPTH):0]     depth;
 logic [W-1:0][BITW-1:0]         x_pad_q;
 logic [H-1:0][W-1:0][BITW-1:0]  x_buffer_q;
 
 logic [$clog2(TOT_DEPTH)-1:0]   pad_r_addr_d, pad_r_addr_q;
 logic                           buf_r_addr, buf_w_addr;
 
-logic pad_read_en,
-      buf_read_en;
+logic [$clog2(TOT_DEPTH):0]     pad_read_cnt;
+logic                           pad_read_cnt_rst;
 
-logic [$clog2(TOT_DEPTH)-1:0] pad_read_addr;
+logic [$clog2(2*H):0]           buf_write_cnt;
 
-logic h_shift_del;
+logic                           pad_read_en,
+                                buf_read_en,
+                                buf_write_en;
 
-logic first_block, refilling;
+logic [$clog2(TOT_DEPTH)-1:0]   pad_read_addr;
+
+redmule_x_state_e               current_state, next_state;
+
+logic                           first_block,
+                                refilling;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : first_block_register
   if(~rst_ni) begin
@@ -58,52 +69,47 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : first_block_register
   end else begin
     if (clear_i || pad_r_addr_q == 2*H-1)
       first_block <= '0;
-    else if (ctrl_i.blck_shift || flags_o.full)
+    else if (ctrl_i.pad_setup)
       first_block <= '1;
   end
 end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : refill_flag_register
   if(~rst_ni) begin
-    refilling <= '0;
+    refilling <= '1;
   end else begin
-    if (clear_i || flags_o.full)
+    if (clear_i)
+      refilling <= '1;
+    else if (flags_o.full)
       refilling <= '0;
     else if (flags_o.empty)
       refilling <= '1;
   end
 end
 
-always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_delay
-  if(~rst_ni) begin
-    h_shift_del <= '0;
-  end else begin
-    if (clear_i)
-      h_shift_del <= '0;
-    else if (first_block)
-      h_shift_del <= ctrl_i.h_shift;
-  end
-end
-
-assign pad_read_en   = ctrl_i.h_shift && ~refilling || h_shift_del && first_block || ctrl_i.pad_setup;
+assign pad_read_en   = buf_write_en || ctrl_i.pad_setup;
 assign pad_read_addr = ctrl_i.dequant ? next_wrow_i : ctrl_i.pad_setup ? '0 : pad_r_addr_d;
 
 redmule_x_pad_scm #(
   .WORD_SIZE ( BITW      ),
   .ROWS      ( W         ),
-  .COLS      ( TOT_DEPTH )     
+  .COLS      ( TOT_DEPTH )
 ) i_x_pad (
   .clk_i        ( clk_i         ),
   .rst_ni       ( rst_ni        ),
   .write_en_i   ( ctrl_i.load   ),
-  .write_addr_i ( w_index       ),
+  .write_addr_i ( w_index_q     ),
   .wdata_i      ( x_buffer_i    ),
   .read_en_i    ( pad_read_en   ),
-  .read_addr_i  ( pad_read_addr ),  
-  .rdata_o      ( x_pad_q       )      
+  .read_addr_i  ( pad_read_addr ),
+  .rdata_o      ( x_pad_q       )
 );
 
-assign buf_write_en = ctrl_i.h_shift && ~refilling || h_shift_del && first_block;
+// Normally, we only write a row in the buffer when another one is read
+// In the FAST_FILL state we write a new row in the buffer every cycle until it is full
+assign buf_write_en = ( current_state == FAST_FILL || 
+                        current_state ==FILL && ctrl_i.h_shift)
+                      && ~refilling;
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),
@@ -118,17 +124,57 @@ redmule_x_buffer_scm #(
   .wdata_i      ( x_pad_q                 ),
   .read_en_i    ( ctrl_i.h_shift          ),
   .read_addr_i  ( {buf_r_addr, h_index_r} ),
-  .rdata_o      ( x_buffer_q              )      
+  .rdata_o      ( x_buffer_q              )
 );
 
-assign buf_w_addr = (first_block && pad_r_addr_q < H) ? buf_r_addr : ~buf_r_addr;
-assign h_index_w  = first_block ? 2*h_index_r - h_shift_del : h_index_r;
+always_ff @(posedge clk_i or negedge rst_ni) begin  : state_register
+  if(~rst_ni) begin
+    current_state <= FAST_FILL;
+  end else begin
+    if (clear_i) begin
+      current_state <= FAST_FILL;
+    end else begin
+      current_state <= next_state;
+    end
+  end
+end
+
+always_comb begin : fsm
+  next_state = current_state;
+
+  case (current_state)
+    FAST_FILL: begin
+      // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
+      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block)) begin
+        next_state = WAIT_FIRST_READ;
+      end
+    end
+
+    WAIT_FIRST_READ: begin
+      if (h_index_r == '0) begin
+        next_state = FILL;
+      end
+    end
+
+    FILL: begin
+      if (flags_o.empty) begin
+        next_state = PAD_EMPTY;
+      end
+    end
+
+    PAD_EMPTY: begin
+      if (flags_o.full) begin
+        next_state = FAST_FILL;
+      end
+    end 
+  endcase
+end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : x_pad_read_pointer
   if(~rst_ni) begin
     pad_r_addr_q <= '0;
   end else begin
-    if (clear_i || rst_h_shift)
+    if (clear_i)
       pad_r_addr_q <= '0;
     else if (buf_write_en)
       pad_r_addr_q <= pad_r_addr_d;
@@ -137,112 +183,101 @@ end
 
 assign pad_r_addr_d = (pad_r_addr_q < TOT_DEPTH) ? pad_r_addr_q + 1 : '0;
 
-always_ff @(posedge clk_i or negedge rst_ni) begin : h_read_pointer
+// Counter to track the rows that have to be loaded
+always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
+  if(~rst_ni) begin
+    w_index_q <= '0;
+  end else begin
+    // The rst signal is externally supplied, as the full flag has to stay asserted until the scheduler acknowledges it
+    if (ctrl_i.rst_w_index || clear_i)
+      w_index_q <= '0;
+    else if (ctrl_i.load)
+      w_index_q <= w_index_d;
+    else
+      w_index_q <= w_index_q;
+  end
+end
+
+assign w_index_d = ctrl_i.load ? w_index_q + 1 : w_index_q;
+
+assign flags_o.full = w_index_d == ctrl_i.width;
+
+
+always_ff @(posedge clk_i or negedge rst_ni) begin : pad_read_counter
+  if(~rst_ni) begin
+    pad_read_cnt <= '0;
+  end else begin
+    if (clear_i)
+      pad_read_cnt <= '0;
+    else begin
+      if (pad_read_cnt_rst)
+        pad_read_cnt <= 1;
+      else if (pad_read_en)
+        pad_read_cnt <= pad_read_cnt + 1;
+    end
+  end
+end
+
+assign pad_read_cnt_rst = (pad_read_cnt == ctrl_i.height) && ctrl_i.h_shift;
+assign flags_o.empty    = pad_read_cnt_rst;
+
+// This counts the number of times we have to write the buffer to fill it during the FAST_FILL state
+always_ff @(posedge clk_i or negedge rst_ni) begin : buf_write_counter
+  if(~rst_ni) begin
+    buf_write_cnt <= '0;
+  end else begin
+    if (clear_i || pad_read_cnt_rst)
+      buf_write_cnt <= '0;
+    else begin
+      if ((current_state == PAD_EMPTY || current_state == FAST_FILL && ~first_block) && ctrl_i.h_shift)
+        buf_write_cnt <= buf_write_cnt + 1;
+      else if (ctrl_i.pad_setup)
+        buf_write_cnt <= 2*H;
+    end
+  end
+end
+
+always_ff @(posedge clk_i or negedge rst_ni) begin : h_index_r_register
+  if(~rst_ni) begin
+    h_index_r <= '0;
+  end else begin
+    if (clear_i)
+      h_index_r <= '0;
+    else if(ctrl_i.h_shift)
+      h_index_r <= h_index_r == H-1 ? '0 : h_index_r + 1;
+  end
+end
+
+always_ff @(posedge clk_i or negedge rst_ni) begin : buffer_read_address
   if(~rst_ni) begin
     buf_r_addr <= '0;
   end else begin
     if (clear_i)
       buf_r_addr <= '0;
-    else if ((ctrl_i.d_shift && ~first_block) || (first_block && (pad_r_addr_q == 2*H-1)))
+    else if (h_index_r == H-1 && ctrl_i.h_shift)
       buf_r_addr <= buf_r_addr + 1;
   end
 end
 
-assign depth = (ctrl_i.cols_lftovr == '0) ? TOT_DEPTH : ctrl_i.cols_lftovr;
-
-// Counter to track the rows that have to be loaded
-always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
+always_ff @(posedge clk_i or negedge rst_ni) begin : h_index_w_register
   if(~rst_ni) begin
-    w_index <= '0;
+    h_index_w <= '0;
   end else begin
-    if (rst_w_load || clear_i)
-      w_index <= '0;
-    else if (ctrl_i.load)
-      w_index <= w_index + 1;
-    else
-      w_index <= w_index;
+    if (clear_i)
+      h_index_w <= '0;
+    else if(buf_write_en)
+      h_index_w <= h_index_w == H-1 ? '0 : h_index_w + 1;
   end
 end
 
-assign w_limit = (ctrl_i.rows_lftovr != '0) ? ctrl_i.rows_lftovr : W;
-
-always_comb begin : load_count_rst
-  rst_w_load   = 1'b0;
-  flags_o.full = 1'b0;
-  if (w_index == w_limit || w_index == W) begin
-    rst_w_load   = 1'b1;
-    flags_o.full = 1'b1;
-  end else begin
-    rst_w_load   = 1'b0;
-    flags_o.full = 1'b0;
-  end
-end
-
-// Depth shift counter
-always_ff @(posedge clk_i or negedge rst_ni) begin : d_shift_counter
+always_ff @(posedge clk_i or negedge rst_ni) begin : buffer_write_address
   if(~rst_ni) begin
-    d_shift <= '0;
+    buf_w_addr <= '0;
   end else begin
-    if (rst_d_shift || clear_i)
-      d_shift <= '0;
-    else if (ctrl_i.blck_shift)
-      d_shift <= d_shift + 2;
-    else if (ctrl_i.d_shift)
-      d_shift <= d_shift + 1;
-    else
-      d_shift <= d_shift;
-  end
-end
-
-always_comb begin
-  if (ctrl_i.cols_lftovr != '0)
-    empty_count = ctrl_i.slots;
-  else
-    empty_count = D;
-end
-
-always_ff @(posedge clk_i or negedge rst_ni) begin : empty_count_reg
-  if(~rst_ni) begin
-    empty_count_q <= '0;
-  end else begin
-    if (clear_i || empty_rst)
-      empty_count_q <= D;
-    else begin
-      if (ctrl_i.cols_lftovr != '0)
-        empty_count_q <= ctrl_i.slots;
-      else
-        empty_count_q <= empty_count_q;
-    end
-  end
-end
-
-always_comb begin : empty_gen_and_shift_count_rst
-  flags_o.empty = 1'b0;
-  rst_d_shift   = 1'b0;
-  empty_rst     = 1'b0;
-  if (d_shift == empty_count_q) begin
-    flags_o.empty = 1'b1;
-    rst_d_shift   = 1'b1;
-    if (empty_count_q != depth)
-      empty_rst = 1'b1;
-  end else begin
-    flags_o.empty = 1'b0;
-    rst_d_shift   = 1'b0;
-    empty_rst     = 1'b0;
-  end
-end
-
-// H shift counter
-always_ff @(posedge clk_i or negedge rst_ni) begin : h_shift_counter
-  if(~rst_ni) begin
-    h_index_r <= '0;
-  end else begin
-    if (rst_h_shift || clear_i)
-      h_index_r <= '0;
-    else if(ctrl_i.h_shift)
-      h_index_r <= h_index_r + 1;
-    else
-      h_index_r <= h_index_r;
+    if (clear_i)
+      buf_w_addr <= '0;
+    else if (h_index_w == H-1 && buf_write_en)
+      buf_w_addr <= buf_w_addr + 1;
   end
 end
 
