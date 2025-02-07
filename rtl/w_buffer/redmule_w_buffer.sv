@@ -38,8 +38,6 @@ localparam int unsigned EL_ADDR_W = $clog2(N_REGS+1);
 localparam int unsigned EL_DATA_W = (N_REGS+1)*BITW;
 
 logic [$clog2(H):0]            w_row;
-logic [$clog2(H):0]            count_limit;
-logic [$clog2(D):0]            depth;
 logic [H-1:0][H-1:0][BITW-1:0] w_buffer_q;
 
 logic [EL_ADDR_W-1:0]          el_addr_d, el_addr_q;
@@ -64,7 +62,7 @@ logic [$clog2(H)-1:0] buf_write_addr;
 logic [H-1:0][$clog2(N_REGS+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
 
 for (genvar d = 0; d < D; d++) begin : zero_padding
-  assign w_data[d] = (d < depth && w_row < count_limit) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
+  assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
 end
 
 assign buf_write_en   = ctrl_i.load && (~ctrl_i.dequant || ~gidx_present);
@@ -87,6 +85,8 @@ redmule_w_buffer_scm #(
   .rows_read_addr_i ( buffer_r_addr_d ),
   .rdata_o          ( w_buffer_o      )
 );
+
+assign flags_o.w_ready = buf_write_en;
 
 // Read side
 for (genvar h = 0; h < H; h++) begin : gen_r_id_registers
@@ -242,8 +242,5 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
       w_row <= w_row;
   end
 end
-
-assign depth       = (ctrl_i.cols_lftovr == '0) ? D : ctrl_i.cols_lftovr;
-assign count_limit = (ctrl_i.rows_lftovr != '0) ? ctrl_i.rows_lftovr : Height;
 
 endmodule : redmule_w_buffer
