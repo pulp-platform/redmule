@@ -5,7 +5,7 @@
 // Andrea Belano <andrea.belano2@unibo.it>
 //
 
-module redmule_scheduler_v2
+module redmule_scheduler
   import fpnew_pkg::*;
   import hci_package::*;
   import redmule_pkg::*;
@@ -48,7 +48,6 @@ module redmule_scheduler_v2
   /********************************************************/
   /*                       Outputs                        */
   /********************************************************/
-  output logic                            soft_clear_o     ,
   output logic                            reg_enable_o     ,
   output cntrl_engine_t                   cntrl_engine_o   ,
   output x_buffer_ctrl_t                  cntrl_x_buffer_o ,
@@ -57,17 +56,15 @@ module redmule_scheduler_v2
   output flgs_scheduler_t                 flgs_scheduler_o
 );
 
-  typedef enum logic [3:0] {
+  typedef enum logic [1:0] {
     IDLE,
     PRELOAD,
     LOAD_W,
-    LOAD_X,
-    STORE
+    WAIT
   } redmule_fsm_state_e;
 
   redmule_fsm_state_e current_state, next_state;
 
-  logic clear_regs;
   logic start;
 
   logic stall_engine,
@@ -87,13 +84,13 @@ module redmule_scheduler_v2
   logic        x_done;
 
   logic        x_cols_iter_en, x_w_iters_en, x_rows_iter_en,
-               x_done_em;
+               x_done_en;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_columns_iteration
     if(~rst_ni) begin
       x_cols_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_cols_iter_q <= '0;
       end else if (x_cols_iter_en && ~x_done) begin
         x_cols_iter_q <= x_cols_iter_d;
@@ -102,13 +99,13 @@ module redmule_scheduler_v2
   end
 
   assign x_cols_iter_en = flgs_x_buffer_i.empty;  //We can do this as the flag is only raised for one cycle
-  assign x_cols_iter_d  = x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 ? '0 : x_cols_iter_q + 1;
+  assign x_cols_iter_d  = x_cols_iter_en ? (x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 ? '0 : x_cols_iter_q + 1) : x_cols_iter_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : weight_iteration_counter
     if(~rst_ni) begin
       x_w_iters_q <= 0;
     end else begin
-      if (clear_i || clear_regs)
+      if (clear_i || cntrl_scheduler_i.rst)
         x_w_iters_q <= '0;
       else if (x_w_iters_en && ~x_done)
         x_w_iters_q <= x_w_iters_d;
@@ -116,13 +113,13 @@ module redmule_scheduler_v2
   end
 
   assign x_w_iters_en = x_cols_iter_en && x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1;
-  assign x_w_iters_d  = x_w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 ? '0 : x_w_iters_q + 1;
+  assign x_w_iters_d  = x_w_iters_en ? (x_w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 ? '0 : x_w_iters_q + 1) : x_w_iters_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_rows_iteration
     if(~rst_ni) begin
       x_rows_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_rows_iter_q <= '0;
       end else if (x_rows_iter_en && ~x_done) begin
         x_rows_iter_q <= x_rows_iter_d;
@@ -131,24 +128,26 @@ module redmule_scheduler_v2
   end
 
   assign x_rows_iter_en = x_w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && x_w_iters_en;
-  assign x_rows_iter_d  = x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 ? '0 : x_rows_iter_q + 1;
+  assign x_rows_iter_d  = x_rows_iter_en ? (x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 ? '0 : x_rows_iter_q + 1) : x_rows_iter_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_done_register
     if(~rst_ni) begin
       x_done <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_done <= '0;
-      end else if (x_done_em) begin
+      end else if (x_done_en) begin
         x_done <= '1;
       end
     end
   end
 
-  assign x_done_em = x_rows_iter_en && x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
+  assign x_done_en = x_rows_iter_en && x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
 
   assign cntrl_x_buffer_o.height = x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][23:16] : D;
-  assign cntrl_x_buffer_o.width  = x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][31:24] : W;
+  assign cntrl_x_buffer_o.slots  = x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 ? reg_file_i.hwpe_params[X_SLOTS] : D;
+  // We use x_rows_iter_*d* to control the width of the x buffer as otherwise the case of a col leftover equal to 1 would not be covered
+  assign cntrl_x_buffer_o.width  = x_rows_iter_d == reg_file_i.hwpe_params[X_ITERS][31:16]-1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][31:24] : W;
 
   /******************************
    *      X Shift Control       *
@@ -160,21 +159,20 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       x_shift_cnt_q <= '0;
     end else begin
-      if (clear_i || clear_regs)
+      if (clear_i || cntrl_scheduler_i.rst)
         x_shift_cnt_q <= '0;
       else if (x_shift_cnt_en)
         x_shift_cnt_q <= x_shift_cnt_d;
     end
   end
 
-  // FIXME Check if X buffer zero pads 
   assign x_shift_cnt_en = (current_state == LOAD_W) && ~stall_engine;
   assign x_shift_cnt_d  = x_shift_cnt_q == H-1 ? '0 : x_shift_cnt_q + 1;
   
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
   assign cntrl_x_buffer_o.d_shift = x_shift_cnt_q == H-1 && x_shift_cnt_en;
 
-  assign cntrl_x_buffer_o.dequant   = reg_file_i[DEQUANT_MODE][0];
+  assign cntrl_x_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
   assign cntrl_x_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
 
   /******************************
@@ -187,7 +185,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       x_reload_q <= '0;
     end else begin
-      if (clear_i || clear_regs || x_reload_rst)
+      if (clear_i || cntrl_scheduler_i.rst || x_reload_rst)
         x_reload_q <= '0;
       else if (x_reload_en)
         x_reload_q <= '1;
@@ -217,7 +215,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       w_rows_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         w_rows_iter_q <= '0;
       end else if (w_rows_iter_en && ~w_done) begin
         w_rows_iter_q <= w_rows_iter_d;
@@ -232,7 +230,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       w_cols_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         w_cols_iter_q <= '0;
       end else if (w_cols_iter_en && ~w_done) begin
         w_cols_iter_q <= w_cols_iter_d;
@@ -247,7 +245,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       w_mat_iters_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         w_mat_iters_q <= '0;
       end else if (w_mat_iters_en && ~w_done) begin
         w_mat_iters_q <= w_mat_iters_q + 1;
@@ -261,7 +259,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       w_done <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         w_done <= '0;
       end else if (w_done_en) begin
         w_done <= '1;
@@ -271,13 +269,13 @@ module redmule_scheduler_v2
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
 
-  assign cntrl_w_buffer_o.height = w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : H;
-  assign cntrl_w_buffer_o.width  = w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1) && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : D;
+  assign cntrl_w_buffer_o.height = w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1)/*w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1*/ && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : H;
+  assign cntrl_w_buffer_o.width  = w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1/*w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1)*/ && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : D;
   
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine;
-  assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == LOAD_X) && ~stall_engine;
+  assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
 
-  assign cntrl_w_buffer_o.dequant   = reg_file_i[DEQUANT_MODE][0];
+  assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
   assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
 
   /****************************
@@ -299,14 +297,11 @@ module redmule_scheduler_v2
   logic [$clog2(W):0]             y_width, z_width;
   logic [$clog2(D):0]             y_height, z_height;
 
-
-  // FIXME y rows and cols iterations now do not serve any purpose, consider removing them
-
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_columns_iteration
     if(~rst_ni) begin
       y_cols_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         y_cols_iter_q <= '0;
       end else if (y_cols_iter_en) begin
         y_cols_iter_q <= y_cols_iter_d;
@@ -314,14 +309,14 @@ module redmule_scheduler_v2
     end
   end
 
-  assign y_cols_iter_en = flgs_z_buffer_i.y_pushed;
+  assign y_cols_iter_en = flgs_z_buffer_i./*y_pushed*/empty;
   assign y_cols_iter_d  = y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 ? '0 : y_cols_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_rows_iteration
     if(~rst_ni) begin
       y_rows_iter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         y_rows_iter_q <= '0;
       end else if (y_rows_iter_en) begin
         y_rows_iter_q <= y_rows_iter_d;
@@ -330,13 +325,13 @@ module redmule_scheduler_v2
   end
 
   assign y_rows_iter_en = y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && y_cols_iter_en;//current == LOAD_W && y_valid_i && y_cols_iter_en;
-  assign y_rows_iter_d  = y_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 ? '0 : y_rows_iter_q + 1;
+  assign y_rows_iter_d  =  y_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 ? '0 : y_rows_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_wait_enable_register
     if(~rst_ni) begin
       z_wait_en <= '0;
     end else begin
-      if (clear_i || clear_regs || z_wait_clr) begin
+      if (clear_i || cntrl_scheduler_i.rst || z_wait_clr) begin
         z_wait_en <= '0;
       end else if (w_cols_iter_en) begin
         z_wait_en <= '1;
@@ -348,7 +343,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       z_wait_counter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         z_wait_counter_q <= '0;
       end else if (z_wait_en && ~stall_engine) begin
         z_wait_counter_q <= z_wait_counter_d;
@@ -363,7 +358,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       z_avail_en <= '0;
     end else begin
-      if (clear_i || clear_regs || z_avail_clr) begin
+      if (clear_i || cntrl_scheduler_i.rst || z_avail_clr) begin
         z_avail_en <= '0;
       end else if (z_wait_clr) begin
         z_avail_en <= '1;
@@ -375,22 +370,22 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       z_avail_counter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         z_avail_counter_q <= '0;
       end else if (z_avail_en && ~stall_engine) begin
         z_avail_counter_q <= z_avail_counter_d;
       end
     end
   end
-                        // vv MOST LIKELY FIXME WITH LFTOVERS vv
-  assign z_avail_counter_d = z_avail_counter_q == D-1 ? '0 : z_avail_counter_q + 1;
-  assign z_avail_clr       = z_avail_en && ~stall_engine && z_avail_counter_q == D-1;  // THIS TOO 
+
+  assign z_avail_counter_d = z_avail_counter_q == z_height-1 ? '0 : z_avail_counter_q + 1;
+  assign z_avail_clr       = z_avail_en && ~stall_engine && z_avail_counter_q == z_height-1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_push_enable_register
     if(~rst_ni) begin
       y_push_en <= '0;
     end else begin
-      if (clear_i || clear_regs || y_push_clr) begin
+      if (clear_i || cntrl_scheduler_i.rst || y_push_clr) begin
         y_push_en <= '0;
       end else if (z_wait_en && ~stall_engine && z_wait_counter_q == PIPE_REGS-1 || start_computation) begin
         y_push_en <= '1;
@@ -402,27 +397,27 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       y_push_counter_q <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         y_push_counter_q <= '0;
       end else if (y_push_en && ~stall_engine) begin
         y_push_counter_q <= y_push_counter_d;
       end
     end
   end
-                        // vv MOST LIKELY FIXME WITH LFTOVERS vv
-  assign y_push_counter_d = y_push_counter_q == D-1 ? '0 : y_push_counter_q + 1;
-  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == D-1;  // THIS TOO
 
-  assign y_width  = y_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : W;
-  assign y_height = y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : D;
+  assign y_push_counter_d = y_push_counter_q == y_height-1 ? '0 : y_push_counter_q + 1;
+  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_height-1;
+
+  assign y_width  = y_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : W;
+  assign y_height = y_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : D;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
     if(~rst_ni) begin
       z_width <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         z_width <= '0;
-      end else if (flgs_z_buffer_i.y_pushed) begin
+      end else if (flgs_z_buffer_i.empty || start_computation) begin
         z_width <= y_width;
       end
     end
@@ -432,9 +427,9 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       z_height <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         z_height <= '0;
-      end else if (flgs_z_buffer_i.y_pushed) begin
+      end else if (flgs_z_buffer_i.empty || start_computation) begin
         z_height <= y_height;
       end
     end
@@ -442,9 +437,10 @@ module redmule_scheduler_v2
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i;
-  assign cntrl_z_buffer_o.y_push_enable = y_push_en && ~stall_engine; //FIXME check if works with leftovers
-  assign cntrl_z_buffer_o.fill          = z_avail_en && ~stall_engine;// Same
-  
+  assign cntrl_z_buffer_o.y_push_enable = y_push_en && ~stall_engine;
+  assign cntrl_z_buffer_o.fill          = z_avail_en && ~stall_engine;
+  assign cntrl_z_buffer_o.first_load    = y_cols_iter_q == '0 && y_rows_iter_q == '0;
+
   assign cntrl_z_buffer_o.y_width       = y_width;
   assign cntrl_z_buffer_o.y_height      = y_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
@@ -462,7 +458,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       waits_cnt <= '0;
     end else begin
-      if (clear_i || clear_regs || cntrl_scheduler_i.rst)
+      if (clear_i || cntrl_scheduler_i.rst)
         waits_cnt <= '0;
       else if (waits_cnt_en)
         waits_cnt <= waits_cnt == NumPipeRegs ? '0 : waits_cnt + 1;
@@ -489,7 +485,15 @@ module redmule_scheduler_v2
   assign cntrl_engine_o.out_ready        = 1'b1;
   assign cntrl_engine_o.accumulate       = ~pushing_y;
 
-  assign cntrl_engine_o.row_clk_gate_en  = '1;
+  always_comb begin
+    cntrl_engine_o.row_clk_gate_en = '0;
+
+    if (computing && ~stall_engine) begin
+      for (int i = 0; i < z_width; i++) begin
+        cntrl_engine_o.row_clk_gate_en[i] = 1'b1;
+      end
+    end
+  end
 
   /*****************************
    *         CHECKS            *
@@ -512,7 +516,7 @@ module redmule_scheduler_v2
   assign check_x_full_en   = x_refill && x_shift_cnt_q == H-1 && ~x_done;
 
   // Check if the new Y rows are loaded and ready to be pushed
-  // Only enable this check when the results of an iteration start to be available
+  // Only enable this check when the results of an iteration are available
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
@@ -530,7 +534,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       first_load <= '1;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         first_load <= '1;
       end else if (current_state == LOAD_W && ~stall_engine) begin
         first_load <= '0;
@@ -542,7 +546,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       computing <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         computing <= '0;
       end else if (current_state == PRELOAD && next_state == LOAD_W) begin
         computing <= '1;
@@ -554,7 +558,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       x_refill <= '0;
     end else begin
-      if (clear_i || clear_regs || cntrl_x_buffer_o.rst_w_index) begin
+      if (clear_i || cntrl_scheduler_i.rst || cntrl_x_buffer_o.rst_w_index) begin
         x_refill <= '0;
       end else if (flgs_x_buffer_i.empty) begin
         x_refill <= '1;
@@ -566,7 +570,7 @@ module redmule_scheduler_v2
     if(~rst_ni) begin
       pushing_y <= '0;
     end else begin
-      if (clear_i || clear_regs) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         pushing_y <= '0;
       end else if (y_push_en || pushing_y) begin
         pushing_y <= y_push_en;
@@ -574,20 +578,20 @@ module redmule_scheduler_v2
     end
   end
 
+  assign start             = current_state == IDLE && cntrl_scheduler_i.first_load;
   assign start_computation = first_load && next_state == LOAD_W && ~stall_engine;
 
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
 
-
-  /**********************************
-  *            FSM                 * 
-  **********************************/
+  /*********************************
+   *            FSM                * 
+   *********************************/
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
     if(~rst_ni) begin
       current_state <= IDLE;
     end else begin
-      if (clear_i || clear_regs || cntrl_scheduler_i.rst)
+      if (clear_i || cntrl_scheduler_i.rst)
         current_state <= IDLE;
       else
         current_state <= next_state;
@@ -620,44 +624,17 @@ module redmule_scheduler_v2
       // in this state we should check that everything is ready to be loaded and
       // if something's amiss stall the engine
       LOAD_W: begin
-
-        /* Checklist
-         *
-         *  x full  (once every 16?)
-         *  w valid (always)
-         *  y loaded / z stored  (once in a while)
-         *  
-         *
-         *
-         */
-
-        //if (x_refill && x_shift_cnt_q == H-1) begin
-        //  // Chech that W is valid AND the X buffer has been reloaded
-        //  if ((w_valid_i || w_done) && (flgs_x_buffer_i.full || x_done)) begin
-        //    next_state = LOAD_X;
-        //  end
-        //end else begin
-        //  if (w_valid_i || w_done) begin
-        //    next_state = LOAD_X;
-        //  end
-        //end
-
         if (~stall_engine) begin
-          next_state = LOAD_X;
+          next_state = WAIT;
         end
       end
 
-      LOAD_X: begin
+      WAIT: begin
         if (waits_cnt == NumPipeRegs && ~stall_engine) begin
           next_state = LOAD_W;
         end
       end
-
-      STORE: begin
-      end
     endcase
   end
-
-  assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
 
 endmodule

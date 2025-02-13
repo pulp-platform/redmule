@@ -159,17 +159,15 @@ package redmule_pkg;
   typedef enum logic [1:0] { QINT_2=2'h0, QINT_4=2'h1, QINT_8=2'h2, QINT_3=2'h3 } qint_fmt_e;
 
   typedef struct packed {
-    logic d_shift;        // No longer used but kept here for the moment
+    logic d_shift;        // No longer used but kept here for the time being
     logic h_shift;
     logic load;
     logic pad_setup;
     logic                         dequant;
     qint_fmt_e                    q_int_fmt;
-    logic [$clog2(TOT_DEPTH):0]   cols_lftovr; // Will be replaced with width
-    logic [$clog2(ARRAY_WIDTH):0] rows_lftovr; // Will be replaced with height 
     logic [$clog2(TOT_DEPTH):0]   width;
     logic [$clog2(ARRAY_WIDTH):0] height;
-    logic [$clog2(DEPTH)-1:0]     slots;
+    logic [$clog2(TOT_DEPTH):0]   slots;
 
     logic                         rst_w_index;
   } x_buffer_ctrl_t;
@@ -184,8 +182,6 @@ package redmule_pkg;
     logic                          load;
     logic                          dequant;
     qint_fmt_e                     q_int_fmt;
-    logic [$clog2(TOT_DEPTH):0]    cols_lftovr; // Will be replaced with width
-    logic [$clog2(ARRAY_HEIGHT):0] rows_lftovr; // Will be replaced with height
     logic [$clog2(TOT_DEPTH):0]    width;
     logic [$clog2(ARRAY_HEIGHT):0] height;
   } w_buffer_ctrl_t;
@@ -200,8 +196,7 @@ package redmule_pkg;
     logic                         fill;
     logic                         ready;
     logic                         y_valid;
-    logic [$clog2(TOT_DEPTH):0]   cols_lftovr; // Will be replaced with width
-    logic [$clog2(ARRAY_WIDTH):0] rows_lftovr; // Will be replaced with height
+    logic                         first_load;
     logic [$clog2(TOT_DEPTH):0]   y_width;
     logic [$clog2(ARRAY_WIDTH):0] y_height;
     logic [$clog2(TOT_DEPTH):0]   z_width;

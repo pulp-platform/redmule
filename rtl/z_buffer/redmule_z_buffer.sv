@@ -26,6 +26,7 @@ module redmule_z_buffer
   input  logic                    [DW-1:0] y_buffer_i  ,
   output logic                    [DW-1:0] z_buffer_o  ,
   output logic           [W-1:0][BITW-1:0] y_buffer_o  ,
+  output logic                  [DW/8-1:0] z_strb_o    ,
   output z_buffer_flgs_t                   flags_o
 );
 
@@ -158,7 +159,7 @@ end
 
 assign store_shift_d = store_shift_q == ctrl_i.z_width-1 ? '0 : store_shift_q + 1;
 
-assign flags_o.empty = store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready;
+assign flags_o.empty = (store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready) || (current_state == LOADED && d_index == ctrl_i.y_height-1 && ctrl_i.y_push_enable && ctrl_i.first_load);
 
 // Counter to track the rows that have to be loaded
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
@@ -174,7 +175,13 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
   end
 end
 
-assign flags_o.loaded = next_state == LOADED;
+// SMARTELLAMENTO  ---- Theoretically this should not break anything, consider it...
+// assign flags_o.loaded = current_state == EMPTY && w_index == ctrl_i.y_width-1 && ctrl_i.y_valid ||
+//                         current_state == LOADED;
+
+assign flags_o.loaded = current_state == LOADED;
+// assign flags_o.loaded = next_state == LOADED; // <-------- ORIGINAL
+
 
 always_comb begin : reset_y_load_counter
   rst_w_load     = 1'b0;
@@ -207,6 +214,14 @@ always_comb begin : reset_depth_counter
   end else begin
     rst_d_count    = 1'b0;
     flags_o.y_pushed = 1'b0;
+  end
+end
+
+always_comb begin : z_strb_assignment
+  z_strb_o = '0;
+
+  for (int i = 0; i < ctrl_i.z_height; i++) begin
+    z_strb_o[i*BITW/8+:BITW/8] = '1;
   end
 end
 

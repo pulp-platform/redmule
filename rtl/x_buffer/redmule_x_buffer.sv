@@ -32,14 +32,15 @@ localparam int unsigned          TOT_DEPTH = H*D
   output logic                                               next_wrow_ready_o 
 );
 
-typedef enum logic [1:0] {
+typedef enum logic [2:0] {
   FAST_FILL,
+  WAIT_BUF_NOT_FULL,
   WAIT_FIRST_READ,
   FILL,
   PAD_EMPTY
 } redmule_x_state_e;
 
-logic [$clog2(W):0]             w_index_d, w_index_q;
+logic [$clog2(W)-1:0]           w_index_d, w_index_q;
 logic [$clog2(H)-1:0]           h_index_r, h_index_w;
 logic [W-1:0][BITW-1:0]         x_pad_q;
 logic [H-1:0][W-1:0][BITW-1:0]  x_buffer_q;
@@ -108,7 +109,7 @@ redmule_x_pad_scm #(
 // Normally, we only write a row in the buffer when another one is read
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
 assign buf_write_en = ( current_state == FAST_FILL || 
-                        current_state ==FILL && ctrl_i.h_shift)
+                        current_state == FILL && ctrl_i.h_shift)
                       && ~refilling;
 
 redmule_x_buffer_scm #(
@@ -121,7 +122,7 @@ redmule_x_buffer_scm #(
   .rst_ni       ( rst_ni                  ),
   .write_en_i   ( buf_write_en            ),
   .write_addr_i ( {buf_w_addr, h_index_w} ),
-  .wdata_i      ( x_pad_q                 ),
+  .wdata_i      ( pad_read_cnt <= ctrl_i.height ? x_pad_q : '0                 ),
   .read_en_i    ( ctrl_i.h_shift          ),
   .read_addr_i  ( {buf_r_addr, h_index_r} ),
   .rdata_o      ( x_buffer_q              )
@@ -150,6 +151,12 @@ always_comb begin : fsm
       end
     end
 
+    WAIT_BUF_NOT_FULL: begin
+      if (h_index_r != '0) begin
+        next_state = WAIT_FIRST_READ;
+      end
+    end
+
     WAIT_FIRST_READ: begin
       if (h_index_r == '0) begin
         next_state = FILL;
@@ -158,13 +165,26 @@ always_comb begin : fsm
 
     FILL: begin
       if (flags_o.empty) begin
-        next_state = PAD_EMPTY;
+        // If the width of the buffer is 1, the full flag is asserted at the same time as the empty flag so we skip the PAD_EMPTY state
+        if (flags_o.full) begin
+          next_state = FILL;
+        end else begin
+          next_state = PAD_EMPTY;
+        end
       end
     end
 
     PAD_EMPTY: begin
       if (flags_o.full) begin
-        next_state = FAST_FILL;
+        if (buf_write_cnt != '0 || ctrl_i.h_shift) begin
+          next_state = FAST_FILL;
+        end else begin
+          if (h_index_r == '0 && ~ctrl_i.h_shift) begin
+            next_state = FILL;
+          end else begin
+            next_state = WAIT_BUF_NOT_FULL;
+          end
+        end
       end
     end 
   endcase
@@ -181,7 +201,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : x_pad_read_pointer
   end
 end
 
-assign pad_r_addr_d = (pad_r_addr_q < TOT_DEPTH) ? pad_r_addr_q + 1 : '0;
+assign pad_r_addr_d = (pad_r_addr_q < ctrl_i.slots-1) ? pad_r_addr_q + 1 : '0;
 
 // Counter to track the rows that have to be loaded
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
@@ -218,7 +238,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : pad_read_counter
   end
 end
 
-assign pad_read_cnt_rst = (pad_read_cnt == ctrl_i.height) && ctrl_i.h_shift;
+assign pad_read_cnt_rst = (pad_read_cnt == ctrl_i.slots) && ctrl_i.h_shift;
 assign flags_o.empty    = pad_read_cnt_rst;
 
 // This counts the number of times we have to write the buffer to fill it during the FAST_FILL state

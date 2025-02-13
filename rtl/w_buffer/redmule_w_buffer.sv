@@ -165,8 +165,7 @@ for (genvar h = 0; h < H; h++) begin : gen_w_id_registers
 end
 
 // Each row of the buffer has a counter that 
-// It resets to D/(PIPE_REGS+1) each time the vector is requested
-// FIXME leftovers ----
+// It resets to D/(PIPE_REGS+1)-1 each time the vector is requested
 for (genvar h = 0; h < H; h++) begin : gen_usage_counters
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if(~rst_ni) begin
