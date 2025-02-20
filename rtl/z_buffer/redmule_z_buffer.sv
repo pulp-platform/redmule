@@ -41,7 +41,7 @@ redmule_z_state_e current_state, next_state;
 logic rst_fill   ,
       rst_w_load ,
       rst_d_count;
-  
+
 logic [$clog2(D)-1:0] fill_shift, d_index;
 logic [$clog2(W)-1:0] store_shift_d, store_shift_q, w_index;
 
@@ -64,7 +64,7 @@ redmule_z_buffer_scm #(
   .row_read_en_i    ( ctrl_i.y_push_enable      ),
   .col_read_addr_i  ( store_shift_d             ),
   .row_read_addr_i  ( d_index                   ),
-  .col_rdata_o      ( z_buffer_o                ), 
+  .col_rdata_o      ( z_buffer_o                ),
   .row_rdata_o      ( y_buffer_o                )
 );
 
@@ -112,7 +112,7 @@ always_comb begin : fsm
       if (store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready) begin
         next_state = EMPTY;
       end
-    end 
+    end
   endcase
 end
 

@@ -137,16 +137,16 @@ flags_fifo_t   w_fifo_flgs;
 // X streaming interface + X FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo      ( .clk( clk_i ) );
- 
-// W streaming interface + W FIFO interface 
+
+// W streaming interface + W FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .clk( clk_i ) );
- 
-// Y streaming interface + Y FIFO interface 
+
+// Y streaming interface + Y FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_i ) );
- 
-// Z streaming interface + Z FIFO interface 
+
+// Z streaming interface + Z FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
@@ -154,7 +154,7 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_stream_d      ( .clk( clk_i ) );  //FIXME DATA WIDTH (?)
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_buffer_fifo   ( .clk( clk_i ) );
 
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) wq_stream_d    ( .clk( clk_i ) );  
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) wq_stream_d    ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) wq_buffer_fifo ( .clk( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) zeros_stream_d     ( .clk( clk_i ) );  //FIXME DATA WIDTH
@@ -317,7 +317,7 @@ redmule_w_buffer #(
   .flags_o     ( w_buffer_flgs      ),
   .w_buffer_o  ( w_buffer_q         ),
   .w_buffer_i  ( w_buffer_fifo.data ),
-  .next_gidx_i ( wrow_q.data &'b111 )      //JUST FOR TESTING 
+  .next_gidx_i ( wrow_q.data &'b111 )      //JUST FOR TESTING
 );
 
 logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
@@ -446,7 +446,7 @@ redmule_engine     #(
 redmule_memory_scheduler #(
   .DW (DATAW_ALIGN),
   .W  (Width),
-  .H  (Height) 
+  .H  (Height)
 ) i_memory_scheduler (
   .clk_i             ( clk_i               ),
   .rst_ni            ( rst_ni              ),
@@ -495,52 +495,6 @@ redmule_ctrl        #(
 /*---------------------------------------------------------------*/
 /* |                        Local FSM                          | */
 /*---------------------------------------------------------------*/
-
-//redmule_scheduler    #(
-//  .Height             ( Height              ),
-//  .Width              ( Width               ),
-//  .NumPipeRegs        ( NumPipeRegs         )
-//) i_scheduler         (
-//  .clk_i              ( clk_i               ),
-//  .rst_ni             ( rst_ni              ),
-//  .test_mode_i        ( test_mode_i         ),
-//  .clear_i            ( clear               ),
-//  .x_valid_i          ( x_buffer_fifo.valid ),
-//  .x_strb_i           ( x_buffer_fifo.strb  ),
-//  .w_valid_i          ( w_buffer_fifo.valid ),
-//  .w_strb_i           ( w_buffer_fifo.strb  ),
-//  .y_fifo_valid_i     ( y_buffer_fifo.valid ),
-//  .y_fifo_strb_i      ( y_buffer_fifo.strb  ),
-//  .z_ready_i          ( z_buffer_q.ready    ),
-//  .accumulate_i       ( accumulate          ),
-//  .engine_flush_i     ( engine_flush        ),
-//  .z_strb_o           (                     ),
-//  .soft_clear_o       ( soft_clear          ),
-//  .w_load_o           ( w_load              ),
-//  .w_cols_lftovr_o    ( w_cols_lftovr       ),
-//  .w_rows_lftovr_o    ( w_rows_lftovr       ),
-//  .y_cols_lftovr_o    ( y_cols_lftovr       ),
-//  .y_rows_lftovr_o    ( y_rows_lftovr       ),
-//  .gate_en_o          ( gate_en             ),
-//  .z_buffer_clk_en_o  ( fsm_z_clk_en        ),
-//  .reg_enable_o       ( reg_enable          ),
-//  .z_store_o          ( z_buffer_store      ),
-//  .y_buffer_load_o    ( y_buffer_load       ),
-//  .reg_file_i         ( reg_file            ),
-//  .flgs_streamer_i    ( flgs_streamer       ),
-//  .flgs_x_buffer_i    ( x_buffer_flgs       ),
-//  .flgs_w_buffer_i    ( w_buffer_flgs       ),
-//  .flgs_z_buffer_i    ( z_buffer_flgs       ),
-//  .flgs_engine_i      ( flgs_engine         ),
-//  .fifo_flgs_i        ( w_fifo_flgs         ),
-//  .cntrl_scheduler_i  ( cntrl_scheduler     ),
-//  .cntrl_engine_o     ( cntrl_engine        ),
-//  .cntrl_x_buffer_o   ( x_buffer_ctrl       ),
-//  .flgs_scheduler_o   ( flgs_scheduler      )
-//);
-
-
-// Will replace the scheduler
 redmule_scheduler #(
   .Height      ( Height         ),
   .Width       ( Width          ),

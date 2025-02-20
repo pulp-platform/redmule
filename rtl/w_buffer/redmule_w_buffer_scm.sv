@@ -9,7 +9,7 @@ module redmule_w_buffer_scm #(
   parameter int unsigned WORD_SIZE = 32,
   parameter int unsigned ROWS      = 1 ,
   parameter int unsigned COLS      = 1 ,
-  parameter int unsigned ELMS      = 1 
+  parameter int unsigned ELMS      = 1
 ) (
   input  logic                                                        clk_i            ,
   input  logic                                                        rst_ni           ,
@@ -51,7 +51,7 @@ module redmule_w_buffer_scm #(
     assign cols_read_addr[r] = cols_read_offs_q >= r ? cols_read_offs_q - r : ROWS - (r - cols_read_offs_q);
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin : output_assignment
+  for (genvar r = 0; r < ROWS; r++) begin : gen_output_assignment
     assign rdata_o[r] = buffer_q[rows_read_addr_q[r]][cols_read_addr[r]][elms_read_addr_q];
   end
 
@@ -84,4 +84,4 @@ module redmule_w_buffer_scm #(
     end
   end
 
-endmodule
+endmodule : redmule_w_buffer_scm

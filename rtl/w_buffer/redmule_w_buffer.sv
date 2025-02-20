@@ -17,7 +17,7 @@ module redmule_w_buffer
   parameter int unsigned  GID_WIDTH = GROUP_ID_WIDTH    ,
   localparam int unsigned BITW      = fp_width(FpFormat), // Number of bits for the given format
   localparam int unsigned H         = Height            ,
-  localparam int unsigned D         = DW/BITW           
+  localparam int unsigned D         = DW/BITW
 )(
   input  logic                             clk_i     ,
   input  logic                             rst_ni    ,
@@ -61,7 +61,7 @@ logic [$clog2(H)-1:0] buf_write_addr;
 
 logic [H-1:0][$clog2(N_REGS+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
 
-for (genvar d = 0; d < D; d++) begin : zero_padding
+for (genvar d = 0; d < D; d++) begin : gen_zero_padding
   assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
 end
 
@@ -164,7 +164,7 @@ for (genvar h = 0; h < H; h++) begin : gen_w_id_registers
   assign cache_w_id_valid_d[h] = (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) ? '1 : cache_w_id_valid_q[h];
 end
 
-// Each row of the buffer has a counter that 
+// Each row of the buffer has a counter that
 // It resets to D/(PIPE_REGS+1)-1 each time the vector is requested
 for (genvar h = 0; h < H; h++) begin : gen_usage_counters
   always_ff @(posedge clk_i or negedge rst_ni) begin

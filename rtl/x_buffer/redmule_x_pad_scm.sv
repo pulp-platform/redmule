@@ -8,7 +8,7 @@
 module redmule_x_pad_scm #(
   parameter int unsigned WORD_SIZE = 32,
   parameter int unsigned ROWS      = 1 ,
-  parameter int unsigned COLS      = 1 
+  parameter int unsigned COLS      = 1
 ) (
   input  logic                           clk_i        ,
   input  logic                           rst_ni       ,
@@ -16,10 +16,10 @@ module redmule_x_pad_scm #(
   input  logic [$clog2(ROWS)-1:0]        write_addr_i ,
   input  logic [COLS-1:0][WORD_SIZE-1:0] wdata_i      ,
   input  logic                           read_en_i    ,
-  input  logic [$clog2(COLS)-1:0]        read_addr_i  ,  
-  output logic [ROWS-1:0][WORD_SIZE-1:0] rdata_o      
+  input  logic [$clog2(COLS)-1:0]        read_addr_i  ,
+  output logic [ROWS-1:0][WORD_SIZE-1:0] rdata_o
 );
-  logic [ROWS-1:0][COLS-1:0][WORD_SIZE-1:0] buffer_q; 
+  logic [ROWS-1:0][COLS-1:0][WORD_SIZE-1:0] buffer_q;
   logic [COLS-1:0][WORD_SIZE-1:0]           wdata_q;
   logic [$clog2(COLS)-1:0]                  read_addr_q;
 
@@ -35,7 +35,7 @@ module redmule_x_pad_scm #(
     end
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin : output_assignment
+  for (genvar r = 0; r < ROWS; r++) begin : gen_output_assignment
     assign rdata_o[r] = buffer_q[r][read_addr_q];
   end
 
@@ -68,4 +68,4 @@ module redmule_x_pad_scm #(
     end
   end
 
-endmodule
+endmodule : redmule_x_pad_scm

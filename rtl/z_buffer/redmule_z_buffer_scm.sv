@@ -8,7 +8,7 @@
 module redmule_z_buffer_scm #(
   parameter int unsigned WORD_SIZE = 32,
   parameter int unsigned ROWS      = 1 ,
-  parameter int unsigned COLS      = 1 
+  parameter int unsigned COLS      = 1
 ) (
   input  logic                           clk_i            ,
   input  logic                           rst_ni           ,
@@ -21,11 +21,11 @@ module redmule_z_buffer_scm #(
   input  logic                           col_read_en_i    ,
   input  logic                           row_read_en_i    ,
   input  logic [$clog2(COLS)-1:0]        col_read_addr_i  ,
-  input  logic [$clog2(ROWS)-1:0]        row_read_addr_i  ,  
-  output logic [ROWS-1:0][WORD_SIZE-1:0] col_rdata_o      , 
+  input  logic [$clog2(ROWS)-1:0]        row_read_addr_i  ,
+  output logic [ROWS-1:0][WORD_SIZE-1:0] col_rdata_o      ,
   output logic [COLS-1:0][WORD_SIZE-1:0] row_rdata_o
 );
-  logic [ROWS-1:0][COLS-1:0][WORD_SIZE-1:0] buffer_q; 
+  logic [ROWS-1:0][COLS-1:0][WORD_SIZE-1:0] buffer_q;
   logic [COLS-1:0][WORD_SIZE-1:0]           row_wdata_q;
   logic [ROWS-1:0][WORD_SIZE-1:0]           col_wdata_q;
   logic                                     row_write_en_q;
@@ -54,11 +54,11 @@ module redmule_z_buffer_scm #(
     end
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin : output_columns_assignment
+  for (genvar r = 0; r < ROWS; r++) begin : gen_output_columns_assignment
     assign col_rdata_o[r] = buffer_q[r][col_read_addr_q];
   end
 
-  for (genvar c = 0; c < COLS; c++) begin : output_rows_assignment
+  for (genvar c = 0; c < COLS; c++) begin : gen_output_rows_assignment
     assign row_rdata_o[c] = buffer_q[row_read_addr_q][c];
   end
 
@@ -113,4 +113,4 @@ module redmule_z_buffer_scm #(
     end
   end
 
-endmodule
+endmodule : redmule_z_buffer_scm
