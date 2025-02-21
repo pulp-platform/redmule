@@ -33,8 +33,8 @@ hw-clean:
 	rm -rf $(VsimCompileScript) $(VsimDir)/transcript $(VsimDir)/modelsim.ini $(VsimDir)/*.wlf $(VsimDir)/work
 
 hw-script:
-	$(BENDER) update
-	$(BENDER) script $(target)     \
+	$(Bender) update
+	$(Bender) script $(target)     \
 	--vlog-arg="$(CompileFlags)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(common_targs) $(common_defs) \
