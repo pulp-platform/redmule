@@ -23,8 +23,8 @@ hw-clean:
 	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves) $(VerilatorDir)/transcript
 
 hw-script:
-	$(BENDER) update
-	$(BENDER) script $(target)     \
+	$(Bender) update
+	$(Bender) script $(target)     \
 	$(common_targs) $(common_defs) \
 	$(sim_targs)                   \
 	> $(VerilatorCompileScript)
