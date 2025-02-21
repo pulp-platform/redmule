@@ -17,8 +17,7 @@ SW         ?= $(RootDir)sw
 BUILD_DIR  ?= $(SW)/build
 SIM_DIR    ?= $(RootDir)vsim
 QUESTA     ?= questa-2023.4
-BENDER_DIR ?= .
-BENDER     ?= bender
+Bender     ?= $(CargoInstallDir)/bin/bender
 Gcc        ?= $(GccInstallDir)/bin/
 ISA        ?= riscv
 ARCH       ?= rv
@@ -104,17 +103,12 @@ SHELL := /bin/bash
 # Generate instructions and data stimuli
 sw-build: $(STIM_INSTR) $(STIM_DATA) dis
 
-# Download bender
-bender:
-	curl --proto '=https'  \
-	--tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh -s -- 0.24.0
-
 $(SIM_DIR):
 	mkdir -p $(SIM_DIR)
 
 synth-ips:
-	$(BENDER) update
-	$(BENDER) script synopsys      \
+	$(Bender) update
+	$(Bender) script synopsys      \
 	$(common_targs) $(common_defs) \
 	$(synth_targs) $(synth_defs)   \
 	> ${compile_script_synth}
@@ -156,6 +150,11 @@ VerilatorInstallDir := $(InstallDir)/verilator
 GccInstallDir := $(InstallDir)/riscv
 RiscvTarDir := riscv.tar.gz
 GccUrl := https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/riscv32-elf-ubuntu-20.04-gcc-nightly-2024.08.28-nightly.tar.gz
+# Bender
+RustupInit := $(ScriptsDir)/rustup-init.sh
+CargoInstallDir := $(InstallDir)/cargo
+RustupInstallDir := $(InstallDir)/rustup
+Cargo := $(CargoInstallDir)/bin/cargo
 
 verilator: $(InstallDir)/bin/verilator
 
@@ -177,3 +176,13 @@ $(GccInstallDir):
 	cd $(VendorDir) && \
 	wget $(GccUrl) -O $(RiscvTarDir) && \
 	tar -xzvf $(RiscvTarDir) -C $(InstallDir) riscv
+
+bender: $(CargoInstallDir)/bin/bender
+
+$(CargoInstallDir)/bin/bender:
+	curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf > $(RustupInit)
+	mkdir -p $(InstallDir)
+	export CARGO_HOME=$(CargoInstallDir) && export RUSTUP_HOME=$(RustupInstallDir) && \
+	chmod +x $(RustupInit); source $(RustupInit) -y && \
+	$(Cargo) install bender
+	rm -rf $(RustupInit)
