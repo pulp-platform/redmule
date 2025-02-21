@@ -57,9 +57,11 @@ The RedMulE Golden Model is intended to generate Floating-Point (FP) input and r
 The golden model makes use of Python3.6 virtual environment, Numpy and Pytorch. These modules have
 to be installed if they are not already present. To simplify this procedure, the `golden-model` folder
 contains a `setup-py.sh` that can be sourced to install all these modules, and to export the
-required environment variables. Thus, the first step is to move into the `golden-model` folder and run:
+required environment variables. Thus, the first step is to install such python packages by running:
 ```bash
-source golden-model/setup-py.sh
+cd golden-model
+source setup-py.sh
+cd ..
 ```
 
 This will install a Python3.6 virtual environment under the `venv` folder.

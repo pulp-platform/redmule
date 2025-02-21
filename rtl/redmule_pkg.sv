@@ -99,7 +99,7 @@ package redmule_pkg;
   // [2:1]   -> Quantized format
   // [0:0]   -> Dequantization enable
   parameter int unsigned DEQUANT_MODE = 18; // 0x48
-  parameter int unsigned GIDX_ADDR    = 19; // 0x4C  
+  parameter int unsigned GIDX_ADDR    = 19; // 0x4C
   parameter int unsigned SCALES_ADDR  = 20; // 0x50
   parameter int unsigned ZEROS_ADDR   = 21; // 0x54
 

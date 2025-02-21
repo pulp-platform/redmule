@@ -2,6 +2,7 @@
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 //
+// Yvan Tortorella <yvan.tortorella@unibo.it>
 // Andrea Belano <andrea.belano2@unibo.it>
 //
 
@@ -168,7 +169,7 @@ module redmule_scheduler
 
   assign x_shift_cnt_en = (current_state == LOAD_W) && ~stall_engine;
   assign x_shift_cnt_d  = x_shift_cnt_q == H-1 ? '0 : x_shift_cnt_q + 1;
-  
+
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
   assign cntrl_x_buffer_o.d_shift = x_shift_cnt_q == H-1 && x_shift_cnt_en;
 
@@ -194,7 +195,7 @@ module redmule_scheduler
 
   assign x_reload_en  = start || x_cols_iter_en/*x_w_iters_en*/;
   assign x_reload_rst = flgs_x_buffer_i.full;
-  
+
   assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
   assign cntrl_x_buffer_o.load        = (flgs_x_buffer_i.empty || x_reload_q) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && x_shift_cnt_q == H-1) && flgs_x_buffer_i.full && ~stall_engine; // FIXME CHECK, WAS current_state == LOAD_W && flgs_x_buffer_i.full
@@ -271,7 +272,7 @@ module redmule_scheduler
 
   assign cntrl_w_buffer_o.height = w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1)/*w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1*/ && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : H;
   assign cntrl_w_buffer_o.width  = w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1/*w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1)*/ && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : D;
-  
+
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine;
   assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
 
@@ -584,7 +585,7 @@ module redmule_scheduler
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
 
   /*********************************
-   *            FSM                * 
+   *            FSM                *
    *********************************/
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
@@ -637,4 +638,4 @@ module redmule_scheduler
     endcase
   end
 
-endmodule
+endmodule : redmule_scheduler

@@ -1,3 +1,10 @@
+// Copyright 2025 ETH Zurich and University of Bologna.
+// Solderpad Hardware License, Version 0.51, see LICENSE for details.
+// SPDX-License-Identifier: SHL-0.51
+//
+// Andrea Belano <andrea.belano2@unibo.it>
+//
+
 module redmule_memory_scheduler
   import redmule_pkg::*;
   import hwpe_ctrl_package::*;
@@ -36,7 +43,7 @@ module redmule_memory_scheduler
   logic [$clog2(W):0] x_rows_lftover_d, x_rows_lftover_q;
 
   logic [$clog2(W):0] num_x_reads;
- 
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_iters_register
     if (~rst_ni) begin
         x_cols_iters_q <= '0;
@@ -64,7 +71,7 @@ module redmule_memory_scheduler
   end
 
   assign w_iters_d = w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 ? '0 : w_iters_q + 1;
-  
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_rows_iters_register
     if (~rst_ni) begin
       x_rows_iters_q <= '0;
@@ -139,7 +146,7 @@ module redmule_memory_scheduler
 
     // Here we initialize the streamer source signals
     // for the W stream source
-    // In quantization mode this is used to load the scales instead 
+    // In quantization mode this is used to load the scales instead
     if (reg_file_i.hwpe_params[DEQUANT_MODE][0] == 1'b0) begin
       cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
       cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
@@ -222,7 +229,7 @@ module redmule_memory_scheduler
   always_comb begin : req_start_assignment
     cntrl_streamer_o.x_stream_source_ctrl.req_start     = (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start; 
+    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
     cntrl_streamer_o.gid_stream_source_ctrl.req_start   = '0; //FIXME
     cntrl_streamer_o.wq_stream_source_ctrl.req_start    = '0; //FIXME
@@ -234,4 +241,4 @@ module redmule_memory_scheduler
   assign cntrl_streamer_o.output_cast_src_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
   assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
 
-endmodule
+endmodule : redmule_memory_scheduler

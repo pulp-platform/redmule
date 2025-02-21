@@ -29,7 +29,7 @@ localparam int unsigned          TOT_DEPTH = H*D
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o ,
   input  logic                                      [DW-1:0] x_buffer_i ,
   input  logic                             [$clog2(D*H)-1:0] next_wrow_i,   //Tentative name
-  output logic                                               next_wrow_ready_o 
+  output logic                                               next_wrow_ready_o
 );
 
 typedef enum logic [2:0] {
@@ -108,7 +108,7 @@ redmule_x_pad_scm #(
 
 // Normally, we only write a row in the buffer when another one is read
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
-assign buf_write_en = ( current_state == FAST_FILL || 
+assign buf_write_en = ( current_state == FAST_FILL ||
                         current_state == FILL && ctrl_i.h_shift)
                       && ~refilling;
 
@@ -186,7 +186,7 @@ always_comb begin : fsm
           end
         end
       end
-    end 
+    end
   endcase
 end
 

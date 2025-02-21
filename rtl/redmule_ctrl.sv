@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: SHL-0.51
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
-// Andrea Belano <andrea.belano2@unibo.it> 
+// Andrea Belano <andrea.belano2@unibo.it>
 //
 
 import redmule_pkg::*;

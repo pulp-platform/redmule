@@ -33,9 +33,9 @@ sources:
     - rtl/redmule_castout.sv
     - rtl/redmule_streamer.sv
     - rtl/x_buffer/redmule_x_buffer.sv
-    - rtl/x_buffer/redmule_x_pad_scm.sv      
+    - rtl/x_buffer/redmule_x_pad_scm.sv
     - rtl/x_buffer/redmule_x_buffer_scm.sv
-    - rtl/w_buffer/redmule_w_buffer.sv      
+    - rtl/w_buffer/redmule_w_buffer.sv
     - rtl/w_buffer/redmule_w_buffer_scm.sv
     - rtl/z_buffer/redmule_z_buffer.sv
     - rtl/z_buffer/redmule_z_buffer_scm.sv
@@ -45,7 +45,6 @@ sources:
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
-    - rtl/redmule_fifo_scm.sv
     - rtl/redmule_memory_scheduler.sv
 
     - target: redmule_hwpe

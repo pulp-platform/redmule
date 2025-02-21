@@ -9,7 +9,7 @@ module redmule_x_buffer_scm #(
   parameter int unsigned WORD_SIZE = 32,
   parameter int unsigned WIDTH     = 1 ,
   parameter int unsigned HEIGHT    = 2 ,
-  parameter int unsigned N_OUTPUTS = 1 
+  parameter int unsigned N_OUTPUTS = 1
 ) (
   input  logic                                           clk_i        ,
   input  logic                                           rst_ni       ,
@@ -17,10 +17,10 @@ module redmule_x_buffer_scm #(
   input  logic [$clog2(N_OUTPUTS)+$clog2(HEIGHT)-1:0]    write_addr_i ,
   input  logic [WIDTH-1:0][WORD_SIZE-1:0]                wdata_i      ,
   input  logic                                           read_en_i    ,
-  input  logic [$clog2(N_OUTPUTS)+$clog2(HEIGHT)-1:0]    read_addr_i  ,  
-  output logic [N_OUTPUTS-1:0][WIDTH-1:0][WORD_SIZE-1:0] rdata_o      
+  input  logic [$clog2(N_OUTPUTS)+$clog2(HEIGHT)-1:0]    read_addr_i  ,
+  output logic [N_OUTPUTS-1:0][WIDTH-1:0][WORD_SIZE-1:0] rdata_o
 );
-  logic [HEIGHT-1:0][N_OUTPUTS-1:0][WIDTH-1:0][WORD_SIZE-1:0] buffer_q; 
+  logic [HEIGHT-1:0][N_OUTPUTS-1:0][WIDTH-1:0][WORD_SIZE-1:0] buffer_q;
   logic [WIDTH-1:0][WORD_SIZE-1:0]                            wdata_q;
   logic [N_OUTPUTS-1:0][$clog2(HEIGHT)-1:0]                   read_addr_q;
 
@@ -41,7 +41,7 @@ module redmule_x_buffer_scm #(
     end
   end
 
-  for (genvar o = 0; o < N_OUTPUTS; o++) begin : output_assignment
+  for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_output_assignment
     assign rdata_o[o] = buffer_q[read_addr_q[o]][o];
   end
 
@@ -79,4 +79,4 @@ module redmule_x_buffer_scm #(
     end
   end
 
-endmodule
+endmodule : redmule_x_buffer_scm
