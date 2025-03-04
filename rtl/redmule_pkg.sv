@@ -31,6 +31,8 @@ package redmule_pkg;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
   parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned ECC_CHUNK_SIZE = 32;
+  parameter int unsigned ECC_N_CHUNK    = DATA_W / ECC_CHUNK_SIZE;
 
 
   //Quantization parameters

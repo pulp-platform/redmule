@@ -5,6 +5,8 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+`include "hci_helpers.svh"
+
 module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
@@ -25,7 +27,8 @@ module redmule_top
   parameter int unsigned  Width              = ARRAY_WIDTH       , // Number of parallel rows
   parameter int unsigned  NumPipeRegs        = PIPE_REGS         , // Number of pipeline registers within each PE
   parameter pipe_config_t PipeConfig         = DISTRIBUTED       ,
-  parameter int unsigned  BITW               = fp_width(FpFormat)  // Number of bits for the given format
+  parameter int unsigned  BITW               = fp_width(FpFormat),  // Number of bits for the given format
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
@@ -42,7 +45,7 @@ module redmule_top
   hwpe_ctrl_intf_periph.slave periph,
 `endif
   // TCDM master ports for the memory side
-  hci_core_intf.master tcdm
+  hci_core_intf.initiator tcdm
 );
 
 localparam int unsigned DATAW_ALIGN = DATAW;
@@ -162,7 +165,8 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) zeros_buffer_fifo  ( .c
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW               )
+  .DW             ( DW                           ),
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i           ( clk_i           ),
   .rst_ni          ( rst_ni          ),
