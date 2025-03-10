@@ -82,7 +82,35 @@ hci_core_intf #(
 `endif
   .DW ( DW ),
   .UW ( UW )
-) ldst_tcdm [0:0] ( .clk ( clk_i ) );
+) ldst_tcdm ( .clk ( clk_i ) );
+
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
+`endif
+  .DW ( DW ),
+  .UW ( UW )
+) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
+
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
+`endif
+  .DW ( DW ),
+  .UW ( UW )
+) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
+
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
+`endif
+  .DW ( DW ),
+  .UW ( UW )
+) yz_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
   logic [ECC_N_CHUNK-1:0] data_single_err, data_multi_err;
@@ -97,40 +125,98 @@ if (EW > 1) begin : gen_ecc_encoder
     .r_data_multi_err_o  ( data_multi_err  ),
     .r_meta_single_err_o ( meta_single_err ),
     .r_meta_multi_err_o  ( meta_multi_err  ),
-    .tcdm_target         ( ldst_tcdm[0]    ),
+    .tcdm_target         ( ldst_tcdm       ),
     .tcdm_initiator      ( tcdm            )
   );
-
-  assign ecc_errors_o.data_single_err = data_single_err & {ECC_N_CHUNK{tcdm.r_valid}};
-  assign ecc_errors_o.data_multi_err  = data_multi_err  & {ECC_N_CHUNK{tcdm.r_valid}};
-  assign ecc_errors_o.meta_single_err = meta_single_err & (tcdm.req & tcdm.gnt);
-  assign ecc_errors_o.meta_multi_err  = meta_multi_err  & (tcdm.req & tcdm.gnt);
 end else begin : gen_ldst_assign
-  hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm [0]), .tcdm_initiator (tcdm) );
-  assign ecc_errors_o = '0;
+  hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm), .tcdm_initiator (tcdm) );
 end
 
-// Virtual internal TCDM interface splitting the upstream TCDM into two channels:
-// * Channel 0 - load channel (from TCDM to stream).
-// * Channel 1 - store channel (from stream to TCDM).
+// Virtual internal TCDM interface used by the y and z channels
+// * Channel 0 - y channel
+// * Channel 1 - z channel
 hci_core_intf #(
 `ifndef SYNTHESIS
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
+  .WAIVE_RQ3_ASSERT  ( 1'b1 ),
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
   .UW ( UW )
-) virt_tcdm [0:1] ( .clk ( clk_i ) );
+) yz_tcdm [0:1] ( .clk ( clk_i ) );
 
-hci_core_mux_dynamic #(
-  .NB_IN_CHAN          ( 2                          ),
-  .`HCI_SIZE_PARAM(in) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+// Virtual internal TCDM interface splitting the upstream TCDM
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
+  .WAIVE_RQ3_ASSERT  ( 1'b1 ),
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
+`endif
+  .DW ( DW ),
+  .UW ( UW )
+) virt_tcdm [0:NumStreamSources-1] ( .clk ( clk_i ) );
+
+
+hci_core_mux_ooo #(
+  .NB_CHAN              ( 2                          ),
+  .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_yz_mux            (
+  .clk_i              ( clk_i                ),
+  .rst_ni             ( rst_ni               ),
+  .clear_i            ( clear_i              ),
+  .priority_force_i   ( '1                   ),
+  .priority_i         ( {1'b1, 1'b0}         ), // The z channel always has priority over the y channel
+  .in                 ( yz_tcdm              ),
+  .out                ( yz_tcdm_pre_r_id     )
+);
+
+hci_core_r_id_filter #(
+  .`HCI_SIZE_PARAM(tcdm_target)   (   `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_yz_r_id_filter (
+  .clk_i          (   clk_i                      ),
+  .rst_ni         (   rst_ni                     ),
+  .clear_i        (   clear_i                    ),
+  .enable_i       (   1'b1                       ),
+  .tcdm_target    (   yz_tcdm_pre_r_id           ),
+  .tcdm_initiator (   virt_tcdm[YsourceStreamId] )
+);
+
+
+hci_core_mux_ooo #(
+  .NB_CHAN              ( NumStreamSources           ),
+  .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_ldst_mux          (
-  .clk_i              ( clk_i     ),
-  .rst_ni             ( rst_ni    ),
-  .clear_i            ( clear_i   ),
-  .in                 ( virt_tcdm ),
-  .out                ( ldst_tcdm )
+  .clk_i              ( clk_i                ),
+  .rst_ni             ( rst_ni               ),
+  .clear_i            ( clear_i              ),
+  .priority_force_i   ( '0                   ),
+  .priority_i         ( '0                   ),
+  .in                 ( virt_tcdm            ),
+  .out                ( ldst_tcdm_pre_r_id   )
+);
+
+hci_core_r_id_filter #(
+  .`HCI_SIZE_PARAM(tcdm_target)   (   `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_load_r_id_filter (
+  .clk_i          (   clk_i                 ),
+  .rst_ni         (   rst_ni                ),
+  .clear_i        (   clear_i               ),
+  .enable_i       (   1'b1                  ),
+  .tcdm_target    (   ldst_tcdm_pre_r_id    ),
+  .tcdm_initiator (   ldst_tcdm_pre_r_valid )
+);
+
+hci_core_r_valid_filter #(
+  .`HCI_SIZE_PARAM(tcdm_target)   ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_tcdm_r_valid_filter (
+    .clk_i          (  clk_i                 ),
+    .rst_ni         (  rst_ni                ),
+    .clear_i        (  clear_i               ),
+    .enable_i       (  1'b1                  ),
+    .tcdm_target    (  ldst_tcdm_pre_r_valid ),
+    .tcdm_initiator (  ldst_tcdm             )
 );
 
 /************************************ Store Channel *************************************/
@@ -138,7 +224,7 @@ hci_core_mux_dynamic #(
  * to an HCI core sink module that translates the stream into a TCDM protocol. This     *
  * sink module then connects to a cast unit to cast data from one FP format to another. *
  * The result of the cast unit enters a TCDM FIFO that eventually connects to the store *
- * side (virt_tcdm[1]) of the LD/ST multiplexer.                                        */
+ * side (virt_tcdm[NumStreamSources]) of the LD/ST multiplexer.                         */
 
 // Sink module that turns the incoming Z stream into TCDM.
 hci_core_intf #( .DW ( DW ),
@@ -224,8 +310,8 @@ hci_core_fifo #(
   .tcdm_initiator ( z_fifo_q )
 );
 
-// Assigning the store FIFO output to the store side of the LD/ST multiplexer.
-hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_tcdm[1]) );
+// Assigning the store FIFO output to the store side of the y/z multiplexer.
+hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (yz_tcdm[1]) );
 
 /**************************************** Load Channel ****************************************/
 /* The load channel of the streamer connects the incoming TCDM interface to three different   *
@@ -236,48 +322,27 @@ hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_
  * the output of the cast connects to a dedicated HCI core source unit used to translate the  *
  * incoming TCDM protocls into stream.                                                        */
 
-// Virtual TCDM interfaces (source type) for input matrices
-// X -> source[0]
-// W -> source[1]
-// Y -> source[2]
-hci_core_intf #(
-`ifndef SYNTHESIS
-    .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-    .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
-`endif
-  .DW ( DW ),
-  .UW ( UW )
-) source [0:NumStreamSources-1] ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) mux_tcdm [0:0] ( .clk ( clk_i ) );
-
-// Dynamic multiplexer splitting the TCDM-side interface into
-// X, W, and Y interfaces
-hci_core_mux_dynamic #(
-  .NB_IN_CHAN          ( NumStreamSources           ),
-  .`HCI_SIZE_PARAM(in) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_source_mux        (
-  .clk_i              ( clk_i            ),
-  .rst_ni             ( rst_ni           ),
-  .clear_i            ( clear_i          ),
-  .in                 ( source           ),
-  .out                ( virt_tcdm[0:0]   )
-);
+// Virtual TCDM interfaces
+// X   -> virt_tcdm[0]
+// W   -> virt_tcdm[1]
+// Y/Z -> virt_tcdm[2]
 
 // One TCDM FIFO and one HCI core source unit per stream channel.
 hci_core_intf #(
 `ifndef SYNTHESIS
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
   .UW ( UW )
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
-hci_core_intf #( 
+hci_core_intf #(
 `ifndef SYNTHESIS
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
   .UW ( UW )
@@ -287,6 +352,7 @@ hci_core_intf #(
 `ifndef SYNTHESIS
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
+  .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
   .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
@@ -307,10 +373,14 @@ assign source_ctrl[ZerossourceStreamId]  = ctrl_i.zeros_stream_source_ctrl;
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
-  hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (source[i]) );
+  if (i != YsourceStreamId) begin
+    hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (virt_tcdm[i]) );
+  end else begin
+    hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (yz_tcdm[0]) );
+  end
 
   hci_core_fifo #(
-    .FIFO_DEPTH  ( 4  ), // to avoid protocol violations, as the consumer has a throughput 
+    .FIFO_DEPTH  ( 4  ), // to avoid protocol violations, as the consumer has a throughput
                          // of 1 packet over 4 cycles, we need a depth of 4 elements.
     .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
   ) i_load_tcdm_fifo (

@@ -161,7 +161,6 @@ package redmule_pkg;
   typedef enum logic [1:0] { QINT_2=2'h0, QINT_4=2'h1, QINT_8=2'h2, QINT_3=2'h3 } qint_fmt_e;
 
   typedef struct packed {
-    logic d_shift;        // No longer used but kept here for the time being
     logic h_shift;
     logic load;
     logic pad_setup;

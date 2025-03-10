@@ -135,8 +135,7 @@ module redmule_memory_scheduler
     // for the X stream source
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
                                                                       + x_rows_offs_q + x_cols_offs_q;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;//(x_rows_lftovr_i == 0) ?
-                                                                    //W : x_rows_lftovr_i;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = 'd1;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = 'd0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;

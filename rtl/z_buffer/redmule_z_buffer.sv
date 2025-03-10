@@ -116,7 +116,9 @@ always_comb begin : fsm
   endcase
 end
 
-assign load_en  = current_state == EMPTY && ~ctrl_i.fill;
+// With very small leftovers on K it may happen that the z submatrix is completely stored before the current matrix of biases is fully pushed.
+// Therefore, we have to check that we are not in the process of pushing biases into the array before storing
+assign load_en  = current_state == EMPTY && ~ctrl_i.fill && d_index == '0;
 assign store_en = current_state == PUSHED;
 
 // Counter to track when the output buffer is full
@@ -175,13 +177,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
   end
 end
 
-// SMARTELLAMENTO  ---- Theoretically this should not break anything, consider it...
-// assign flags_o.loaded = current_state == EMPTY && w_index == ctrl_i.y_width-1 && ctrl_i.y_valid ||
-//                         current_state == LOADED;
-
-assign flags_o.loaded = current_state == LOADED;
-// assign flags_o.loaded = next_state == LOADED; // <-------- ORIGINAL
-
+assign flags_o.loaded = current_state == EMPTY && w_index == ctrl_i.y_width-1 && ctrl_i.y_valid ||
+                        current_state == LOADED;
 
 always_comb begin : reset_y_load_counter
   rst_w_load     = 1'b0;

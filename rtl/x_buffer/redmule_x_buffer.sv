@@ -33,9 +33,10 @@ localparam int unsigned          TOT_DEPTH = H*D
 );
 
 typedef enum logic [2:0] {
+  PRELOAD,
   FAST_FILL,
-  WAIT_BUF_NOT_FULL,
   WAIT_FIRST_READ,
+  WAIT_SHIFT,
   FILL,
   PAD_EMPTY
 } redmule_x_state_e;
@@ -118,22 +119,22 @@ redmule_x_buffer_scm #(
   .HEIGHT    ( 2    ),
   .N_OUTPUTS ( H    )
 ) i_x_buf (
-  .clk_i        ( clk_i                   ),
-  .rst_ni       ( rst_ni                  ),
-  .write_en_i   ( buf_write_en            ),
-  .write_addr_i ( {buf_w_addr, h_index_w} ),
-  .wdata_i      ( pad_read_cnt <= ctrl_i.height ? x_pad_q : '0                 ),
-  .read_en_i    ( ctrl_i.h_shift          ),
-  .read_addr_i  ( {buf_r_addr, h_index_r} ),
-  .rdata_o      ( x_buffer_q              )
+  .clk_i        ( clk_i                                        ),
+  .rst_ni       ( rst_ni                                       ),
+  .write_en_i   ( buf_write_en                                 ),
+  .write_addr_i ( {buf_w_addr, h_index_w}                      ),
+  .wdata_i      ( pad_read_cnt <= ctrl_i.height ? x_pad_q : '0 ),
+  .read_en_i    ( ctrl_i.h_shift                               ),
+  .read_addr_i  ( {buf_r_addr, h_index_r}                      ),
+  .rdata_o      ( x_buffer_q                                   )
 );
 
 always_ff @(posedge clk_i or negedge rst_ni) begin  : state_register
   if(~rst_ni) begin
-    current_state <= FAST_FILL;
+    current_state <= PRELOAD;
   end else begin
     if (clear_i) begin
-      current_state <= FAST_FILL;
+      current_state <= PRELOAD;
     end else begin
       current_state <= next_state;
     end
@@ -144,22 +145,36 @@ always_comb begin : fsm
   next_state = current_state;
 
   case (current_state)
-    FAST_FILL: begin
-      // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
-      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block)) begin
-        next_state = WAIT_FIRST_READ;
+    PRELOAD: begin
+      if (ctrl_i.pad_setup) begin
+        next_state = FAST_FILL;
       end
     end
 
-    WAIT_BUF_NOT_FULL: begin
-      if (h_index_r != '0) begin
-        next_state = WAIT_FIRST_READ;
+    FAST_FILL: begin
+      // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
+      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block)) begin
+        if (first_block) begin
+          next_state = WAIT_FIRST_READ;
+        end else begin
+          if (pad_read_cnt >= ctrl_i.slots) begin // There is nothing more to read inside the pad, we just have to assert the empty flag once we are read
+            next_state = WAIT_SHIFT;
+          end else begin
+            next_state = FILL;
+          end
+        end
       end
     end
 
     WAIT_FIRST_READ: begin
-      if (h_index_r == '0) begin
+      if (h_index_r == H-1 && ctrl_i.h_shift) begin
         next_state = FILL;
+      end
+    end
+
+    WAIT_SHIFT: begin // The pad is empty but we are waiting for the first h_shift to assert the empty flag
+      if (ctrl_i.h_shift) begin
+        next_state = PAD_EMPTY;
       end
     end
 
@@ -179,11 +194,7 @@ always_comb begin : fsm
         if (buf_write_cnt != '0 || ctrl_i.h_shift) begin
           next_state = FAST_FILL;
         end else begin
-          if (h_index_r == '0 && ~ctrl_i.h_shift) begin
-            next_state = FILL;
-          end else begin
-            next_state = WAIT_BUF_NOT_FULL;
-          end
+          next_state = FILL;
         end
       end
     end
@@ -220,7 +231,7 @@ end
 
 assign w_index_d = ctrl_i.load ? w_index_q + 1 : w_index_q;
 
-assign flags_o.full = w_index_d == ctrl_i.width;
+assign flags_o.full = w_index_q == ctrl_i.width;
 
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : pad_read_counter
@@ -238,7 +249,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : pad_read_counter
   end
 end
 
-assign pad_read_cnt_rst = (pad_read_cnt == ctrl_i.slots) && ctrl_i.h_shift;
+assign pad_read_cnt_rst = (pad_read_cnt >= ctrl_i.slots) && ctrl_i.h_shift;
 assign flags_o.empty    = pad_read_cnt_rst;
 
 // This counts the number of times we have to write the buffer to fill it during the FAST_FILL state
