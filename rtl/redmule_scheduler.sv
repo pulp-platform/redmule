@@ -16,7 +16,6 @@ module redmule_scheduler
   parameter  int unsigned Height      = ARRAY_HEIGHT  ,
   parameter  int unsigned Width       = ARRAY_WIDTH   ,
   parameter  int unsigned NumPipeRegs = PIPE_REGS     ,
-  parameter  int unsigned GID_WIDTH   = GROUP_ID_WIDTH,
   localparam int unsigned D           = TOT_DEPTH     ,
   localparam int unsigned H           = Height        ,
   localparam int unsigned W           = Width
@@ -171,9 +170,6 @@ module redmule_scheduler
 
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
 
-  assign cntrl_x_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
-  assign cntrl_x_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
-
   /******************************
    *     X Reload Control       *
    ******************************/
@@ -273,9 +269,6 @@ module redmule_scheduler
 
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine;
   assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
-
-  assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
-  assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
 
   /****************************
    * Y & Z Iteration counters *

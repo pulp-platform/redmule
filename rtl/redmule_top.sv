@@ -153,16 +153,6 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
-// GIDX streaming interface + GIDX FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_stream_d      ( .clk( clk_i ) );  //FIXME DATA WIDTH (?)
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_buffer_fifo   ( .clk( clk_i ) );
-
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) wq_stream_d    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) wq_buffer_fifo ( .clk( clk_i ) );
-
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) zeros_stream_d     ( .clk( clk_i ) );  //FIXME DATA WIDTH
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) zeros_buffer_fifo  ( .clk( clk_i ) );
-
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
   .DW             ( DW                           ),
@@ -178,9 +168,6 @@ redmule_streamer #(
   .x_stream_o      ( x_buffer_d      ),
   .w_stream_o      ( w_buffer_d      ),
   .y_stream_o      ( y_buffer_d      ),
-  .gidx_stream_o   ( gidx_stream_d   ),
-  .wq_stream_o     ( wq_stream_d     ),
-  .zeros_stream_o  ( zeros_stream_d  ),
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo   ),
   // Master TCDM interface ports for the memory side
@@ -237,9 +224,6 @@ hwpe_stream_fifo #(
   .pop_o          ( z_buffer_fifo )
 );
 
-//TEST FIXME!!!!!
-assign gidx_stream_d.ready = '0;
-
 // Valid/Ready assignment
 assign x_buffer_fifo.ready = x_buffer_ctrl.load;
 assign w_buffer_fifo.ready = w_buffer_flgs.w_ready;
@@ -247,48 +231,10 @@ assign w_buffer_fifo.ready = w_buffer_flgs.w_ready;
 assign y_buffer_fifo.ready = z_buffer_flgs.y_ready;
 
 assign z_buffer_q.valid    = z_buffer_flgs.z_valid;
-//assign z_buffer_q.strb     = '1; // Set this to '1 for now... //flgs_scheduler.z_strb;
 
 /*----------------------------------------------------------------*/
 /* |                          Buffers                           | */
 /*----------------------------------------------------------------*/
-
-
-hwpe_stream_intf_stream #( .DATA_WIDTH ( 32 ) ) wrow_d ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( 32 ) ) wrow_q ( .clk( clk_i ) );
-
-logic [4:0] order_counter;
-logic wrow_ready;
-
-always_ff @(posedge clk_i or negedge rst_ni) begin
-  if (~rst_ni) begin
-    order_counter <= 0;
-  end else begin
-    if (clear) begin
-      order_counter <= 0;
-    end else if (wrow_ready) begin
-      order_counter <= order_counter + 2;
-    end
-  end
-end
-
-assign wrow_d.valid = wrow_ready;
-assign wrow_d.data  = order_counter;
-assign wrow_d.strb  = '1;
-
-assign wrow_q.ready = w_buffer_ctrl.load;
-
-hwpe_stream_fifo #(
-  .DATA_WIDTH     ( 32      ),
-  .FIFO_DEPTH     ( Height )
-) i_wrow_fifo (
-  .clk_i          ( clk_i         ),
-  .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
-  .flags_o        (               ),
-  .push_i         ( wrow_d        ),
-  .pop_o          ( wrow_q        )
-);
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
 redmule_x_buffer #(
@@ -303,9 +249,7 @@ redmule_x_buffer #(
   .ctrl_i      ( x_buffer_ctrl      ),
   .flags_o     ( x_buffer_flgs      ),
   .x_buffer_o  ( x_buffer_q         ),
-  .x_buffer_i  ( x_buffer_fifo.data ),
-  .next_wrow_i ( order_counter      ),      //JUST FOR TESTING
-  .next_wrow_ready_o (wrow_ready    )
+  .x_buffer_i  ( x_buffer_fifo.data )
 );
 
 logic [Height-1:0][BITW-1:0] w_buffer_q;
@@ -320,8 +264,7 @@ redmule_w_buffer #(
   .ctrl_i      ( w_buffer_ctrl      ),
   .flags_o     ( w_buffer_flgs      ),
   .w_buffer_o  ( w_buffer_q         ),
-  .w_buffer_i  ( w_buffer_fifo.data ),
-  .next_gidx_i ( wrow_q.data &'b111 )      //JUST FOR TESTING
+  .w_buffer_i  ( w_buffer_fifo.data )
 );
 
 logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
@@ -456,7 +399,6 @@ redmule_memory_scheduler #(
   .rst_ni            ( rst_ni              ),
   .clear_i           ( clear               ),
   .reg_file_i        ( reg_file            ),
-  .current_gids_i    ( ),
   .flgs_streamer_i   ( flgs_streamer       ),
   .cntrl_scheduler_i ( cntrl_scheduler     ),
   .cntrl_streamer_o  ( cntrl_streamer      )
@@ -502,8 +444,7 @@ redmule_ctrl        #(
 redmule_scheduler #(
   .Height      ( Height         ),
   .Width       ( Width          ),
-  .NumPipeRegs ( NumPipeRegs    ),
-  .GID_WIDTH   ( GROUP_ID_WIDTH )
+  .NumPipeRegs ( NumPipeRegs    )
 ) i_scheduler (
   .clk_i             ( clk_i               ),
   .rst_ni            ( rst_ni              ),

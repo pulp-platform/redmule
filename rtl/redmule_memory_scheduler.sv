@@ -12,7 +12,6 @@ module redmule_memory_scheduler
   parameter int unsigned   DW   = DATAW,
   parameter int unsigned   W    = ARRAY_WIDTH,
   parameter int unsigned   H    = ARRAY_HEIGHT,
-  parameter int unsigned   GW   = GROUP_ID_WIDTH,
   parameter int unsigned   ELW  = BITW,
   localparam int unsigned  D    = TOT_DEPTH
 ) (
@@ -23,7 +22,6 @@ module redmule_memory_scheduler
   input  logic [31:0]           x_cols_offs_i    ,
   input  logic [31:0]           x_rows_offs_i    ,
   input  logic [$clog2(W):0]    x_rows_lftover_i ,
-  input  logic [D-1:0][GW-1:0]  current_gids_i   ,
   input  flgs_streamer_t        flgs_streamer_i  ,
   input  cntrl_scheduler_t      cntrl_scheduler_i,
   output cntrl_streamer_t       cntrl_streamer_o
@@ -145,27 +143,14 @@ module redmule_memory_scheduler
 
     // Here we initialize the streamer source signals
     // for the W stream source
-    // In quantization mode this is used to load the scales instead
-    if (reg_file_i.hwpe_params[DEQUANT_MODE][0] == 1'b0) begin
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[W_D0_STRIDE];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-    end else begin
-      //FIXME
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[W_D0_STRIDE];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
-      cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-    end
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[W_D0_STRIDE];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
 
     // Here we initialize the streamer source signals
     // for the Y stream source
@@ -188,41 +173,6 @@ module redmule_memory_scheduler
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-
-    // Here we initialize the streamer source signals
-    // for the GIDX stream source
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[GIDX_ADDR];
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN]/(DATAW/GW);
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16]/(DATAW/GW);
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.d0_stride = JMP;
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.d1_stride = '0;
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.gid_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b01;
-
-    //FIXME
-    // Here we initialize the streamer source signals
-    // for the Wq stream source
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.tot_len = '0;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.d0_stride = '0;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.wq_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-
-    //FIXME
-    // Here we initialize the streamer source signals
-    // for the Zeros stream source
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[ZEROS_ADDR];
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.tot_len = '0;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d0_len = W;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d0_stride = '0;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
   end
 
   always_comb begin : req_start_assignment
@@ -230,9 +180,6 @@ module redmule_memory_scheduler
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.gid_stream_source_ctrl.req_start   = '0; //FIXME
-    cntrl_streamer_o.wq_stream_source_ctrl.req_start    = '0; //FIXME
-    cntrl_streamer_o.zeros_stream_source_ctrl.req_start = '0; //FIXME
   end
 
   assign cntrl_streamer_o.input_cast_src_fmt  = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);

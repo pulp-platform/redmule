@@ -27,9 +27,7 @@ localparam int unsigned          TOT_DEPTH = H*D
   input  x_buffer_ctrl_t                                     ctrl_i     ,
   output x_buffer_flgs_t                                     flags_o    ,
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o ,
-  input  logic                                      [DW-1:0] x_buffer_i ,
-  input  logic                             [$clog2(D*H)-1:0] next_wrow_i,   //Tentative name
-  output logic                                               next_wrow_ready_o
+  input  logic                                      [DW-1:0] x_buffer_i
 );
 
 typedef enum logic [2:0] {
@@ -90,7 +88,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : refill_flag_register
 end
 
 assign pad_read_en   = buf_write_en || ctrl_i.pad_setup;
-assign pad_read_addr = ctrl_i.dequant ? next_wrow_i : ctrl_i.pad_setup ? '0 : pad_r_addr_d;
+assign pad_read_addr = ctrl_i.pad_setup ? '0 : pad_r_addr_d;
 
 redmule_x_pad_scm #(
   .WORD_SIZE ( BITW      ),

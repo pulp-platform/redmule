@@ -34,13 +34,6 @@ package redmule_pkg;
   parameter int unsigned ECC_CHUNK_SIZE = 32;
   parameter int unsigned ECC_N_CHUNK    = DATA_W / ECC_CHUNK_SIZE;
 
-
-  //Quantization parameters
-  parameter logic DEQUANT_EN      = 1; //This enables support for 2, 4, and 8-bit quantization
-  parameter logic DEQUANT_INT3_EN = 0; //Enable support for INT3 quantized weights (currently unsupported)
-
-  parameter int unsigned  GROUP_ID_WIDTH  = 16;
-
   // Register File mapping
   /**********************
   ** Slave RF indexing **
@@ -51,15 +44,9 @@ package redmule_pkg;
   parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
   parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
   // Matrix arithmetic config register
-  // [18:17] -> Quantized format
-  // [16]    -> Dequantization enable
   // [12:10] -> Operation selection
   // [ 9: 7] -> Input/Output format
   parameter int unsigned MACFG = 5; // 0x14
-  // Dequantization config registers
-  parameter int unsigned GIDX_ADDR_R   = 6; // 0x18
-  parameter int unsigned SCALES_ADDR_R = 7; // 0x1C
-  parameter int unsigned ZEROS_ADDR_R  = 8; // 0x20
   /**********************
   ** Final RF indexing **
   **********************/
@@ -97,13 +84,6 @@ package redmule_pkg;
   // [12:10] -> computing format
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 17; // 0x44
-  // One register is used for the dequantization parameters
-  // [2:1]   -> Quantized format
-  // [0:0]   -> Dequantization enable
-  parameter int unsigned DEQUANT_MODE = 18; // 0x48
-  parameter int unsigned GIDX_ADDR    = 19; // 0x4C
-  parameter int unsigned SCALES_ADDR  = 20; // 0x50
-  parameter int unsigned ZEROS_ADDR   = 21; // 0x54
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
   parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
@@ -123,13 +103,10 @@ package redmule_pkg;
     CSR_REDMULE_MACFG  = 12'h805
   } redmule_csr_num_e;
 
-  parameter int unsigned NumStreamSources     = 6; // X, W/scales, Y, gidx, wq, zeros
+  parameter int unsigned NumStreamSources     = 3; // X, W, Y
   parameter int unsigned XsourceStreamId      = 0;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
-  parameter int unsigned GIdxsourceStreamId   = 3;
-  parameter int unsigned WQsourceStreamId     = 4;
-  parameter int unsigned ZerossourceStreamId  = 5;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
@@ -139,9 +116,6 @@ package redmule_pkg;
     hci_package::hci_streamer_ctrl_t w_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t y_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t z_stream_sink_ctrl;
-    hci_package::hci_streamer_ctrl_t gid_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t wq_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t zeros_stream_source_ctrl;
     fpnew_pkg::fp_format_e           input_cast_src_fmt;
     fpnew_pkg::fp_format_e           input_cast_dst_fmt;
     fpnew_pkg::fp_format_e           output_cast_src_fmt;
@@ -153,19 +127,12 @@ package redmule_pkg;
     hci_package::hci_streamer_flags_t w_stream_source_flags;
     hci_package::hci_streamer_flags_t y_stream_source_flags;
     hci_package::hci_streamer_flags_t z_stream_sink_flags;
-    hci_package::hci_streamer_flags_t gid_stream_source_flags;
-    hci_package::hci_streamer_flags_t wq_stream_source_flags;
-    hci_package::hci_streamer_flags_t zeros_stream_source_flags;
   } flgs_streamer_t;
-
-  typedef enum logic [1:0] { QINT_2=2'h0, QINT_4=2'h1, QINT_8=2'h2, QINT_3=2'h3 } qint_fmt_e;
 
   typedef struct packed {
     logic h_shift;
     logic load;
     logic pad_setup;
-    logic                         dequant;
-    qint_fmt_e                    q_int_fmt;
     logic [$clog2(TOT_DEPTH):0]   width;
     logic [$clog2(ARRAY_WIDTH):0] height;
     logic [$clog2(TOT_DEPTH):0]   slots;
@@ -181,8 +148,6 @@ package redmule_pkg;
   typedef struct packed {
     logic                          shift;
     logic                          load;
-    logic                          dequant;
-    qint_fmt_e                     q_int_fmt;
     logic [$clog2(TOT_DEPTH):0]    width;
     logic [$clog2(ARRAY_HEIGHT):0] height;
   } w_buffer_ctrl_t;
@@ -207,7 +172,6 @@ package redmule_pkg;
   typedef struct packed {
     logic y_pushed;
     logic empty;
-    logic full;
     logic loaded;
     logic y_ready;
     logic z_valid;
@@ -271,9 +235,6 @@ package redmule_pkg;
     logic [31:0] x_addr;
     logic [31:0] w_addr;
     logic [31:0] z_addr;
-    logic [31:0] gidx_addr;
-    logic [31:0] scales_addr;
-    logic [31:0] zeros_addr;
     logic [15:0] m_size;
     logic [15:0] n_size;
     logic [15:0] k_size;
@@ -307,8 +268,6 @@ package redmule_pkg;
     fpu_fmt_e input_format;
     fpu_fmt_e computing_format;
     logic        gemm_selection;
-    logic        dequant_enable;
-    qint_fmt_e   q_int_fmt;
   } redmule_config_t;
 
   typedef enum {
