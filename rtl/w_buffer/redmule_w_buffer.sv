@@ -22,6 +22,7 @@ module redmule_w_buffer
   input  logic                             clk_i     ,
   input  logic                             rst_ni    ,
   input  logic                             clear_i   ,
+  input  logic                             clear_i   ,
   input  w_buffer_ctrl_t                   ctrl_i    ,
   output w_buffer_flgs_t                   flags_o   ,
   output logic           [H-1:0][BITW-1:0] w_buffer_o,
@@ -76,6 +77,7 @@ redmule_w_buffer_scm #(
 ) i_w_buf (
   .clk_i            ( clk_i           ),
   .rst_ni           ( rst_ni          ),
+  .clear_i          ( clear_i         ),
   .write_en_i       ( buf_write_en    ),
   .write_addr_i     ( buf_write_addr  ),
   .wdata_i          ( w_data          ),

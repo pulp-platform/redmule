@@ -42,10 +42,11 @@ module redmule_ctrl
   hwpe_ctrl_intf_periph.slave     periph
 );
 
-  logic        clear;
+  logic        clear, latch_clear;
   logic        tiler_setback, tiler_valid;
 
-  typedef enum logic [1:0] {
+  typedef enum logic [2:0] {
+    REDMULE_LATCH_RST,
     REDMULE_IDLE,
     REDMULE_STARTING,
     REDMULE_COMPUTING,
@@ -95,7 +96,7 @@ module redmule_ctrl
   // State register
   always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
     if(~rst_ni) begin
-       current <= REDMULE_IDLE;
+       current <= REDMULE_LATCH_RST;
     end else begin
       if (clear)
         current <= REDMULE_IDLE;
@@ -132,11 +133,16 @@ module redmule_ctrl
   assign flush_o                      = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
+  assign latch_clear                  = current == REDMULE_LATCH_RST;
 
   always_comb begin : controller_fsm
     next = current;
 
     case (current)
+      REDMULE_LATCH_RST: begin
+        next = REDMULE_IDLE;
+      end
+
       REDMULE_IDLE: begin
         if ((slave_start & tiler_valid) || test_mode_i) begin
           next = REDMULE_STARTING;
@@ -165,6 +171,6 @@ module redmule_ctrl
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_slave.evt[7:0];
-  assign clear_o = clear;
+  assign clear_o = clear || latch_clear;
 
 endmodule : redmule_ctrl

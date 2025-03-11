@@ -12,6 +12,7 @@ module redmule_z_buffer_scm #(
 ) (
   input  logic                           clk_i            ,
   input  logic                           rst_ni           ,
+  input  logic                           clear_i          ,
   input  logic                           row_write_en_i   ,
   input  logic                           col_write_en_i   ,
   input  logic [$clog2(ROWS)-1:0]        row_write_addr_i ,
@@ -38,7 +39,9 @@ module redmule_z_buffer_scm #(
     if(~rst_ni) begin
       col_read_addr_q <= '0;
     end else begin
-      if (col_read_en_i) begin
+      if (clear_i) begin
+        col_read_addr_q <= '0;
+      end else if (col_read_en_i) begin
         col_read_addr_q <= col_read_addr_i;
       end
     end
@@ -48,7 +51,9 @@ module redmule_z_buffer_scm #(
     if(~rst_ni) begin
       row_read_addr_q <= '0;
     end else begin
-      if (row_read_en_i) begin
+      if (clear_i) begin
+        row_read_addr_q <= '0;
+      end else if (row_read_en_i) begin
         row_read_addr_q <= row_read_addr_i;
       end
     end
@@ -66,7 +71,9 @@ module redmule_z_buffer_scm #(
     if(~rst_ni) begin
       row_wdata_q <= '0;
     end else begin
-      if (row_write_en_i) begin
+      if (clear_i) begin
+        row_wdata_q <= '0;
+      end else if (row_write_en_i) begin
         row_wdata_q <= row_wdata_i;
       end
     end
@@ -76,7 +83,9 @@ module redmule_z_buffer_scm #(
     if(~rst_ni) begin
       col_wdata_q <= '0;
     end else begin
-      if (col_write_en_i) begin
+      if (clear_i) begin
+        col_wdata_q <= '0;
+      end if (col_write_en_i) begin
         col_wdata_q <= col_wdata_i;
       end
     end
@@ -86,7 +95,9 @@ module redmule_z_buffer_scm #(
     if(~rst_ni) begin
       row_write_en_q <= '0;
     end else begin
-      if (col_write_en_i || row_write_en_i) begin
+      if (clear_i) begin
+        row_write_en_q <= '0;
+      end else if (col_write_en_i || row_write_en_i) begin
         row_write_en_q <= row_write_en_i;
       end
     end
@@ -95,10 +106,10 @@ module redmule_z_buffer_scm #(
   for (genvar r = 0; r < ROWS; r++) begin : gen_write_clock_gates
     for (genvar c = 0; c < COLS; c++) begin : gen_col_write_clock_gates
       tc_clk_gating i_rows_cg (
-        .clk_i     ( clk_i                                                                              ),
-        .en_i      ( row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i ),
-        .test_en_i ( '0                                                                                 ),
-        .clk_o     ( clk_w[r][c]                                                                        )
+        .clk_i     ( clk_i                                                                                         ),
+        .en_i      ( row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i || clear_i ),
+        .test_en_i ( '0                                                                                            ),
+        .clk_o     ( clk_w[r][c]                                                                                   )
       );
     end
   end

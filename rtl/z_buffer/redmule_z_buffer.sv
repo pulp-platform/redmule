@@ -54,6 +54,7 @@ redmule_z_buffer_scm #(
 ) i_z_buf (
   .clk_i            ( clk_i                     ),
   .rst_ni           ( rst_ni                    ),
+  .clear_i          ( clear_i                   ),
   .row_write_en_i   ( ctrl_i.fill               ),
   .col_write_en_i   ( load_en && ctrl_i.y_valid ),
   .row_write_addr_i ( fill_shift                ),

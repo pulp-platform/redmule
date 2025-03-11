@@ -13,6 +13,7 @@ module redmule_x_buffer_scm #(
 ) (
   input  logic                                           clk_i        ,
   input  logic                                           rst_ni       ,
+  input  logic                                           clear_i      ,
   input  logic                                           write_en_i   ,
   input  logic [$clog2(N_OUTPUTS)+$clog2(HEIGHT)-1:0]    write_addr_i ,
   input  logic [WIDTH-1:0][WORD_SIZE-1:0]                wdata_i      ,
@@ -34,7 +35,9 @@ module redmule_x_buffer_scm #(
       if(~rst_ni) begin
         read_addr_q[o] <= '0;
       end else begin
-        if (read_en_i && read_addr_i[$clog2(N_OUTPUTS)-1:0] == o) begin
+        if (clear_i) begin
+          read_addr_q[o] <= '0;
+        end if (read_en_i && read_addr_i[$clog2(N_OUTPUTS)-1:0] == o) begin
           read_addr_q[o] <= read_addr_i[$clog2(N_OUTPUTS)+:$clog2(HEIGHT)];
         end
       end
@@ -49,7 +52,9 @@ module redmule_x_buffer_scm #(
     if(~rst_ni) begin
       wdata_q <= '0;
     end else begin
-      if (write_en_i) begin
+      if (clear_i) begin
+        wdata_q <= '0;
+      end if (write_en_i) begin
         wdata_q <= wdata_i;
       end
     end
@@ -61,10 +66,10 @@ module redmule_x_buffer_scm #(
   for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots_cg
     for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows_cg
       tc_clk_gating i_row_cg (
-        .clk_i     ( clk_i                                             ),
-        .en_i      ( row_w_addr == o && slot_w_addr == h && write_en_i ),
-        .test_en_i ( '0                                                ),
-        .clk_o     ( clk_w[h][o]                                       )
+        .clk_i     ( clk_i                                                        ),
+        .en_i      ( row_w_addr == o && slot_w_addr == h && write_en_i || clear_i ),
+        .test_en_i ( '0                                                           ),
+        .clk_o     ( clk_w[h][o]                                                  )
       );
     end
   end
