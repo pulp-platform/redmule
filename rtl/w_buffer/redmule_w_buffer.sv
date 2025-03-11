@@ -21,7 +21,6 @@ module redmule_w_buffer
   input  logic                             clk_i     ,
   input  logic                             rst_ni    ,
   input  logic                             clear_i   ,
-  input  logic                             clear_i   ,
   input  w_buffer_ctrl_t                   ctrl_i    ,
   output w_buffer_flgs_t                   flags_o   ,
   output logic           [H-1:0][BITW-1:0] w_buffer_o,
