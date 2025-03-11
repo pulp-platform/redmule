@@ -97,6 +97,7 @@ redmule_x_pad_scm #(
 ) i_x_pad (
   .clk_i        ( clk_i         ),
   .rst_ni       ( rst_ni        ),
+  .clear_i      ( clear_i       ),
   .write_en_i   ( ctrl_i.load   ),
   .write_addr_i ( w_index_q     ),
   .wdata_i      ( x_buffer_i    ),
@@ -119,6 +120,7 @@ redmule_x_buffer_scm #(
 ) i_x_buf (
   .clk_i        ( clk_i                                        ),
   .rst_ni       ( rst_ni                                       ),
+  .clear_i      ( clear_i                                      ),
   .write_en_i   ( buf_write_en                                 ),
   .write_addr_i ( {buf_w_addr, h_index_w}                      ),
   .wdata_i      ( pad_read_cnt <= ctrl_i.height ? x_pad_q : '0 ),
