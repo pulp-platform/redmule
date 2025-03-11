@@ -42,13 +42,8 @@ logic [D-1:0][BITW-1:0]        w_data;
 logic [H-1:0][$clog2(H)-1:0]   buffer_r_addr_d, buffer_r_addr_q;
 logic [H-1:0]                  buffer_r_addr_valid_d, buffer_r_addr_valid_q;
 
-logic [H-1:0][$clog2(D/(PIPE_REGS+1))-1:0]   usage_counter_q;
-logic [$clog2(H)-1:0]                        evict_pointer;
-
 logic                 buf_write_en;
 logic [$clog2(H)-1:0] buf_write_addr;
-
-logic [H-1:0][$clog2(N_REGS+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
 
 for (genvar d = 0; d < D; d++) begin : gen_zero_padding
   assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;

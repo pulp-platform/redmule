@@ -53,7 +53,6 @@ logic                           pad_read_cnt_rst;
 logic [$clog2(2*H):0]           buf_write_cnt;
 
 logic                           pad_read_en,
-                                buf_read_en,
                                 buf_write_en;
 
 logic [$clog2(TOT_DEPTH)-1:0]   pad_read_addr;

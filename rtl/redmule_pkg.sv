@@ -153,7 +153,6 @@ package redmule_pkg;
   } w_buffer_ctrl_t;
 
   typedef struct packed {
-    logic [ARRAY_HEIGHT-1:0] empty;
     logic                    w_ready;
   } w_buffer_flgs_t;
 
@@ -203,26 +202,13 @@ package redmule_pkg;
   } flgs_engine_t;
 
   typedef struct packed {
-    logic start_fsm;
     logic first_load;
-    logic engine_working;
-    logic storing;
     logic rst;
     logic finished;
-    logic done;
   } cntrl_scheduler_t;
 
   typedef struct packed {
-    logic            y_push_enable;
-    logic            x_ready;
-    logic            w_ready;
-    logic            y_ready;
-    logic            z_valid;
-    logic            x_full;
     logic            w_loaded;
-    logic            w_shift;
-    logic            stored;
-    logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
 
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;

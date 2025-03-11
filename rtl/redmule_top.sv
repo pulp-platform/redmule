@@ -50,24 +50,9 @@ module redmule_top
 
 localparam int unsigned DATAW_ALIGN = DATAW;
 
-logic                       fsm_z_clk_en, ctrl_z_clk_en;
 logic                       enable, clear;
-logic                       y_buffer_depth_count,
-                            y_buffer_load,
-                            z_buffer_fill,
-                            z_buffer_store;
-logic                       w_shift;
-logic                       w_load;
-logic                       reg_enable,
-                            gate_en;
+logic                       reg_enable;
 logic                       start_cfg, cfg_complete;
-logic [31:0]                x_cols_offs,
-                            x_rows_offs;
-logic [$clog2(Width):0]     x_rows_lftover;
-logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
-                            y_cols_lftovr;
-logic [$clog2(Height):0]    w_rows_lftovr;
-logic [$clog2(Width):0]     y_rows_lftovr;
 
 `ifdef TARGET_REDMULE_HWPE
   /* If there is no Xif we directly plug the

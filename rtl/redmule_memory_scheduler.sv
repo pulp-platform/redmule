@@ -19,9 +19,6 @@ module redmule_memory_scheduler
   input  logic                  rst_ni           ,
   input  logic                  clear_i          ,
   input  ctrl_regfile_t         reg_file_i       ,
-  input  logic [31:0]           x_cols_offs_i    ,
-  input  logic [31:0]           x_rows_offs_i    ,
-  input  logic [$clog2(W):0]    x_rows_lftover_i ,
   input  flgs_streamer_t        flgs_streamer_i  ,
   input  cntrl_scheduler_t      cntrl_scheduler_i,
   output cntrl_streamer_t       cntrl_streamer_o
@@ -37,8 +34,6 @@ module redmule_memory_scheduler
   logic [15:0]        w_iters_d, w_iters_q;
 
   logic [15:0]        tot_x_read_d, tot_x_read_q;
-
-  logic [$clog2(W):0] x_rows_lftover_d, x_rows_lftover_q;
 
   logic [$clog2(W):0] num_x_reads;
 
