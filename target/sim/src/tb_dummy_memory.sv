@@ -23,6 +23,8 @@ module tb_dummy_memory
   input  logic                randomize_i,
   input  logic                enable_i,
   input  logic                stallable_i,
+  input  logic                init_i,
+  input  logic         [31:0] memory_init [MEMORY_SIZE],
   hwpe_stream_intf_tcdm.slave tcdm [MP-1:0]
 );
 
@@ -60,7 +62,7 @@ module tb_dummy_memory
   generate
 
     for(genvar i=0; i<MP; i++) begin
-      
+
       assign tcdm_gnt[i] = (probs[i] < PROB_STALL) & stallable_i ? 1'b0 : 1'b1;
     end
 
@@ -73,13 +75,6 @@ module tb_dummy_memory
       assign tcdm[ii].gnt     = tcdm_gnt [ii] & tcdm_req [ii];
       assign tcdm[ii].r_data  = tcdm_r_data  [ii];
       assign tcdm[ii].r_valid = tcdm_r_valid [ii];
-    end
-
-    always_ff @(posedge clk_i)
-    begin
-      if(randomize_i)
-        for(int i=0; i<MEMORY_SIZE; i++)
-          memory[i] = $random();
     end
 
   endgenerate
@@ -102,6 +97,18 @@ module tb_dummy_memory
       tcdm_r_data_int <= '0;
       tcdm_r_valid_int <= '0;
     end else begin
+      if(randomize_i) begin
+        for(int i = 0; i < MEMORY_SIZE; i++)
+          memory[i] <= $random();
+      end else if (init_i) begin
+        memory <= memory_init;
+      end else begin
+        for (int i=0; i<MP; i++) begin
+          if (tcdm_gnt[i] & ~tcdm_wen[i])
+            memory[(tcdm_add[i]-BASE_ADDR) >> 2] <= write_data [i];
+        end
+      end
+
       for (int i=0; i<MP; i++) begin
         if ((tcdm_req[i] & enable_i) == 1'b0) begin
           tcdm_r_data_int  [i] <= '0;
@@ -115,7 +122,6 @@ module tb_dummy_memory
           end
           // write
           else if (tcdm_gnt[i] & ~tcdm_wen[i]) begin
-            memory[(tcdm_add[i]-BASE_ADDR) >> 2] <= write_data [i];
             tcdm_r_data_int  [i] <= write_data [i];
             tcdm_r_valid_int [i] <= 1'b1;
           end

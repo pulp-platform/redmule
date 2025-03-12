@@ -183,6 +183,11 @@ module redmule_tb
     .periph_r_id_o      ( periph_r_id        )
   );
 
+  logic [31:0] data_memory [MEMORY_SIZE];
+  logic [31:0] inst_memory [MEMORY_SIZE];
+  logic [31:0] stck_memory [STACK_MEMORY_SIZE];
+  for (genvar i = 0; i < STACK_MEMORY_SIZE; i++) assign stck_memory[i] = 32'h0;
+  logic memory_init;
   tb_dummy_memory  #(
     .MP             ( MP + 1        ),
     .MEMORY_SIZE    ( MEMORY_SIZE   ),
@@ -198,6 +203,8 @@ module redmule_tb
     .randomize_i    ( 1'b0          ),
     .enable_i       ( 1'b1          ),
     .stallable_i    ( 1'b1          ),
+    .init_i         ( memory_init   ),
+    .memory_init    ( data_memory   ),
     .tcdm           ( tcdm          )
   );
 
@@ -216,6 +223,8 @@ module redmule_tb
     .randomize_i    ( 1'b0        ),
     .enable_i       ( 1'b1        ),
     .stallable_i    ( 1'b0        ),
+    .init_i         ( memory_init ),
+    .memory_init    ( inst_memory ),
     .tcdm           ( instr       )
   );
 
@@ -234,6 +243,8 @@ module redmule_tb
     .randomize_i         ( 1'b0              ),
     .enable_i            ( 1'b1              ),
     .stallable_i         ( 1'b0              ),
+    .init_i              ( 1'b0              ),
+    .memory_init         ( stck_memory       ),
     .tcdm                ( stack             )
   );
 
@@ -298,18 +309,23 @@ module redmule_tb
   logic start;
   int cnt_rd, cnt_wr;
 
-  int errors = -1;
-  always_ff @(posedge clk_i)
-  begin
-    if((data_addr == 32'h80000000 ) && (data_we & data_req == 1'b1)) begin
-      errors = data_wdata;
-    end
-    if((data_addr == 32'h80000004 ) && (data_we & data_req == 1'b1)) begin
-      $write("%c", data_wdata);
+  logic [31:0] errors;
+  always_ff @(posedge clk_i, negedge rst_ni) begin
+    if (~rst_ni) begin
+      errors <= '0;
+    end else begin
+      if((data_addr == 32'h80000000 ) && (data_we & data_req == 1'b1)) begin
+        errors = data_wdata;
+      end
+      if((data_addr == 32'h80000004 ) && (data_we & data_req == 1'b1)) begin
+        $write("%c", data_wdata);
+      end
     end
   end
 
   initial begin
+
+    memory_init = 1'b0; @(posedge clk_i);
 
     if (!$value$plusargs("STIM_INSTR=%s", stim_instr)) stim_instr = "../../../sw/build/stim_instr.txt";
     if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
@@ -318,8 +334,10 @@ module redmule_tb
     core_boot_addr = 32'h1C000084;
 
     // Load instruction and data memory
-    $readmemh(stim_instr, redmule_tb.i_dummy_imemory.memory);
-    $readmemh(stim_data,  redmule_tb.i_dummy_dmemory.memory);
+    memory_init = 1'b1; @(posedge clk_i);
+    $readmemh(stim_instr, inst_memory);
+    $readmemh(stim_data,  data_memory);
+    memory_init = 1'b1; @(posedge clk_i);
 
     // End: WFI + returned != -1 signals end-of-computation
     while(~core_sleep || errors==-1) @(posedge clk_i);
