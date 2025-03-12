@@ -81,7 +81,7 @@ module redmule_memory_scheduler
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : tot_x_read_register
     if (~rst_ni) begin
-      x_rows_iters_q <= '0;
+      tot_x_read_q <= '0;
     end else begin
       if (clear_i) begin
         tot_x_read_q <= '0;
