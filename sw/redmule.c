@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "redmule_utils.h"
 #include "archi_redmule.h"
+#include "tensor_dim.h"
 #include "hal_redmule.h"
 
 #include "x_input.h"
