@@ -41,7 +41,7 @@ typedef enum logic [2:0] {
   PAD_EMPTY
 } redmule_x_state_e;
 
-logic [$clog2(W)-1:0]           w_index_d, w_index_q;
+logic [$clog2(W):0]             w_index_d, w_index_q;
 logic [$clog2(H)-1:0]           h_index_r, h_index_w;
 logic [W-1:0][BITW-1:0]         x_pad_q;
 logic [H-1:0][W-1:0][BITW-1:0]  x_buffer_q;
@@ -97,15 +97,15 @@ redmule_x_pad_scm #(
   .ROWS      ( W         ),
   .COLS      ( TOT_DEPTH )
 ) i_x_pad (
-  .clk_i        ( clk_i         ),
-  .rst_ni       ( rst_ni        ),
-  .clear_i      ( clear_i       ),
-  .write_en_i   ( ctrl_i.load   ),
-  .write_addr_i ( w_index_q     ),
-  .wdata_i      ( x_buffer_i    ),
-  .read_en_i    ( pad_read_en   ),
-  .read_addr_i  ( pad_read_addr ),
-  .rdata_o      ( x_pad_q       )
+  .clk_i        ( clk_i                     ),
+  .rst_ni       ( rst_ni                    ),
+  .clear_i      ( clear_i                   ),
+  .write_en_i   ( ctrl_i.load               ),
+  .write_addr_i ( w_index_q [$clog2(W)-1:0] ),
+  .wdata_i      ( x_buffer_i                ),
+  .read_en_i    ( pad_read_en               ),
+  .read_addr_i  ( pad_read_addr             ),
+  .rdata_o      ( x_pad_q                   )
 );
 
 // Normally, we only write a row in the buffer when another one is read
@@ -155,11 +155,13 @@ always_comb begin : fsm
 
     FAST_FILL: begin
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
-      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block)) begin
-        if (first_block) begin
+      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
+        if (pad_read_cnt == ctrl_i.slots) begin
+          next_state = PAD_EMPTY;
+        end else if (first_block) begin
           next_state = WAIT_FIRST_READ;
         end else begin
-          if (pad_read_cnt >= ctrl_i.slots) begin // There is nothing more to read inside the pad, we just have to assert the empty flag once we are read
+          if (pad_read_cnt == ctrl_i.slots) begin // There is nothing more to read inside the pad, we just have to assert the empty flag once we are read
             next_state = WAIT_SHIFT;
           end else begin
             next_state = FILL;
