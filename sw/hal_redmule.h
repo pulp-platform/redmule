@@ -8,8 +8,6 @@
 #ifndef __HAL_REDMULE_H__
 #define __HAL_REDMULE_H__
 
-#include "tensor_dim.h"
-
 /* LOW-LEVEL HAL */
 #define REDMULE_ADDR_BASE REDMULE_BASE_ADD
 #define REDMULE_ADDR_SPACE 0x00000100
