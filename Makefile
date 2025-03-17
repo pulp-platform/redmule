@@ -120,10 +120,10 @@ dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
 OP     ?= gemm
-fp_fmt ?= FP16
-M      ?= 12
-N      ?= 16
-K      ?= 16
+fp_fmt ?= FP32
+M      ?= 4
+N      ?= 4
+K      ?= 4
 
 golden: golden-clean
 	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)

@@ -1,0 +1,5 @@
+golden-model/venv
+golden-model/gemm
+golden-model/matmul
+golden-model/FP32/net_parameters.h
+sw/inc
