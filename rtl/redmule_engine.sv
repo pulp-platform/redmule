@@ -29,8 +29,6 @@ module redmule_engine
   input  logic                    [W-1:0]       [BITW-1:0] y_bias_i           ,
   // Output Result
   output logic                    [W-1:0]       [BITW-1:0] z_output_o         , // Outputs computations
-  // Control signal for successive accumulations
-  input  logic                                             accumulate_i       ,
   // fpnew_fma Input Signals
   input  logic                    [2:0]                    fma_is_boxed_i     ,
   input  logic                    [1:0]                    noncomp_is_boxed_i ,
@@ -119,7 +117,7 @@ generate
     // In case input matrix is bigger than the array, we feedback the partial results to continue the computation
     always_comb begin : partial_product_feedback
       feedback[index] = y_bias_i[index];
-      if (accumulate_i)
+      if (ctrl_engine_i.accumulate)
         feedback[index] = result[index];
       else
         feedback[index] = y_bias_i[index];

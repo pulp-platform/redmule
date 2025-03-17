@@ -152,9 +152,13 @@ hwpe_ctrl_seq_mult #(
 
 // Calculate x_buffer_slots
 logic [31:0] buffer_slots;
-assign buffer_slots = config_d.x_cols_lftovr/(DATAW/(ARRAY_HEIGHT*BITW));
-assign config_d.x_buffer_slots = (config_d.x_cols_lftovr % (DATAW/(ARRAY_HEIGHT*BITW)) != '0) ? buffer_slots + 1 :
-                                                                                                buffer_slots;
+//assign buffer_slots = config_d.x_cols_lftovr/(DATAW/(ARRAY_HEIGHT*BITW));
+//assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % (DATAW/(ARRAY_HEIGHT*BITW)) != '0) ? buffer_slots + 1 :
+//                                                                                                buffer_slots) * (DATAW/(ARRAY_HEIGHT*BITW));
+
+assign buffer_slots = config_d.x_cols_lftovr/ARRAY_HEIGHT;
+assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % ARRAY_HEIGHT != '0) ? buffer_slots + 1 :
+                                                                                                buffer_slots) * ARRAY_HEIGHT;
 
 // Calculating the number of total stores
 assign config_d.tot_stores = x_rows_by_w_cols_iter[15:0];
