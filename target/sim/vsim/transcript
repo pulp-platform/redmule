@@ -1,0 +1,193 @@
+# vsim redmule_tb_wrap_opt -c -suppress 3009 -do "run -a" 
+# Start time: 15:07:09 on Mar 18,2025
+# //  Questa Sim-64
+# //  Version 2023.4 linux_x86_64 Oct  9 2023
+# //
+# //  Copyright 1991-2023 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.fpnew_pkg(fast)
+# Loading work.hwpe_stream_package(fast)
+# Loading work.hci_package(fast)
+# Loading work.redmule_pkg(fast)
+# Loading work.redmule_tb_wrap(fast)
+# Loading work.redmule_tb_sv_unit(fast)
+# Loading work.redmule_tb(fast)
+# Loading work.hwpe_ctrl_package(fast)
+# Loading work.redmule_wrap(fast)
+# Loading work.hci_core_intf(fast__1)
+# Loading work.hwpe_ctrl_intf_periph(fast__1)
+# Loading work.redmule_top(fast)
+# Loading work.hwpe_stream_intf_stream(fast__1)
+# Loading work.hwpe_stream_intf_stream(fast__2)
+# Loading work.hwpe_stream_intf_stream(fast__3)
+# Loading work.redmule_streamer(fast)
+# Loading work.hci_core_intf(fast__2)
+# Loading work.hci_core_intf(fast__3)
+# Loading work.hci_core_assign(fast)
+# Loading work.hci_core_mux_ooo(fast)
+# Loading work.hci_core_r_id_filter(fast)
+# Loading work.hci_core_mux_ooo(fast__1)
+# Loading work.hci_core_r_id_filter(fast__1)
+# Loading work.hci_core_r_valid_filter(fast)
+# Loading work.hci_core_intf(fast__5)
+# Loading work.hci_core_sink(fast)
+# Loading work.hwpe_stream_intf_stream(fast__4)
+# Loading work.hwpe_stream_intf_stream(fast__5)
+# Loading work.hci_core_intf(fast__6)
+# Loading work.hwpe_stream_addressgen_v3_sv_unit(fast)
+# Loading work.hwpe_stream_addressgen_v3(fast)
+# Loading work.hwpe_stream_fifo_sv_unit(fast)
+# Loading work.hwpe_stream_fifo(fast)
+# Loading work.hci_core_assign(fast__1)
+# Loading work.hci_core_intf(fast__7)
+# Loading work.hci_core_intf(fast__8)
+# Loading work.redmule_castout_sv_unit(fast)
+# Loading work.redmule_castout(fast)
+# Loading work.fpnew_cast_multi(fast)
+# Loading work.fpnew_classifier(fast)
+# Loading work.fpnew_classifier(fast__1)
+# Loading work.fpnew_classifier(fast__2)
+# Loading work.cf_math_pkg(fast)
+# Loading work.lzc(fast)
+# Loading work.fpnew_rounding(fast)
+# Loading work.hci_core_fifo(fast)
+# Loading work.hwpe_stream_intf_stream(fast__6)
+# Loading work.hwpe_stream_intf_stream(fast__7)
+# Loading work.hwpe_stream_intf_stream(fast__8)
+# Loading work.hwpe_stream_intf_stream(fast__9)
+# Loading work.hwpe_stream_fifo(fast__1)
+# Loading work.hwpe_stream_fifo(fast__2)
+# Loading work.hci_core_assign(fast__2)
+# Loading work.hci_core_assign(fast__3)
+# Loading work.hci_core_fifo(fast__1)
+# Loading work.hwpe_stream_fifo(fast__3)
+# Loading work.hwpe_stream_fifo(fast__4)
+# Loading work.redmule_castin_sv_unit(fast)
+# Loading work.redmule_castin(fast)
+# Loading work.hci_core_source(fast)
+# Loading work.hwpe_stream_intf_stream(fast__10)
+# Loading work.hwpe_stream_intf_stream(fast__11)
+# Loading work.hwpe_stream_addressgen_v3(fast__1)
+# Loading work.hwpe_stream_fifo(fast__5)
+# Loading work.hwpe_stream_intf_stream(fast__12)
+# Loading work.hwpe_stream_intf_stream(fast__13)
+# Loading work.hwpe_stream_fifo(fast__6)
+# Loading work.hwpe_stream_assign_sv_unit(fast)
+# Loading work.hwpe_stream_assign(fast)
+# Loading work.hwpe_stream_fifo(fast__7)
+# Loading work.hwpe_stream_fifo(fast__8)
+# Loading work.redmule_x_buffer(fast)
+# Loading work.redmule_x_pad_scm(fast)
+# Loading work.tc_clk_gating(fast)
+# Loading work.redmule_x_buffer_scm(fast)
+# Loading work.redmule_w_buffer(fast)
+# Loading work.redmule_w_buffer_scm(fast)
+# Loading work.redmule_z_buffer(fast)
+# Loading work.redmule_z_buffer_scm(fast)
+# Loading work.redmule_engine(fast)
+# Loading work.redmule_row(fast)
+# Loading work.redmule_ce(fast)
+# Loading work.cluster_clock_gating(fast)
+# Loading work.redmule_noncomp(fast)
+# Loading work.fpnew_classifier(fast__3)
+# Loading work.redmule_fma(fast)
+# Loading work.fpnew_classifier(fast__4)
+# Loading work.lzc(fast__1)
+# Loading work.fpnew_rounding(fast__1)
+# Loading work.redmule_noncomp(fast__1)
+# Loading work.redmule_memory_scheduler(fast)
+# Loading work.redmule_ctrl_sv_unit(fast)
+# Loading work.redmule_ctrl(fast)
+# Loading work.hwpe_ctrl_slave(fast)
+# Loading work.hwpe_ctrl_regfile(fast)
+# Loading work.hwpe_ctrl_regfile_latch_test_wrap(fast)
+# Loading work.hwpe_ctrl_regfile_ff(fast)
+# Loading work.redmule_tiler(fast)
+# Loading work.hwpe_ctrl_seq_mult(fast)
+# Loading work.hwpe_ctrl_seq_mult(fast__1)
+# Loading work.redmule_scheduler(fast)
+# Loading work.tb_dummy_memory(fast)
+# Loading work.tb_dummy_memory(fast__1)
+# Loading work.tb_dummy_memory(fast__2)
+# Loading work.cv32e40p_pkg(fast)
+# Loading work.cv32e40p_apu_core_pkg(fast)
+# Loading work.cv32e40p_core(fast)
+# Loading work.cv32e40p_sleep_unit(fast)
+# Loading work.cv32e40p_clock_gate(fast)
+# Loading work.cv32e40p_if_stage(fast)
+# Loading work.cv32e40p_prefetch_buffer(fast)
+# Loading work.cv32e40p_prefetch_controller(fast)
+# Loading work.cv32e40p_fifo(fast)
+# Loading work.cv32e40p_obi_interface(fast)
+# Loading work.cv32e40p_aligner(fast)
+# Loading work.cv32e40p_compressed_decoder(fast)
+# Loading work.cv32e40p_fpu_pkg(fast)
+# Loading work.cv32e40p_id_stage(fast)
+# Loading work.cv32e40p_register_file(fast)
+# Loading work.cv32e40p_decoder(fast)
+# Loading work.cv32e40p_controller(fast)
+# Loading work.cv32e40p_int_controller(fast)
+# Loading work.cv32e40p_hwloop_regs(fast)
+# Loading work.cv32e40p_ex_stage(fast)
+# Loading work.cv32e40p_alu(fast)
+# Loading work.cv32e40p_popcnt(fast)
+# Loading work.cv32e40p_ff_one(fast)
+# Loading work.cv32e40p_alu_div(fast)
+# Loading work.cv32e40p_mult(fast)
+# Loading work.cv32e40p_load_store_unit(fast)
+# Loading work.cv32e40p_obi_interface(fast__1)
+# Loading work.cv32e40p_cs_registers(fast)
+# Loading work.hwpe_stream_intf_tcdm(fast__1)
+# Loading work.hci_core_intf(fast__4)
+# Loading work.hci_core_intf(fast__9)
+# Loading work.hci_core_intf(fast__10)
+# run -a
+# Triggering accelerator and going to sleep...
+# ** Warning: HCI RQ-3 STABILITY protocol violation!          1
+#    Time: 701001 ps Started: 701001 ps  Scope: redmule_tb_wrap.i_redmule_tb.i_redmule_wrap.i_redmule_top.i_streamer.yz_tcdm_pre_r_id.HCI_RQ3 File: /scratch/ope_pagonis/redmule-ope/.bender/git/checkouts/hci-5afd8126f874b49f/rtl/common/hci_interfaces.sv Line: 194
+# ** Warning: HCI RQ-3 STABILITY protocol violation!          1
+#    Time: 701001 ps Started: 701001 ps  Scope: redmule_tb_wrap.i_redmule_tb.i_redmule_wrap.i_redmule_top.i_streamer.z_fifo_q.HCI_RQ3 File: /scratch/ope_pagonis/redmule-ope/.bender/git/checkouts/hci-5afd8126f874b49f/rtl/common/hci_interfaces.sv Line: 194
+# ** Warning: HCI RQ-3 STABILITY protocol violation!          1
+#    Time: 702001 ps Started: 702001 ps  Scope: redmule_tb_wrap.i_redmule_tb.i_redmule_wrap.i_redmule_top.i_streamer.z_fifo_d.HCI_RQ3 File: /scratch/ope_pagonis/redmule-ope/.bender/git/checkouts/hci-5afd8126f874b49f/rtl/common/hci_interfaces.sv Line: 194
+# ** Warning: HCI RQ-3 STABILITY protocol violation!          1
+#    Time: 704001 ps Started: 704001 ps  Scope: redmule_tb_wrap.i_redmule_tb.i_redmule_wrap.i_redmule_top.i_streamer.yz_tcdm_pre_r_id.HCI_RQ3 File: /scratch/ope_pagonis/redmule-ope/.bender/git/checkouts/hci-5afd8126f874b49f/rtl/common/hci_interfaces.sv Line: 194
+# ** Warning: HCI RQ-3 STABILITY protocol violation!          1
+#    Time: 704001 ps Started: 704001 ps  Scope: redmule_tb_wrap.i_redmule_tb.i_redmule_wrap.i_redmule_top.i_streamer.z_fifo_q.HCI_RQ3 File: /scratch/ope_pagonis/redmule-ope/.bender/git/checkouts/hci-5afd8126f874b49f/rtl/common/hci_interfaces.sv Line: 194
+# Resumed!
+# Here
+# Index 0: Golden: 0x3fd38e6d; Actual: 0x80808080
+# Index 1: Golden: 0x3ff4312a; Actual: 0x0000000
+# Index 2: Golden: 0x400924a4; Actual: 0x00000000
+# Index 3: Golden: 0x3fb4fd18; Actual: 0x00000000
+# Index 4: Golden: 0x3f95a1f7; Actual: 0x80808080
+# Index 5: Golden: 0x3f7db708; Actual: 0x0000000
+# Index 6: Golden: 0x3f11bd87; Actual: 0x00000000
+# Index 7: Golden: 0x3facaaee; Actual: 0x00000000
+# Index 8: Golden: 0x3fd7e7e0; Actual: 0x80808080
+# Index 9: Golden: 0x4002aaed; Actual: 0x0000000
+# Index 10: Golden: 0x3fbfbf56; Actual: 0x00000000
+# Index 11: Golden: 0x3fabee8a; Actual: 0x00000000
+# Index 12: Golden: 0x3fec0aa4; Actual: 0x80808080
+# Index 13: Golden: 0x3fa2ce99; Actual: 0x0000000
+# Index 14: Golden: 0x3f7a759e; Actual: 0x00000000
+# Index 15: Golden: 0x3f8e6ab1; Actual: 0x00000000
+# Terminated test with  errors. See you!
+# NICEFormat: 4
+# [TB] - cnt_rd=2452    
+# [TB] - cnt_wr=946     
+# [TB] - Success!
+# [TB] - errors=00000000
+# ** Note: $finish    : /scratch/ope_pagonis/redmule-ope/target/sim/src/redmule_tb.sv(403)
+#    Time: 39249 ns  Iteration: 1  Instance: /redmule_tb_wrap/i_redmule_tb
+# End time: 15:07:12 on Mar 18,2025, Elapsed time: 0:00:03
+# Errors: 0, Warnings: 5

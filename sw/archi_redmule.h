@@ -89,15 +89,17 @@
 #define MINMAX 0x7
 
 // GEMM formats
-#define Float8 0x0
-#define Float16 0x1
-#define Float8Alt 0x2
+#define Float8     0x0
+#define Float16    0x1
+#define Float8Alt  0x2
 #define Float16Alt 0x3
+#define Float32    0x4
 
 // FP Formats encoding
-#define FP16 0x2
-#define FP8 0x3
+#define FP16    0x2
+#define FP8     0x3
 #define FP16ALT 0x4
-#define FP8ALT 0x5
+#define FP8ALT  0x5
+#define FP32    0x6
 
 #endif

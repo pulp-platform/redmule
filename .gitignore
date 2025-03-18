@@ -3,3 +3,8 @@ golden-model/gemm
 golden-model/matmul
 golden-model/FP32/net_parameters.h
 sw/inc
+.bender
+vendor
+sw/build
+*.wlf
+target/sim/vsim/work/

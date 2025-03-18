@@ -21,7 +21,7 @@ If you want to use RedMulE for academic purposes, please cite it as:
 
 ```
 @article{TORTORELLA2023122,
-title = {RedMule: A mixed-precision matrix–matrix operation engine for flexible and energy-efficient on-chip linear algebra and TinyML training acceleration},
+title = {RedMule: A mixed-precision matrixï¿½matrix operation engine for flexible and energy-efficient on-chip linear algebra and TinyML training acceleration},
 journal = {Future Generation Computer Systems},
 volume = {149},
 pages = {122-135},

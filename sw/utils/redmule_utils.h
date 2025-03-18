@@ -11,6 +11,33 @@
 #define REDMULE_UTILS_H
 
 #define ERR 0x0011
+#define DEBUG
+
+int redmule32_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
+  int errors = 0;
+  int error;
+  for (int i = 0; i < len; i++) {
+    error = 0;
+    uint32_t actual_word = *(actual_z + i);
+    uint32_t golden_word = *(golden_z + i);
+    // Compute the absolute difference between the 32-bit representations.
+    uint32_t diff = (actual_word > golden_word) ? (actual_word - golden_word)
+                                                : (golden_word - actual_word);
+
+    if (diff > ERR) {
+      error = 1;
+// #ifdef VERBOSE
+//       tfp_printf("Error at index %d: diff = 0x%08x\n", i, diff);
+//       tfp_printf("FP32 Error! Golden: 0x%08x; Actual: 0x%08x\n", golden_word, actual_word);
+// #endif
+    }
+    errors += error;
+#ifdef DEBUG
+    tfp_printf("Index %d: Golden: 0x%08x; Actual: 0x%08x\n", i, golden_word, actual_word);
+#endif
+  }
+  return errors;
+}
 
 int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   uint32_t actual_word = 0;
