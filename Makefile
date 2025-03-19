@@ -120,7 +120,7 @@ dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
 OP     ?= gemm
-fp_fmt ?= FP16
+fp_fmt ?= FP32
 M      ?= 4
 N      ?= 4
 K      ?= 4

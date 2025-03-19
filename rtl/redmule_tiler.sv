@@ -191,11 +191,14 @@ assign config_d.stage_2_op       = FPU_MINMAX;
 assign config_d.input_format     = config_d.gemm_input_fmt == Float16    ? FPU_FP16 :
                                    config_d.gemm_input_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_input_fmt == Float16Alt ? FPU_FP16ALT :
-                                                                           FPU_FP8ALT;
+                                   config_d.gemm_input_fmt == Float8Alt  ? FPU_FP8ALT :
+                                                                           FPU_FLOAT32;
 assign config_d.computing_format = config_d.gemm_output_fmt == Float16    ? FPU_FP16 :
                                    config_d.gemm_output_fmt == Float8     ? FPU_FP8 :
                                    config_d.gemm_output_fmt == Float16Alt ? FPU_FP16ALT :
-                                                                            FPU_FP8ALT;
+                                   config_d.gemm_output_fmt == Float8Alt  ? FPU_FP8ALT :
+                                                                            FPU_FLOAT32;
+
 assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
 
 assign config_d.x_d1_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);

@@ -11,7 +11,6 @@
 #define REDMULE_UTILS_H
 
 #define ERR 0x0011
-#define DEBUG
 
 int redmule32_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   int errors = 0;
@@ -26,10 +25,10 @@ int redmule32_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
 
     if (diff > ERR) {
       error = 1;
-// #ifdef VERBOSE
-//       tfp_printf("Error at index %d: diff = 0x%08x\n", i, diff);
-//       tfp_printf("FP32 Error! Golden: 0x%08x; Actual: 0x%08x\n", golden_word, actual_word);
-// #endif
+ #ifdef VERBOSE
+       tfp_printf("Error at index %d: diff = 0x%08x\n", i, diff);
+       tfp_printf("FP32 Error! Golden: 0x%08x; Actual: 0x%08x\n", golden_word, actual_word);
+ #endif
     }
     errors += error;
 #ifdef DEBUG

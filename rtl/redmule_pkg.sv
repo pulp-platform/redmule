@@ -11,7 +11,7 @@ import hwpe_stream_package::*;
 
 package redmule_pkg;
 
-  parameter int unsigned            DATA_W       = 128 + 32; // TCDM port dimension (in bits)
+  parameter int unsigned            DATA_W       = 256 + 32; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
@@ -27,7 +27,7 @@ package redmule_pkg;
   parameter int unsigned            DEPTH        = TOT_DEPTH/ARRAY_HEIGHT;
   parameter int unsigned            STRB         = DATA_W/8;
   // parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b111111;
-  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101;
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b101101;
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
   parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
@@ -213,10 +213,10 @@ package redmule_pkg;
   } flgs_scheduler_t;
 
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;
-  typedef enum logic [1:0] { Float8=2'h0, Float16=2'h1, Float8Alt=2'h2, Float16Alt=2'h3 } gemm_fmt_e;
+  typedef enum logic [2:0] { Float8=3'h0, Float16=3'h1, Float8Alt=3'h2, Float16Alt=3'h3, Float32=3'h4 } gemm_fmt_e;
   typedef enum logic       { RNE=1'h0, RTZ=1'h1 } rnd_mode_e;
   typedef enum logic [2:0] { FPU_FMADD=3'h0, FPU_ADD=3'h2, FPU_MUL=3'h3, FPU_MINMAX=3'h7 }    fpu_op_e;
-  typedef enum logic [2:0] { FPU_FP16=3'h2, FPU_FP8=3'h3, FPU_FP16ALT=3'h4, FPU_FP8ALT=3'h5 } fpu_fmt_e;
+  typedef enum logic [2:0] { FPU_FLOAT32=3'h0, FPU_FP16=3'h2, FPU_FP8=3'h3, FPU_FP16ALT=3'h4, FPU_FP8ALT=3'h5 } fpu_fmt_e;
 
   typedef struct packed {
     logic [31:0] x_addr;

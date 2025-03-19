@@ -70,7 +70,7 @@
 #define REDMULE_SOFT_CLEAR 0x14
 
 // Registers
-#define REDMULE_REG_OFFS 0x40
+#define REDMULE_REG_OFFS  0x40
 #define REDMULE_REG_X_PTR 0x00
 #define REDMULE_REG_W_PTR 0x04
 #define REDMULE_REG_Z_PTR 0x08
@@ -80,7 +80,7 @@
 
 // OPs definition
 #define MATMUL 0x0
-#define GEMM 0x1
+#define GEMM   0x1
 #define ADDMAX 0x2
 #define ADDMIN 0x3
 #define MULMAX 0x4
@@ -96,10 +96,10 @@
 #define Float32    0x4
 
 // FP Formats encoding
+#define FP32    0x0
 #define FP16    0x2
 #define FP8     0x3
 #define FP16ALT 0x4
 #define FP8ALT  0x5
-#define FP32    0x6
 
 #endif

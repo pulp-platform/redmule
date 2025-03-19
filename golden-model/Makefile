@@ -20,7 +20,7 @@ N ?= 3
 K ?= 3
 
 # FP format
-fp_fmt ?= FP16
+fp_fmt ?= FP32
 
 check_sw:
 	mkdir -p $(SW)

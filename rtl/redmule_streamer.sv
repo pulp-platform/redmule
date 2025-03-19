@@ -249,7 +249,7 @@ hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
 
 logic cast;
-assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
+assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP32) ? 1'b0: 1'b1;
 
 // Store cast unit
 // This unit uses only the data bus of the TCDM interface. The other buses
