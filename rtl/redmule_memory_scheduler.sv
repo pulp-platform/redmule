@@ -32,7 +32,7 @@ module redmule_memory_scheduler
   hwpe_stream_intf_stream.source wq_bias_o        ,
   hwpe_stream_intf_stream.source wq_skip_o
 );
-  localparam int unsigned JMP = NumByte*(DATA_W/MemDw - 1);
+  localparam int unsigned JMP = NumByte*(DATA_W/MemDw);
 
   logic [31:0]        x_cols_offs_d, x_cols_offs_q;
   logic [31:0]        x_rows_offs_d, x_rows_offs_q;
