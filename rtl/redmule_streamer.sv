@@ -16,7 +16,7 @@ module redmule_streamer
 #(
   parameter  int unsigned DW      = 288   ,
   parameter  int unsigned AW      = ADDR_W,
-  localparam int unsigned REALIGN = 1     ,
+  localparam int unsigned REALIGN = 0     ,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input logic                    clk_i,
