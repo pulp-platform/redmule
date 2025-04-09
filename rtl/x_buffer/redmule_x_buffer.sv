@@ -21,13 +21,16 @@ localparam int unsigned          D         = DW/(H*BITW),
 localparam int unsigned          HALF_D    = D/2,
 localparam int unsigned          TOT_DEPTH = H*D
 )(
-  input  logic                                               clk_i      ,
-  input  logic                                               rst_ni     ,
-  input  logic                                               clear_i    ,
-  input  x_buffer_ctrl_t                                     ctrl_i     ,
-  output x_buffer_flgs_t                                     flags_o    ,
-  output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o ,
-  input  logic                                      [DW-1:0] x_buffer_i
+  input  logic                                               clk_i            ,
+  input  logic                                               rst_ni           ,
+  input  logic                                               clear_i          ,
+  input  x_buffer_ctrl_t                                     ctrl_i           ,
+  output x_buffer_flgs_t                                     flags_o          ,
+  output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o       ,
+  input  logic                                      [DW-1:0] x_buffer_i       ,
+  input  logic                             [$clog2(D*H)-1:0] next_wrow_i      ,   //Tentative name
+  input  logic                                               next_wrow_valid_i,
+  output logic                                               next_wrow_ready_o
 );
 
 typedef enum logic [2:0] {
@@ -109,7 +112,7 @@ redmule_x_pad_scm #(
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
 assign buf_write_en = ( current_state == FAST_FILL ||
                         current_state == FILL && ctrl_i.h_shift)
-                      && ~refilling;
+                      && ~refilling && (~ctrl_i.dequant || next_wrow_valid_i);
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),

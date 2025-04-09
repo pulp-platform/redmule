@@ -27,6 +27,7 @@ module redmule_top
   parameter int unsigned  Height             = ARRAY_HEIGHT      , // Number of PEs within a row
   parameter int unsigned  Width              = ARRAY_WIDTH       , // Number of parallel rows
   parameter int unsigned  NumPipeRegs        = PIPE_REGS         , // Number of pipeline registers within each PE
+  parameter int unsigned  GidxWidth          = GROUP_ID_WIDTH    ,
   parameter pipe_config_t PipeConfig         = DISTRIBUTED       ,
   parameter int unsigned  BITW               = fp_width(FpFormat),  // Number of bits for the given format
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
@@ -54,6 +55,10 @@ logic                       reg_enable;
 logic                       start_cfg, cfg_complete;
 
 hwpe_ctrl_intf_periph #( .ID_WIDTH  (ID_WIDTH) ) local_periph ( .clk(clk_i) );
+
+logic                       gidx_out_valid;
+
+logic                       gidx_present_d, gidx_present_q;
 
 if (!X_EXT) begin: gen_periph_connection
   /* If there is no Xif we directly plug the
@@ -165,6 +170,20 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
+// GIDX streaming interface + GIDX FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_stream_d      ( .clk( clk_i ) );  //FIXME DATA WIDTH (?)
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) gidx_buffer_fifo   ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN/2 ) ) wq_stream_d    ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN/2 ) ) wq_buffer_fifo ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN/2 ) ) zeros_stream_d     ( .clk( clk_i ) );  //FIXME DATA WIDTH
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN/2 ) ) zeros_buffer_fifo  ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( 32 ) ) wq_bias     ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( 32 ) ) scales_bias ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( 32 ) ) zeros_bias  ( .clk( clk_i ) );
+
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
@@ -181,6 +200,10 @@ redmule_streamer #(
   .y_stream_o      ( y_buffer_d          ),
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo       ),
+  // Biases interfaces
+  .wq_bias_i       ( wq_bias             ),
+  .scales_bias_i   ( scales_bias         ),
+  .zeros_bias_i    ( zeros_bias          ),
   // Master TCDM interface ports for the memory side
   .tcdm            ( tcdm                ),
   .ecc_errors_o    ( ecc_errors_streamer ),
@@ -236,17 +259,134 @@ hwpe_stream_fifo #(
   .pop_o          ( z_buffer_fifo )
 );
 
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN      ),
+  .FIFO_DEPTH     ( 4                )
+) i_gidx_buffer_fifo (
+  .clk_i          ( clk_i            ),
+  .rst_ni         ( rst_ni           ),
+  .clear_i        ( clear            ),
+  .flags_o        (                  ),
+  .push_i         ( gidx_stream_d    ),
+  .pop_o          ( gidx_buffer_fifo )
+);
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN/2     ),
+  .FIFO_DEPTH     ( 4                 )
+) i_zeros_fifo    (
+  .clk_i          ( clk_i             ),
+  .rst_ni         ( rst_ni            ),
+  .clear_i        ( clear             ),
+  .flags_o        (                   ),
+  .push_i         ( zeros_stream_d    ),
+  .pop_o          ( zeros_buffer_fifo )
+);
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN/2  ),
+  .FIFO_DEPTH     ( 4              )
+) i_wq_fifo       (
+  .clk_i          ( clk_i          ),
+  .rst_ni         ( rst_ni         ),
+  .clear_i        ( clear          ),
+  .flags_o        (                ),
+  .push_i         ( wq_stream_d    ),
+  .pop_o          ( wq_buffer_fifo )
+);
+
 // Valid/Ready assignment
-assign x_buffer_fifo.ready = x_buffer_ctrl.load;
-assign w_buffer_fifo.ready = w_buffer_flgs.w_ready;
+assign x_buffer_fifo.ready     = x_buffer_ctrl.load;
+assign w_buffer_fifo.ready     = w_buffer_ctrl.load; // w_buffer_flgs.w_ready
 
-assign y_buffer_fifo.ready = z_buffer_flgs.y_ready;
+assign y_buffer_fifo.ready     = z_buffer_flgs.y_ready;
 
-assign z_buffer_q.valid    = z_buffer_flgs.z_valid;
+assign z_buffer_q.valid        = z_buffer_flgs.z_valid;
+
+assign zeros_buffer_fifo.ready = w_buffer_ctrl.load; // w_buffer_flgs.w_ready
+assign wq_buffer_fifo.ready    = w_buffer_ctrl.load;
 
 /*----------------------------------------------------------------*/
 /* |                          Buffers                           | */
 /*----------------------------------------------------------------*/
+
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( $clog2(DATAW_ALIGN/BITW) ) ) next_row_d ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( $clog2(DATAW_ALIGN/BITW) ) ) x_buffer_next_row_d ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( $clog2(DATAW_ALIGN/BITW) ) ) x_buffer_next_row_q ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( $clog2(DATAW_ALIGN/BITW) ) ) wq_next_row_d ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( $clog2(DATAW_ALIGN/BITW) ) ) wq_next_row_q ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( GidxWidth + 1 ) ) next_gidx_d ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( GidxWidth + 1 ) ) next_gidx_q ( .clk( clk_i ) );
+
+hwpe_stream_intf_stream #( .DATA_WIDTH ( GidxWidth ) ) w_buffer_next_gidx_d ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( GidxWidth ) ) w_buffer_next_gidx_q ( .clk( clk_i ) );
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( $clog2(DATAW_ALIGN/BITW)     ),
+  .FIFO_DEPTH     ( Height              )  //TEMP
+) x_buf_next_row_fifo (
+  .clk_i          ( clk_i               ),
+  .rst_ni         ( rst_ni              ),
+  .clear_i        ( clear               ),
+  .flags_o        (                     ),
+  .push_i         ( x_buffer_next_row_d ),
+  .pop_o          ( x_buffer_next_row_q )
+);
+
+assign x_buffer_next_row_d.valid = wq_next_row_d.ready && x_buffer_next_row_d.ready && next_row_d.valid;
+assign x_buffer_next_row_d.data  = next_row_d.data;
+assign x_buffer_next_row_d.strb  = next_row_d.strb;
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( $clog2(DATAW_ALIGN/BITW)     ),
+  .FIFO_DEPTH     ( Height              )   //TEMP
+) wq_next_row_fifo (
+  .clk_i          ( clk_i               ),
+  .rst_ni         ( rst_ni              ),
+  .clear_i        ( clear               ),
+  .flags_o        (                     ),
+  .push_i         ( wq_next_row_d ),
+  .pop_o          ( wq_next_row_q )
+);
+
+assign wq_next_row_d.valid = wq_next_row_d.ready && x_buffer_next_row_d.ready && next_row_d.valid;
+assign wq_next_row_d.data  = next_row_d.data;
+assign wq_next_row_d.strb  = next_row_d.strb;
+
+assign next_row_d.ready   = wq_next_row_d.ready && x_buffer_next_row_d.ready;
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( GidxWidth + 1 ),
+  .FIFO_DEPTH     ( Height        )
+) next_gidx_fifo (
+  .clk_i          ( clk_i       ),
+  .rst_ni         ( rst_ni      ),
+  .clear_i        ( clear       ),
+  .flags_o        (             ),
+  .push_i         ( next_gidx_d ),
+  .pop_o          ( next_gidx_q )
+);
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( GidxWidth ),
+  .FIFO_DEPTH     ( 2*Height  )
+) w_buf_next_gidx_fifo (
+  .clk_i          ( clk_i       ),
+  .rst_ni         ( rst_ni      ),
+  .clear_i        ( clear       ),
+  .flags_o        (             ),
+  .push_i         ( w_buffer_next_gidx_d ),
+  .pop_o          ( w_buffer_next_gidx_q )
+);
+
+assign w_buffer_next_gidx_d.valid = next_gidx_q.valid && (scales_bias.ready && zeros_bias.ready || next_gidx_q.data[GidxWidth]);
+assign w_buffer_next_gidx_d.data  = next_gidx_q.data[GidxWidth-1:0];
+assign w_buffer_next_gidx_d.strb  = next_gidx_q.strb[(GidxWidth+7)/8:0];
+// ready is not assigned as the FIFO is dimensioned so that it is never full
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
 redmule_x_buffer #(
@@ -255,29 +395,41 @@ redmule_x_buffer #(
   .Height     ( Height              ),
   .Width      ( Width               )
 ) i_x_buffer  (
-  .clk_i       ( clk_i              ),
-  .rst_ni      ( rst_ni             ),
-  .clear_i     ( clear              ),
-  .ctrl_i      ( x_buffer_ctrl      ),
-  .flags_o     ( x_buffer_flgs      ),
-  .x_buffer_o  ( x_buffer_q         ),
-  .x_buffer_i  ( x_buffer_fifo.data )
+  .clk_i             ( clk_i                     ),
+  .rst_ni            ( rst_ni                    ),
+  .clear_i           ( clear                     ),
+  .ctrl_i            ( x_buffer_ctrl             ),
+  .flags_o           ( x_buffer_flgs             ),
+  .x_buffer_o        ( x_buffer_q                ),
+  .x_buffer_i        ( x_buffer_fifo.data        ),
+  .next_wrow_i       ( x_buffer_next_row_q.data  ),
+  .next_wrow_valid_i ( x_buffer_next_row_q.valid ),
+  .next_wrow_ready_o ( x_buffer_next_row_q.ready )
 );
 
-logic [Height-1:0][BITW-1:0] w_buffer_q;
+logic [Height-1:0][BITW-1:0]   w_buffer_q;
+logic [Height-1:0][BITW/2-1:0] wq_buffer_q;
+logic [Height-1:0][BITW/2-1:0] zeros_buffer_q;
 redmule_w_buffer #(
-  .DW         ( DATAW_ALIGN         ),
-  .FpFormat   ( FpFormat            ),
-  .Height     ( Height              )
-) i_w_buffer  (
-  .clk_i       ( clk_i              ),
-  .rst_ni      ( rst_ni             ),
-  .clear_i     ( clear              ),
-  .ctrl_i      ( w_buffer_ctrl      ),
-  .flags_o     ( w_buffer_flgs      ),
-  .w_buffer_o  ( w_buffer_q         ),
-  .w_buffer_i  ( w_buffer_fifo.data )
+  .DW          ( DATAW_ALIGN                 ),
+  .FpFormat    ( FpFormat                    ),
+  .Height      ( Height                      )
+) i_w_buffer   (
+  .clk_i       ( clk_i                       ),
+  .rst_ni      ( rst_ni                      ),
+  .clear_i     ( clear                       ),
+  .ctrl_i      ( w_buffer_ctrl               ),
+  .flags_o     ( w_buffer_flgs               ),
+  .w_buffer_o  ( w_buffer_q                  ),
+  .w_buffer_i  ( w_buffer_fifo.data          ),
+  .qw_i        ( wq_buffer_fifo.data         ),
+  .zeros_i     ( zeros_buffer_fifo.data      ),
+  .qw_o        ( wq_buffer_q                 ),
+  .zeros_o     ( zeros_buffer_q              ),
+  .next_gidx_i ( w_buffer_next_gidx_q.data   )
 );
+
+assign w_buffer_next_gidx_q.ready = w_buffer_ctrl.load;
 
 logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
 redmule_z_buffer #(
@@ -297,6 +449,30 @@ redmule_z_buffer #(
   .z_buffer_o    ( z_buffer_q.data    ),
   .z_strb_o      ( z_buffer_q.strb    )
 );
+
+
+redmule_gidx_buffer #(
+  .DW         ( DATAW_ALIGN ),
+  .GID_WIDTH  ( GidxWidth   ),
+  .FpFormat   ( FpFormat    ),
+  .Height     ( Height      )
+) i_gidx_buffer (
+  .clk_i          ( clk_i                                 ),
+  .rst_ni         ( rst_ni                                ),
+  .clear_i        ( clear                                 ),
+  .ctrl_i         (                                       ),
+  .flags_o        (                                       ),
+  .gidx_buffer_i  ( gidx_buffer_fifo.data                 ),
+  .gidx_valid_i   ( gidx_buffer_fifo.valid                ),
+  .gidx_ready_o   ( gidx_buffer_fifo.ready                ),
+  .next_gidx_o    ( next_gidx_d.data                      ),
+  .next_wrow_o    ( next_row_d.data                       ),
+  .out_valid_o    ( gidx_out_valid                        ),
+  .out_ready_i    ( next_row_d.ready && next_gidx_d.ready )
+ );
+
+ assign next_row_d.valid  = gidx_out_valid;
+ assign next_gidx_d.valid = gidx_out_valid;
 
 /*---------------------------------------------------------------*/
 /* |                          Engine                           | */
@@ -373,6 +549,8 @@ redmule_engine     #(
   .w_input_i          ( w_buffer_q       ),
   .y_bias_i           ( y_bias_q         ),
   .z_output_o         ( z_buffer_d       ),
+  .zeros_i            ( zeros_buffer_q   ),
+  .qweights_i         ( wq_buffer_q      ),
   .fma_is_boxed_i     ( fma_is_boxed     ),
   .noncomp_is_boxed_i ( noncomp_is_boxed ),
   .stage1_rnd_i       ( stage1_rnd       ),
@@ -405,21 +583,26 @@ redmule_engine     #(
 logic z_priority;
 assign z_priority = z_buffer_flgs.z_priority | !z_fifo_flgs.empty;
 redmule_memory_scheduler #(
-  .DW (DATAW_ALIGN),
-  .W  (Width),
-  .H  (Height)
+  .DW ( DATAW_ALIGN ),
+  .W  ( Width       ),
+  .H  ( Height      ),
+  .GW ( GidxWidth   )
 ) i_memory_scheduler (
-  .clk_i             ( clk_i           ),
-  .rst_ni            ( rst_ni          ),
-  .clear_i           ( clear           ),
-  .z_priority_i      ( z_priority      ),
-  .reg_file_i        ( reg_file        ),
-  .flgs_streamer_i   ( flgs_streamer   ),
-  .cntrl_scheduler_i ( cntrl_scheduler ),
-  .cntrl_flags_i     ( cntrl_flags     ),
-  .cntrl_streamer_o  ( cntrl_streamer  )
+  .clk_i             ( clk_i               ),
+  .rst_ni            ( rst_ni              ),
+  .clear_i           ( clear               ),
+  .z_priority_i      ( z_priority          ),
+  .reg_file_i        ( reg_file            ),
+  .flgs_streamer_i   ( flgs_streamer       ),
+  .cntrl_scheduler_i ( cntrl_scheduler     ),
+  .cntrl_flags_i     ( cntrl_flags         ),
+  .cntrl_streamer_o  ( cntrl_streamer      ),
+  .next_gidx_i       ( next_gidx_q         ),
+  .next_row_i        ( wq_next_row_q       ),
+  .scales_bias_o     ( scales_bias         ),
+  .zeros_bias_o      ( zeros_bias          ),
+  .wq_bias_o         ( wq_bias             )
 );
-
 
 
 /*---------------------------------------------------------------*/
@@ -463,30 +646,33 @@ redmule_ctrl        #(
 redmule_scheduler #(
   .Height      ( Height         ),
   .Width       ( Width          ),
-  .NumPipeRegs ( NumPipeRegs    )
+  .NumPipeRegs ( NumPipeRegs    ),
+  .GID_WIDTH   ( GidxWidth      )
 ) i_scheduler (
-  .clk_i             ( clk_i               ),
-  .rst_ni            ( rst_ni              ),
-  .test_mode_i       ( test_mode_i         ),
-  .clear_i           ( clear               ),
-  .x_valid_i         ( x_buffer_fifo.valid ),
-  .w_valid_i         ( w_buffer_fifo.valid ),
-  .y_valid_i         ( y_buffer_fifo.valid ),
-  .z_ready_i         ( z_buffer_q.ready    ),
-  .engine_flush_i    ( engine_flush        ),
-  .reg_file_i        ( reg_file            ),
-  .flgs_streamer_i   ( flgs_streamer       ),
-  .flgs_x_buffer_i   ( x_buffer_flgs       ),
-  .flgs_w_buffer_i   ( w_buffer_flgs       ),
-  .flgs_z_buffer_i   ( z_buffer_flgs       ),
-  .flgs_engine_i     ( flgs_engine         ),
-  .cntrl_scheduler_i ( cntrl_scheduler     ),
-  .reg_enable_o      ( reg_enable          ),
-  .cntrl_engine_o    ( cntrl_engine        ),
-  .cntrl_x_buffer_o  ( x_buffer_ctrl       ),
-  .cntrl_w_buffer_o  ( w_buffer_ctrl       ),
-  .cntrl_z_buffer_o  ( z_buffer_ctrl       ),
-  .flgs_scheduler_o  ( flgs_scheduler      )
+  .clk_i             ( clk_i                   ),
+  .rst_ni            ( rst_ni                  ),
+  .test_mode_i       ( test_mode_i             ),
+  .clear_i           ( clear                   ),
+  .x_valid_i         ( x_buffer_fifo.valid     ),
+  .w_valid_i         ( w_buffer_fifo.valid     ),
+  .y_valid_i         ( y_buffer_fifo.valid     ),
+  .z_ready_i         ( z_buffer_q.ready        ),
+  .wq_valid_i        ( wq_buffer_fifo.valid    ),
+  .zeros_valid_i     ( zeros_buffer_fifo.valid ),
+  .engine_flush_i    ( engine_flush            ),
+  .reg_file_i        ( reg_file                ),
+  .flgs_streamer_i   ( flgs_streamer           ),
+  .flgs_x_buffer_i   ( x_buffer_flgs           ),
+  .flgs_w_buffer_i   ( w_buffer_flgs           ),
+  .flgs_z_buffer_i   ( z_buffer_flgs           ),
+  .flgs_engine_i     ( flgs_engine             ),
+  .cntrl_scheduler_i ( cntrl_scheduler         ),
+  .reg_enable_o      ( reg_enable              ),
+  .cntrl_engine_o    ( cntrl_engine            ),
+  .cntrl_x_buffer_o  ( x_buffer_ctrl           ),
+  .cntrl_w_buffer_o  ( w_buffer_ctrl           ),
+  .cntrl_z_buffer_o  ( z_buffer_ctrl           ),
+  .flgs_scheduler_o  ( flgs_scheduler          )
 );
 
 endmodule : redmule_top

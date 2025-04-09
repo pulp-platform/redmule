@@ -33,6 +33,9 @@ module redmule_scheduler
   input  logic                            y_valid_i        ,
   input  logic                            z_ready_i        ,
 
+  input  logic                            wq_valid_i       ,
+  input  logic                            zeros_valid_i    ,
+
   input  logic                            engine_flush_i   ,
 
   input  ctrl_regfile_t                   reg_file_i       ,
@@ -203,7 +206,7 @@ module redmule_scheduler
   assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full;
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
-  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
+  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;   // PAY ATTENTION, we may want to also check the next wrow is ready
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && x_shift_cnt_q == H-1) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en;
@@ -509,6 +512,7 @@ module redmule_scheduler
   assign cntrl_engine_o.flush            = engine_flush_i;
   assign cntrl_engine_o.out_ready        = 1'b1;
   assign cntrl_engine_o.accumulate       = ~pushing_y;
+  assign cntrl_engine_o.dequant_enable   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
 
   logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
@@ -547,6 +551,8 @@ module redmule_scheduler
   logic check_x_full, check_x_full_en;
   logic check_y_loaded, check_y_loaded_en;
 
+  logic check_quant_valid, check_quant_valid_en;
+
   // Check if the next w row is valid
   assign check_w_valid     = w_valid_i;
   assign check_w_valid_en  = ~w_done;
@@ -561,14 +567,18 @@ module redmule_scheduler
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
+  assign check_quant_valid = zeros_valid_i && wq_valid_i;
+  assign check_quant_valid_en = ~w_done && reg_file_i.hwpe_params[DEQUANT_MODE][0];  // Is w_done enough?
+
   /******************************
    *           FLAGS            *
    ******************************/
 
   assign stall_engine = current_state == LOAD_W && (
-                          ~check_w_valid  && check_w_valid_en  ||
-                          ~check_x_full   && check_x_full_en   ||
-                          ~check_y_loaded && check_y_loaded_en
+                          ~check_w_valid     && check_w_valid_en     ||
+                          ~check_x_full      && check_x_full_en      ||
+                          ~check_y_loaded    && check_y_loaded_en    ||
+                          ~check_quant_valid && check_quant_valid_en
                         );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register

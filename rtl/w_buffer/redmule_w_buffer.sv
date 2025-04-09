@@ -16,7 +16,8 @@ module redmule_w_buffer
   parameter int unsigned  N_REGS    = PIPE_REGS         , // Number of registers per PE
   localparam int unsigned BITW      = fp_width(FpFormat), // Number of bits for the given format
   localparam int unsigned H         = Height            ,
-  localparam int unsigned D         = DW/BITW
+  localparam int unsigned D         = DW/BITW           ,
+  localparam int unsigned DWQ       = DW/(BITW/8)
 )(
   input  logic                             clk_i     ,
   input  logic                             rst_ni    ,
@@ -24,7 +25,15 @@ module redmule_w_buffer
   input  w_buffer_ctrl_t                   ctrl_i    ,
   output w_buffer_flgs_t                   flags_o   ,
   output logic           [H-1:0][BITW-1:0] w_buffer_o,
-  input  logic                    [DW-1:0] w_buffer_i
+  input  logic                    [DW-1:0] w_buffer_i,  //Normally the rows of the W matrix; in quantization mode, the vectors of scales
+
+  input  logic                   [DWQ-1:0] qw_i      ,
+  input  logic                   [DWQ-1:0] zeros_i   ,
+
+  output logic                [H-1:0][7:0] qw_o      ,
+  output logic                [H-1:0][7:0] zeros_o   ,
+
+  input  logic             [GID_WIDTH-1:0] next_gidx_i   //Tentative name
 );
 
 localparam int unsigned C         = (D+N_REGS)/(N_REGS+1);
@@ -38,8 +47,16 @@ logic [$clog2(C)-1:0]          col_addr_d, col_addr_q;
 
 logic [D-1:0][BITW-1:0]        w_data;
 
-logic [H-1:0][$clog2(H)-1:0]   buffer_r_addr_d, buffer_r_addr_q;
+logic [H-1:0][GID_WIDTH-1:0]   cache_r_id_d, cache_r_id_q, cache_w_id_d, cache_w_id_q;
+logic [H-1:0]                  cache_r_id_valid_d, cache_r_id_valid_q, cache_w_id_valid_d, cache_w_id_valid_q;
+
+logic [H-1:0][$clog2(H)-1:0]   buffer_r_addr_d, buffer_r_addr_q, wq_buffer_raddr;
 logic [H-1:0]                  buffer_r_addr_valid_d, buffer_r_addr_valid_q;
+
+logic [H-1:0][$clog2(D/(PIPE_REGS+1)):0]   usage_counter_q;
+logic [$clog2(H)-1:0]                        evict_pointer;
+
+logic gidx_present;
 
 logic                 buf_write_en;
 logic [$clog2(H)-1:0] buf_write_addr;
@@ -70,6 +87,44 @@ redmule_w_buffer_scm #(
   .rdata_o          ( w_buffer_o      )
 );
 
+redmule_w_buffer_scm #(
+  .WORD_SIZE ( BITW/2   ),
+  .ROWS      ( H        ),
+  .COLS      ( C        ),
+  .ELMS      ( N_REGS+1 )
+) i_zeros_buf (
+  .clk_i            ( clk_i           ),
+  .rst_ni           ( rst_ni          ),
+  .clear_i          ( clear_i         ),
+  .write_en_i       ( buf_write_en    ),
+  .write_addr_i     ( buf_write_addr  ),
+  .wdata_i          ( zeros_i         ),
+  .read_en_i        ( ctrl_i.shift    ),
+  .elms_read_addr_i ( el_addr_q       ),
+  .cols_read_offs_i ( col_addr_q      ),
+  .rows_read_addr_i ( buffer_r_addr_d ),
+  .rdata_o          ( zeros_o         )
+);
+
+redmule_w_buffer_scm #(
+  .WORD_SIZE ( BITW/2   ),
+  .ROWS      ( H        ),
+  .COLS      ( C        ),
+  .ELMS      ( N_REGS+1 )
+) i_wq_buf (
+  .clk_i            ( clk_i                ),
+  .rst_ni           ( rst_ni               ),
+  .clear_i          ( clear_i              ),
+  .write_en_i       ( ctrl_i.load          ),
+  .write_addr_i     ( w_row[$clog2(H)-1:0] ),
+  .wdata_i          ( qw_i                 ),
+  .read_en_i        ( ctrl_i.shift         ),
+  .elms_read_addr_i ( el_addr_q            ),
+  .cols_read_offs_i ( col_addr_q           ),
+  .rows_read_addr_i ( wq_buffer_raddr      ),
+  .rdata_o          ( qw_o                 )
+);
+
 assign flags_o.w_ready = buf_write_en;
 
 always_comb begin : buffer_r_addr_assignment
@@ -87,7 +142,78 @@ always_comb begin : buffer_r_addr_assignment
   end
 end
 
+for (genvar h = 0; h < H; h++) begin
+  assign wq_buffer_raddr[h] = h;
+end
+
 // Write side
+for (genvar h = 0; h < H; h++) begin : gen_w_id_registers
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if(~rst_ni) begin
+      cache_w_id_q[h]       <= '0;
+      cache_w_id_valid_q[h] <= '0;
+    end else begin
+      if (clear_i) begin
+        cache_w_id_q[h]       <= '0;
+        cache_w_id_valid_q[h] <= '0;
+      end else if (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) begin   // This is loaded at the same time as the W row
+        cache_w_id_q[h]       <= next_gidx_i;
+        cache_w_id_valid_q[h] <= '1;
+      end
+    end
+  end
+
+  assign cache_w_id_d[h]       = (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) ? next_gidx_i : cache_w_id_q[h];
+  assign cache_w_id_valid_d[h] = (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) ? '1 : cache_w_id_valid_q[h];
+end
+
+// Each row of the buffer has a counter that
+// resets to D/(PIPE_REGS+1) each time the vector is requested
+for (genvar h = 0; h < H; h++) begin : gen_usage_counters
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if(~rst_ni) begin
+      usage_counter_q[h] <= '0;
+    end else begin
+      if (clear_i)
+        usage_counter_q[h] <= '0;
+      else if (ctrl_i.dequant && (evict_pointer == h && ~gidx_present || gidx_present && cache_w_id_q[h] == next_gidx_i) && ctrl_i.load)
+        usage_counter_q[h] <= D/(PIPE_REGS+1);
+      else if (ctrl_i.dequant && el_addr_q == N_REGS && usage_counter_q[h] != 0 && ctrl_i.shift)
+        usage_counter_q[h] <= usage_counter_q[h] - 1;
+    end
+  end
+end
+
+always_comb begin : evict_pointer_assignment
+  evict_pointer = '0;
+
+  for (int h = 0; h < H; h++) begin
+    if (cache_w_id_valid_q[h] == '0) begin
+      evict_pointer = h;
+      break;
+    end
+  end
+
+  if (&cache_w_id_valid_q) begin
+    for (int h = 0; h < H; h++) begin
+      if (usage_counter_q[h] == '0) begin
+        evict_pointer = h;
+        break;
+      end
+    end
+  end
+end
+
+always_comb begin : gidx_present_assignment
+  gidx_present = '0;
+
+  for (int h = 0; h < H; h++) begin
+    if (cache_w_id_q[h] == next_gidx_i && cache_w_id_valid_q[h]) begin
+      gidx_present = '1;
+      break;
+    end
+  end
+end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : element_counter
   if(~rst_ni) begin
