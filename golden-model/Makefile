@@ -9,7 +9,7 @@
 SHELL   := /bin/bash
 CUR_DIR := $(shell pwd)
 PENV    := $(CUR_DIR)/venv
-SW      ?= 
+SW      ?=
 
 ## Perform Matrix-Matrix Operations of the kins _Z = Y (op2) (X (op1) W)_
 ## We assume X is _MxN_, W is _NxK_, while Y and Z are _MxK_
@@ -66,6 +66,19 @@ addmin: check_penv
 	deactivate
 
 gemm: check_penv
+	mkdir -p $@/txt;                          \
+	cd $(PENV);                               \
+	source ./bin/activate;                    \
+	cd $(CUR_DIR)/$(fp_fmt);                  \
+	python3 ./scripts/$@.py                   \
+	--m_size $(M) --n_size $(N) --k_size $(K) \
+	--inc_dir $(SW)                           \
+	--txt_dir $(CUR_DIR)/$@/txt;              \
+	cd $(PENV);                               \
+	deactivate
+
+
+gptq_gemm: check_penv
 	mkdir -p $@/txt;                          \
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
