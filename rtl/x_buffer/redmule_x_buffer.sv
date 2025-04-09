@@ -21,14 +21,15 @@ localparam int unsigned          D         = DW/(H*BITW),
 localparam int unsigned          HALF_D    = D/2,
 localparam int unsigned          TOT_DEPTH = H*D
 )(
-  input  logic                                               clk_i      ,
-  input  logic                                               rst_ni     ,
-  input  logic                                               clear_i    ,
-  input  x_buffer_ctrl_t                                     ctrl_i     ,
-  output x_buffer_flgs_t                                     flags_o    ,
-  output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o ,
-  input  logic                                      [DW-1:0] x_buffer_i ,
-  input  logic                             [$clog2(D*H)-1:0] next_wrow_i,   //Tentative name
+  input  logic                                               clk_i            ,
+  input  logic                                               rst_ni           ,
+  input  logic                                               clear_i          ,
+  input  x_buffer_ctrl_t                                     ctrl_i           ,
+  output x_buffer_flgs_t                                     flags_o          ,
+  output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o       ,
+  input  logic                                      [DW-1:0] x_buffer_i       ,
+  input  logic                             [$clog2(D*H)-1:0] next_wrow_i      ,   //Tentative name
+  input  logic                                               next_wrow_valid_i,
   output logic                                               next_wrow_ready_o
 );
 
@@ -112,7 +113,7 @@ redmule_x_pad_scm #(
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
 assign buf_write_en = ( current_state == FAST_FILL ||
                         current_state == FILL && ctrl_i.h_shift)
-                      && ~refilling;
+                      && ~refilling && (~ctrl_i.dequant || next_wrow_valid_i);
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),
@@ -157,7 +158,13 @@ always_comb begin : fsm
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
       if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
         if (pad_read_cnt == ctrl_i.slots) begin
-          next_state = PAD_EMPTY;
+          if (~flags_o.full) begin  // Have to check wether it also requires ~ctrl_i.rst_w_index
+            next_state = PAD_EMPTY;
+          end else begin
+            next_state = WAIT_FIRST_READ;
+          end
+
+          // next_state = PAD_EMPTY;  < WAS LIKE THIS
         end else if (first_block) begin
           next_state = WAIT_FIRST_READ;
         end else begin

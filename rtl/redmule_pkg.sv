@@ -135,17 +135,17 @@ package redmule_pkg;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
 
   typedef struct packed {
-    hci_package::hci_streamer_ctrl_t x_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t w_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t y_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t z_stream_sink_ctrl;
-    hci_package::hci_streamer_ctrl_t gid_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t wq_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t zeros_stream_source_ctrl;
-    fpnew_pkg::fp_format_e           input_cast_src_fmt;
-    fpnew_pkg::fp_format_e           input_cast_dst_fmt;
-    fpnew_pkg::fp_format_e           output_cast_src_fmt;
-    fpnew_pkg::fp_format_e           output_cast_dst_fmt;
+    hci_package::hci_streamer_ctrl_t        x_stream_source_ctrl;
+    hci_package::hci_streamer_biased_ctrl_t w_stream_source_ctrl;
+    hci_package::hci_streamer_ctrl_t        y_stream_source_ctrl;
+    hci_package::hci_streamer_ctrl_t        z_stream_sink_ctrl;
+    hci_package::hci_streamer_ctrl_t        gid_stream_source_ctrl;
+    hci_package::hci_streamer_biased_ctrl_t wq_stream_source_ctrl;
+    hci_package::hci_streamer_biased_ctrl_t zeros_stream_source_ctrl;
+    fpnew_pkg::fp_format_e                  input_cast_src_fmt;
+    fpnew_pkg::fp_format_e                  input_cast_dst_fmt;
+    fpnew_pkg::fp_format_e                  output_cast_src_fmt;
+    fpnew_pkg::fp_format_e                  output_cast_dst_fmt;
   } cntrl_streamer_t;
 
   typedef struct packed {
@@ -213,6 +213,18 @@ package redmule_pkg;
     logic z_valid;
   } z_buffer_flgs_t;
 
+
+///////  WORK IN PROGRESS    ////////////////
+
+  typedef struct packed {
+    logic placeholder;
+  } gidx_buffer_ctrl_t;
+
+  typedef struct packed {
+    logic placeholder;
+  } gidx_buffer_flgs_t;
+
+
   typedef struct packed {
     logic                   [2:0] fma_is_boxed;
     logic                   [1:0] noncomp_is_boxed;
@@ -226,6 +238,8 @@ package redmule_pkg;
     logic                         out_ready;
     logic                         accumulate;
     logic       [ARRAY_WIDTH-1:0] row_clk_gate_en;
+    logic                         dequant_enable;
+    qint_fmt_e                    q_format;
   } cntrl_engine_t;
 
   typedef struct packed {
