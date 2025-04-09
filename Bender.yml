@@ -15,7 +15,7 @@ dependencies:
   cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
-  hwpe-stream       : { path: "/scratch2/abelano/hwpe-stream"                         , rev: 261dadd                                  } #branch: ab/strb_fix
+  hwpe-stream       : { git: "git@github.com:pulp-platform/hwpe-stream.git"           , rev: 261dadd                                  } #branch: ab/strb_fix
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: 0e95510c0f4d43452d21b7723d766ae92e45c101 } # branch: yt/task-interfaces
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 5618e93                                  } # branch: ab/fifo_en
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
