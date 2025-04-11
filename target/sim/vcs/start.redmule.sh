@@ -24,12 +24,12 @@ flags="-full64 -kdb "
 # Set default to fast simulation flags.
 if [ -z "${VCSARGS}" ]; then
     # Use -debug_access+all for waveform debugging
-    flags+="-O2 -debug_access=r -debug_region=1,${TESTBENCH} "
+    flags+="-O2 -debug_access+all -debug_region=1000000000,${TESTBENCH} "
 fi
 
 flags+="-cpp ${CXX_PATH} "
 
-pargs=""
+pargs="-verdi"
 
 COLOR_NC='\e[0m'
 COLOR_BLUE='\e[0;34m'
