@@ -55,7 +55,7 @@ module redmule_tb
   logic [MP-1:0]       tcdm_r_valid;
   logic                tcdm_r_opc;
   logic                tcdm_r_user;
-   
+
   logic          periph_req;
   logic          periph_gnt;
   logic [31:0]   periph_add;
