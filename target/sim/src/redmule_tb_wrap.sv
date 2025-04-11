@@ -19,7 +19,7 @@ import redmule_pkg::*;
   redmule_tb #(
     .TCP ( TCP ),
     .TA  ( TA  ),
-    .TT  ( TT  ) 
+    .TT  ( TT  )
   ) i_redmule_tb (
     .clk_i          ( clk          ),
     .rst_ni         ( rst_n        ),
@@ -37,7 +37,7 @@ import redmule_pkg::*;
     clk <= 1'b0;
     rst_n <= 1'b0;
     fetch_enable <= 1'b0;
-    
+
     for (int i = 0; i < 20; i++) cycle();
 
     rst_n <= #TA 1'b1;

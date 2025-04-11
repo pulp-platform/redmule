@@ -6,7 +6,7 @@
 #
 # Makefragment for Verilator simulation.
 
-Questa ?=
+Questa ?= questa-2023.4
 Module := redmule
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
@@ -21,6 +21,7 @@ else
 	TbType := redmule_tb
 endif
 
+VsimFlags += -suppress vsim-3009
 ifeq ($(gui),1)
 	VsimFlags += -do "set TbType $(TbType)" \
                -do "log -r /*"            \
@@ -40,7 +41,7 @@ hw-script:
 	--vlog-arg="$(CompileFlags)"   \
 	--vcom-arg="-pedanticerrors"   \
 	$(common_targs) $(common_defs) \
-	$(sim_targs)                   \
+	$(sim_targs) $(sim_defs)       \
 	> $(VsimCompileScript)
 	echo 'vopt $(CompileFlags) $(Tb) -o $(Tb)_opt' >> $(VsimCompileScript)
 
@@ -50,6 +51,7 @@ hw-build: hw-script
 	+STIM_INSTR=$(STIM_INSTR) \
 	+STIM_INSTR=$(STIM_DATA)  \
 	+PROB_STALL=$(P_STALL)    \
+  +UseXif=$(UseXif)         \
 	-do 'quit -code [source $(VsimCompileScript)]'
 
 hw-run:

@@ -5,6 +5,7 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+`include "obi/typedef.svh"
 module redmule_complex
   import cv32e40x_pkg::*;
   import fpnew_pkg::*;
@@ -57,8 +58,21 @@ module redmule_complex
   hci_core_intf.initiator              tcdm
 );
 
+localparam int unsigned XExt = (CoreType == CV32X) ? 1 : 0;
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
 localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
+
+typedef struct packed {
+  logic [31:0] idx;
+  logic [31:0] start_addr;
+  logic [31:0] end_addr;
+} addr_map_rule_t;
+
+localparam addr_map_rule_t [2:0] LocalAddrMap = '{
+  '{ idx: 0, start_addr: 'h00000000, end_addr: 'h00100000}, // Before Accelerator
+  '{ idx: 1, start_addr: 'h00100000, end_addr: 'h00100400}, // Accelerator configuration
+  '{ idx: 0, start_addr: 'h00100400, end_addr: 'hFFFFFFFF}  // After Accelerator
+};
 
 logic busy;
 logic s_clk, s_clk_en;
@@ -67,8 +81,10 @@ logic [N_CORES-1:0][1:0] evt;
 core_inst_req_t core_inst_req;
 core_inst_rsp_t core_inst_rsp;
 
-core_data_req_t core_data_req;
-core_data_rsp_t core_data_rsp;
+core_data_req_t core_data_req, redmule_cfg_req;
+core_data_rsp_t core_data_rsp, redmule_cfg_rsp;
+
+hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
 
 always_ff @(posedge clk_i or negedge rst_ni) begin: clock_enable
   if (~rst_ni)
@@ -111,9 +127,35 @@ cv32e40x_if_xif#(
   .X_ECS_XS    ( XifEcsXs        )
 ) redmule_xif ();
 
-generate
   if (CoreType == CV32P) begin: gen_cv32e40p
+
+    localparam obi_pkg::obi_cfg_t ObiDemuxCfg = '{
+      UseRReady: 1'b0,
+      CombGnt:   1'b0,
+      AddrWidth: AddrWidth,
+      DataWidth: 32,
+      IdWidth:   ID_WIDTH,
+      Integrity: 1'b0,
+      BeFull:    1'b1,
+      OptionalCfg: {default: '0}
+    };
+
+    `OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, 32, ID_WIDTH, logic)
+    `OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, 32, ID_WIDTH, logic)
+    `OBI_TYPEDEF_REQ_T(redmule_complex_req_t, redmule_complex_a_chan_t)
+    `OBI_TYPEDEF_RSP_T(redmule_complex_rsp_t, redmule_complex_r_chan_t)
+
+    redmule_complex_req_t core_req;
+    redmule_complex_rsp_t core_rsp;
+
+    redmule_complex_req_t [1:0] target_req;
+    redmule_complex_rsp_t [1:0] target_rsp;
+
+  `ifdef TARGET_CV32E40P_INCLUDE_TRACER
+    cv32e40p_wrapper #(
+  `else
     cv32e40p_core #(
+  `endif
       .PULP_XPULP     ( XPulp      ),
       .FPU            ( FpuPresent ),
       .PULP_ZFINX     ( Zfinx      )
@@ -136,14 +178,14 @@ generate
       .instr_rvalid_i      ( core_inst_rsp_i.valid ),
       .instr_rdata_i       ( core_inst_rsp_i.data  ),
       // Data memory interface
-      .data_req_o          ( core_data_req_o.req   ),
-      .data_we_o           ( core_data_req_o.we    ),
-      .data_be_o           ( core_data_req_o.be    ),
-      .data_addr_o         ( core_data_req_o.addr  ),
-      .data_wdata_o        ( core_data_req_o.data  ),
-      .data_gnt_i          ( core_data_rsp_i.gnt   ),
-      .data_rvalid_i       ( core_data_rsp_i.valid ),
-      .data_rdata_i        ( core_data_rsp_i.data  ),
+      .data_req_o          ( core_req.req     ),
+      .data_we_o           ( core_req.a.we    ),
+      .data_be_o           ( core_req.a.be    ),
+      .data_addr_o         ( core_req.a.addr  ),
+      .data_wdata_o        ( core_req.a.wdata ),
+      .data_gnt_i          ( core_rsp.gnt     ),
+      .data_rvalid_i       ( core_rsp.rvalid  ),
+      .data_rdata_i        ( core_rsp.r.rdata ),
       // apu-interconnect
       // handshake signals
       .apu_req_o           (                   ),
@@ -157,7 +199,7 @@ generate
       .apu_result_i        ( '0                ),
       .apu_flags_i         ( '0                ),
       // Interrupt inputs
-      .irq_i               ({27'd0 ,evt, 3'd0} ),  // CLINT interrupts + CLINT extension interrupts
+      .irq_i               ({27'd0, evt, 3'd0} ),  // CLINT interrupts + CLINT extension interrupts
       .irq_ack_o           (                   ),
       .irq_id_o            (                   ),
       // Debug Interface
@@ -169,6 +211,71 @@ generate
       .fetch_enable_i      ( fetch_enable_i    ),
       .core_sleep_o        ( core_sleep_o      )
     );
+    // Tie to 0 unused buses
+    assign core_req.rready = '0;
+    assign core_req.a.aid = '0;
+    assign core_req.a.a_optional = '0;
+
+    logic target_sel;
+    addr_decode #(
+      .NoIndices ( 2 ),
+      .NoRules   ( 3 ),
+      .addr_t    ( logic [AddrWidth-1:0] ),
+      .rule_t    ( addr_map_rule_t       )
+    ) i_addr_decode (
+      .addr_i          ( core_req.a.addr ),
+      .addr_map_i      ( LocalAddrMap    ),
+      .idx_o           ( target_sel      ),
+      .dec_valid_o     ( ),
+      .dec_error_o     ( ),
+      .en_default_idx_i( 1'b1            ),
+      .default_idx_i   ( 0               )
+    );
+
+    obi_demux #(
+      .ObiCfg      ( ObiDemuxCfg           ),
+      .obi_req_t   ( redmule_complex_req_t ),
+      .obi_rsp_t   ( redmule_complex_rsp_t ),
+      .NumMgrPorts ( 2                     ),
+      .NumMaxTrans ( 1                     )
+    ) i_demux (
+      .clk_i,
+      .rst_ni,
+      .sbr_port_select_i ( target_sel ),
+      .sbr_port_req_i    ( core_req   ),
+      .sbr_port_rsp_o    ( core_rsp   ),
+      .mgr_ports_req_o   ( target_req ),
+      .mgr_ports_rsp_i   ( target_rsp )
+    );
+
+    // Bind redmule config bus to HWPE Control interface
+    assign periph.req            = target_req[1].req;
+    assign periph.add            = target_req[1].a.addr;
+    assign periph.wen            = ~target_req[1].a.we;
+    assign periph.be             = target_req[1].a.be;
+    assign periph.data           = target_req[1].a.wdata;
+    assign periph.id             = target_req[1].a.aid;
+    assign target_rsp[1].gnt     = periph.gnt;
+    assign target_rsp[1].r.rdata = periph.r_data;
+    assign target_rsp[1].rvalid  = periph.r_valid;
+
+    assign core_data_req_o.req  = target_req[0].req;
+    assign core_data_req_o.addr = target_req[0].a.addr;
+    assign core_data_req_o.we   = target_req[0].a.we;
+    assign core_data_req_o.be   = target_req[0].a.be;
+    assign core_data_req_o.data = target_req[0].a.wdata;
+    assign target_rsp[0].gnt     = core_data_rsp_i.gnt;
+    assign target_rsp[0].r.rdata = core_data_rsp_i.data;
+    assign target_rsp[0].rvalid  = core_data_rsp_i.valid;
+
+    // Kill Xif on the coprocessor side
+    assign core_xif.coproc_compressed.compressed_valid = '0;
+    assign core_xif.coproc_compressed.compressed_req = '0;
+    assign core_xif.coproc_issue.issue_valid = '0;
+    assign core_xif.coproc_issue.issue_req = '0;
+    assign core_xif.coproc_mem.mem_ready = '0;
+    assign core_xif.coproc_mem.mem_resp = '0;
+    assign core_xif.coproc_result.result_ready = '0;
   end else if (CoreType == CV32X) begin: gen_cv32e40x
     cv32e40x_core #(
       .M_EXT       ( cv32e40x_pkg::M ),
@@ -228,7 +335,7 @@ generate
       .xif_mem_result_if   ( core_xif.cpu_mem_result    ),
       .xif_result_if       ( core_xif.cpu_result        ),
       // Basic interrupt architecture
-      .irq_i               ( {27'd0 ,evt, 3'd0}         ),
+      .irq_i               ( {27'd0, evt, 3'd0}         ),
       // Event wakeup signals
       .wu_wfe_i            ( '0                         ), // Wait-for-event wakeup
       // CLIC interrupt architecture
@@ -251,14 +358,19 @@ generate
       .fetch_enable_i      ( fetch_enable_i             ),
       .core_sleep_o        ( core_sleep_o               )
     );
+
+    // Kill coprocessor periph interface
+    assign periph.req  = '0;
+    assign periph.add  = '0;
+    assign periph.wen  = '0;
+    assign periph.be   = '0;
+    assign periph.data = '0;
+    assign periph.id   = '0;
   end else if (CoreType == Ibex) begin: gen_ibex
     $error("Ibex connection not yet implemented");
   end else begin: gen_cva6
     $error("CVA6 connection not yet implemented");
   end
-endgenerate
-
-localparam int unsigned XExt = (CoreType == CV32X) ? 1 : 0;
 
 redmule_top #(
   .ID_WIDTH           ( ID_WIDTH              ),
@@ -277,7 +389,8 @@ redmule_top #(
   .xif_issue_if_i     ( core_xif.coproc_issue      ),
   .xif_result_if_o    ( core_xif.coproc_result     ),
   .xif_compressed_if_i( core_xif.coproc_compressed ),
-  .xif_mem_if_o       ( core_xif.coproc_mem        )
+  .xif_mem_if_o       ( core_xif.coproc_mem        ),
+  .periph             ( periph                     )
 );
 
 endmodule: redmule_complex

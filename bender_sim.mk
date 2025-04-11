@@ -5,7 +5,8 @@
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 #
 
-sim_targs += -t rtl
+sim_targs += -t rtl -t cv32e40p_include_tracer -t test
+sim_defs  += -D CV32E40P_TRACE_EXECUTION
 
 ifeq ($(REDMULE_COMPLEX),1)
 	sim_targs += -t redmule_test_complex

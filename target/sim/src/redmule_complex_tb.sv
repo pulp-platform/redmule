@@ -20,6 +20,7 @@ module redmule_tb
 );
 
   // parameters
+  localparam bit          UseXif = 1'b0;
   localparam int unsigned PROB_STALL = 0;
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 10;
@@ -32,6 +33,8 @@ module redmule_tb
   localparam int unsigned PULP_ZFINX = 0;
   localparam logic [31:0] BASE_ADDR = 32'h1c000000;
   localparam logic [31:0] HWPE_ADDR_BASE_BIT = 20;
+  localparam redmule_pkg::core_type_e CoreType = UseXif ? redmule_pkg::CV32X
+                                                        : redmule_pkg::CV32P;
 
   // global signals
   string stim_instr, stim_data;
@@ -55,7 +58,7 @@ module redmule_tb
   logic [MP-1:0]       tcdm_r_valid;
   logic                tcdm_r_opc;
   logic                tcdm_r_user;
-   
+
   logic          periph_req;
   logic          periph_gnt;
   logic [31:0]   periph_add;
@@ -117,17 +120,6 @@ module redmule_tb
   core_data_req_t core_data_req;
   core_data_rsp_t core_data_rsp;
 
-  // bindings
-  always_comb begin : bind_periph
-    periph_req     = '0;
-    periph_add     = core_data_req.addr;
-    periph_wen     = ~core_data_req.we;
-    periph_be      = core_data_req.be;
-    periph_data    = core_data_req.data;
-    periph_id      = '0;
-    periph_r_valid = '0;
-  end
-
   always_comb begin : bind_instrs
     instr[0].req  = core_inst_req.req;
     instr[0].add  = core_inst_req.addr;
@@ -140,7 +132,7 @@ module redmule_tb
   end
 
   always_comb begin : bind_stack
-    stack[0].req  = core_data_req.req & (core_data_req.addr[31:24] == '0) &
+    stack[0].req  = core_data_req.req & (core_data_req.addr[31:16] == 16'h1c04) &
                     ~core_data_req.addr[HWPE_ADDR_BASE_BIT];
     stack[0].add  = core_data_req.addr;
     stack[0].wen  = ~core_data_req.we;
@@ -181,16 +173,13 @@ module redmule_tb
   assign tcdm[MP].be   = core_data_req.be;
   assign tcdm[MP].data = core_data_req.data;
 
-  assign core_data_rsp.gnt = periph_req ?
-                             periph_gnt : stack[0].req ?
-                                          stack[0].gnt : tcdm[MP].req ?
-                                                         tcdm[MP].gnt : '1;
+  assign core_data_rsp.gnt = stack[0].req ?
+                             stack[0].gnt : tcdm[MP].req ?
+                                            tcdm[MP].gnt : '1;
 
-  assign core_data_rsp.data = periph_r_valid   ? periph_r_data    :
-                              stack[0].r_valid ? stack[0].r_data  :
+  assign core_data_rsp.data = stack[0].r_valid ? stack[0].r_data  :
                                                  tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
-  assign core_data_rsp.valid = periph_r_valid   |
-                               stack[0].r_valid |
+  assign core_data_rsp.valid = stack[0].r_valid |
                                tcdm[MP].r_valid |
                                other_r_valid    ;
 
@@ -249,7 +238,7 @@ module redmule_tb
   );
 
   redmule_complex #(
-    .CoreType           ( redmule_pkg::CV32X  ), // CV32E40P, CV32E40X, IBEX, SNITCH, CVA6
+    .CoreType           ( CoreType            ), // CV32E40P, CV32E40X, IBEX, SNITCH, CVA6
     .ID_WIDTH           ( ID                  ),
     .N_CORES            ( NC                  ),
     .DW                 ( DW                  ), // TCDM port dimension (in bits)

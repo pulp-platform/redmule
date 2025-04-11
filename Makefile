@@ -34,12 +34,6 @@ include bender_common.mk
 include bender_sim.mk
 include bender_synth.mk
 
-ifeq ($(REDMULE_COMPLEX),1)
-	TEST_SRCS := $(SW)/redmule_complex.c
-else
-	TEST_SRCS := $(SW)/redmule.c
-endif
-
 compile_script_synth ?= $(RootDir)scripts/synth_compile.tcl
 
 INI_PATH  = $(RootDir)modelsim.ini
@@ -49,6 +43,13 @@ WORK_PATH = $(SIM_DIR)/work
 gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
+UseXif   ?= 0
+
+ifeq ($(UseXif),1)
+	TEST_SRCS := $(SW)/redmule_complex.c
+else
+	TEST_SRCS := $(SW)/redmule.c
+endif
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
@@ -186,3 +187,5 @@ $(CargoInstallDir)/bin/bender:
 	chmod +x $(RustupInit); source $(RustupInit) -y && \
 	$(Cargo) install bender
 	rm -rf $(RustupInit)
+
+tools: bender riscv32-gcc
