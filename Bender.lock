@@ -86,6 +86,14 @@ packages:
     source:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
+  obi:
+    revision: 8097928cf1b43712f93d5356f336397879b4ad2c
+    version: 0.1.6
+    source:
+      Git: https://github.com/pulp-platform/obi.git
+    dependencies:
+    - common_cells
+    - common_verification
   tech_cells_generic:
     revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
     version: 0.2.13

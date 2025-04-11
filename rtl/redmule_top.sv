@@ -8,6 +8,7 @@
 `include "hci_helpers.svh"
 
 module redmule_top
+  import cv32e40x_pkg::*;
   import fpnew_pkg::*;
   import redmule_pkg::*;
   import hci_package::*;
@@ -35,15 +36,12 @@ module redmule_top
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
   output logic [N_CORES-1:0][1:0] evt_o      ,
-`ifdef TARGET_REDMULE_COMPLEX
   cv32e40x_if_xif.coproc_issue    xif_issue_if_i,
   cv32e40x_if_xif.coproc_result   xif_result_if_o,
   cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
   cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
-`elsif TARGET_REDMULE_HWPE
   // Periph slave port for the controller side
   hwpe_ctrl_intf_periph.slave periph,
-`endif
   // TCDM master ports for the memory side
   hci_core_intf.initiator tcdm
 );
@@ -54,15 +52,37 @@ logic                       enable, clear;
 logic                       reg_enable;
 logic                       start_cfg, cfg_complete;
 
-`ifdef TARGET_REDMULE_HWPE
+hwpe_ctrl_intf_periph #( .ID_WIDTH  (ID_WIDTH) ) local_periph ( .clk(clk_i) );
+
+if (!X_EXT) begin: gen_periph_connection
   /* If there is no Xif we directly plug the
      control port into the hwpe-slave device */
   assign start_cfg = ((periph.req) &&
                       (periph.add[7:0] == 'h54) &&
                       (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
 
-`elsif TARGET_REDMULE_COMPLEX
-  hwpe_ctrl_intf_periph #( .ID_WIDTH  (ID_WIDTH) ) periph ( .clk(clk_i) );
+  // Bind periph port to local one
+  assign local_periph.req  = periph.req;
+  assign local_periph.add  = periph.add;
+  assign local_periph.wen  = periph.wen;
+  assign local_periph.be   = periph.be;
+  assign local_periph.data = periph.data;
+  assign local_periph.id   = periph.id;
+  assign periph.gnt     = local_periph.gnt;
+  assign periph.r_data  = local_periph.r_data;
+  assign periph.r_valid = local_periph.r_valid;
+  assign periph.r_id    = local_periph.r_id;
+  // Kill Xif
+  assign xif_issue_if_i.issue_ready = '0;
+  assign xif_issue_if_i.issue_resp  = '0;
+  assign xif_result_if_o.result_valid = '0;
+  assign xif_result_if_o.result       = '0;
+  assign xif_compressed_if_i.compressed_ready = '0;
+  assign xif_compressed_if_i.compressed_resp  = '0;
+  assign xif_mem_if_o.mem_valid = '0;
+  assign xif_mem_if_o.mem_req   = '0;
+
+end else begin: gen_xif_decoder
   /* If there is the Xif, we pass through the
      instruction decoder and then enter into
      the hwpe slave device */
@@ -82,12 +102,16 @@ logic                       start_cfg, cfg_complete;
     .xif_result_if_o     ( xif_result_if_o     ),
     .xif_compressed_if_i ( xif_compressed_if_i ),
     .xif_mem_if_o        ( xif_mem_if_o        ),
-    .periph              ( periph              ),
+    .periph              ( local_periph        ),
     .cfg_complete_i      ( cfg_complete        ),
     .start_cfg_o         ( start_cfg           )
   );
-
-`endif
+  // Kill periph bus
+  assign periph.gnt     = '0;
+  assign periph.r_data  = '0;
+  assign periph.r_valid = '0;
+  assign periph.r_id    = '0;
+end
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;
@@ -419,7 +443,7 @@ redmule_ctrl        #(
   .w_loaded_i        ( flgs_scheduler.w_loaded ),
   .flush_o           ( engine_flush            ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
-  .periph            ( periph                  )
+  .periph            ( local_periph            )
 );
 
 
