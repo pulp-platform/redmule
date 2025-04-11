@@ -34,7 +34,7 @@ module redmule_tb
   localparam logic [31:0] HWPE_ADDR_BASE_BIT = 20;
 
   // global signals
-  string stim_instr, stim_data;
+  string stim_instr, stim_data, stack_data;
   logic test_mode;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
@@ -55,7 +55,7 @@ module redmule_tb
   logic [MP-1:0]       tcdm_r_valid;
   logic                tcdm_r_opc;
   logic                tcdm_r_user;
-   
+
   logic          periph_req;
   logic          periph_gnt;
   logic [31:0]   periph_add;
@@ -186,7 +186,6 @@ module redmule_tb
   logic [31:0] data_memory [MEMORY_SIZE];
   logic [31:0] inst_memory [MEMORY_SIZE];
   logic [31:0] stck_memory [STACK_MEMORY_SIZE];
-  for (genvar i = 0; i < STACK_MEMORY_SIZE; i++) assign stck_memory[i] = 32'h0;
   logic memory_init;
   tb_dummy_memory  #(
     .MP             ( MP + 1        ),
@@ -329,6 +328,7 @@ module redmule_tb
 
     if (!$value$plusargs("STIM_INSTR=%s", stim_instr)) stim_instr = "../../../sw/build/stim_instr.txt";
     if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
+    if (!$value$plusargs("STACK_DATA=%s", stack_data)) stack_data = "../../../sw/build/stack_memory.txt";
 
     test_mode = 1'b0;
     core_boot_addr = 32'h1C000084;
@@ -337,6 +337,7 @@ module redmule_tb
     memory_init = 1'b1; @(posedge clk_i);
     $readmemh(stim_instr, inst_memory);
     $readmemh(stim_data,  data_memory);
+    $readmemh(stack_data,  stck_memory);
     memory_init = 1'b1; @(posedge clk_i);
 
     // End: WFI + returned != -1 signals end-of-computation
