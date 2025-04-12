@@ -28,22 +28,22 @@ PYTHON     ?= python3
 target ?= verilator
 TargetPath := $(SimDir)/$(target)
 
-# Included makefrags
-include $(TargetPath)/$(target).mk
-include bender_common.mk
-include bender_sim.mk
-include bender_synth.mk
-
-compile_script_synth ?= $(RootDir)scripts/synth_compile.tcl
-
-INI_PATH  = $(RootDir)modelsim.ini
-WORK_PATH = $(SIM_DIR)/work
-
 # Useful Parameters
 gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
 UseXif   ?= 0
+
+# Included makefrags
+include bender_common.mk
+include bender_sim.mk
+include bender_synth.mk
+include $(TargetPath)/$(target).mk
+
+compile_script_synth ?= $(RootDir)scripts/synth_compile.tcl
+
+INI_PATH  = $(RootDir)modelsim.ini
+WORK_PATH = $(SIM_DIR)/work
 
 ifeq ($(UseXif),1)
 	TEST_SRCS := $(SW)/redmule_complex.c
@@ -80,12 +80,14 @@ BIN=$(BUILD_DIR)/verif
 DUMP=$(BUILD_DIR)/verif.dump
 STIM_INSTR=$(BUILD_DIR)/stim_instr.txt
 STIM_DATA=$(BUILD_DIR)/stim_data.txt
+STACK_INIT=$(BUILD_DIR)/stack_init.txt
 
 # Build implicit rules
-$(STIM_INSTR) $(STIM_DATA): $(BIN)
+$(STIM_INSTR) $(STIM_DATA) $(STACK_INIT): $(BIN)
 	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	$(PYTHON) scripts/parse_s19.py < $(BIN).s19 > $(BIN).txt
 	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+	$(PYTHON) scripts/stack_init.py $(STACK_INIT)
 
 $(BIN): $(CRT) $(OBJ)
 	$(LD) $(LD_OPTS) -o $(BIN) $(CRT) $(OBJ) -T$(LINKSCRIPT)
@@ -102,7 +104,7 @@ $(BUILD_DIR):
 SHELL := /bin/bash
 
 # Generate instructions and data stimuli
-sw-build: $(STIM_INSTR) $(STIM_DATA) dis
+sw-build: $(STIM_INSTR) $(STIM_DATA) $(STACK_INIT) dis
 
 $(SIM_DIR):
 	mkdir -p $(SIM_DIR)

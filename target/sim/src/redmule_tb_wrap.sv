@@ -13,13 +13,17 @@ import redmule_pkg::*;
   localparam TCP = 1.0ns; // clock period, 1 GHz clock
   localparam TA  = 0.2ns; // application time
   localparam TT  = 0.8ns; // test time
+  parameter  logic UseXif = 1'b0; // Wether to use CV32E40P/X (passed through the Makefile)
+  parameter int unsigned PROB_STALL = 0; // Dummy memories stall probability (passed through the Makefile)
 
   logic clk, rst_n, fetch_enable;
 
   redmule_tb #(
     .TCP ( TCP ),
     .TA  ( TA  ),
-    .TT  ( TT  )
+    .TT  ( TT  ),
+    .UseXif ( UseXif ),
+    .PROB_STALL ( PROB_STALL )
   ) i_redmule_tb (
     .clk_i          ( clk          ),
     .rst_ni         ( rst_n        ),
