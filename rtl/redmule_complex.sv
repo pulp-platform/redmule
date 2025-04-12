@@ -70,11 +70,15 @@ logic busy;
 logic s_clk, s_clk_en;
 logic [N_CORES-1:0][1:0] evt;
 
-core_inst_req_t core_inst_req;
-core_inst_rsp_t core_inst_rsp;
+`OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, SysDataWidth, ID_WIDTH, logic)
+`OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, SysDataWidth, ID_WIDTH, logic)
+`OBI_TYPEDEF_REQ_T(redmule_complex_req_t, redmule_complex_a_chan_t)
+`OBI_TYPEDEF_RSP_T(redmule_complex_rsp_t, redmule_complex_r_chan_t)
 
-core_data_req_t core_data_req, redmule_cfg_req;
-core_data_rsp_t core_data_rsp, redmule_cfg_rsp;
+redmule_complex_req_t core_data_req, core_data_req_cut;
+redmule_complex_rsp_t core_data_rsp, core_data_rsp_cut;
+redmule_complex_req_t core_inst_req, core_inst_req_cut;
+redmule_complex_rsp_t core_inst_rsp, core_inst_rsp_cut;
 
 hwpe_ctrl_intf_periph #(.ID_WIDTH(ID_WIDTH)) periph (.clk(clk_i));
 
@@ -109,6 +113,66 @@ cv32e40x_if_xif#(
   .X_ECS_XS    ( XifEcsXs        )
 ) core_xif ();
 
+localparam obi_pkg::obi_cfg_t LocalObiCfg = '{
+  UseRReady: 1'b0,
+  CombGnt:   1'b0,
+  AddrWidth: AddrWidth,
+  DataWidth: SysDataWidth,
+  IdWidth:   ID_WIDTH,
+  Integrity: 1'b0,
+  BeFull:    1'b1,
+  OptionalCfg: '{default: '0}
+};
+
+obi_cut #(
+  .ObiCfg       ( LocalObiCfg              ),
+  .obi_a_chan_t ( redmule_complex_a_chan_t ),
+  .obi_r_chan_t ( redmule_complex_r_chan_t ),
+  .obi_req_t    ( redmule_complex_req_t    ),
+  .obi_rsp_t    ( redmule_complex_rsp_t    ),
+  .Bypass       ( 1'b0                     ),
+  .BypassReq    ( 1'b0                     ),
+  .BypassRsp    ( 1'b0                     )
+) i_obi_data_cut (
+  .clk_i,
+  .rst_ni,
+  .sbr_port_req_i ( core_data_req     ),
+  .sbr_port_rsp_o ( core_data_rsp     ),
+  .mgr_port_req_o ( core_data_req_cut ),
+  .mgr_port_rsp_i ( core_data_rsp_cut )
+);
+assign core_data_req_o.req  = core_data_req_cut.req;
+assign core_data_req_o.addr = core_data_req_cut.a.addr;
+assign core_data_req_o.we   = core_data_req_cut.a.we;
+assign core_data_req_o.be   = core_data_req_cut.a.be;
+assign core_data_req_o.data = core_data_req_cut.a.wdata;
+assign core_data_rsp_cut.gnt     = core_data_rsp_i.gnt;
+assign core_data_rsp_cut.r.rdata = core_data_rsp_i.data;
+assign core_data_rsp_cut.rvalid  = core_data_rsp_i.valid;
+
+obi_cut #(
+  .ObiCfg       ( LocalObiCfg              ),
+  .obi_a_chan_t ( redmule_complex_a_chan_t ),
+  .obi_r_chan_t ( redmule_complex_r_chan_t ),
+  .obi_req_t    ( redmule_complex_req_t    ),
+  .obi_rsp_t    ( redmule_complex_rsp_t    ),
+  .Bypass       ( 1'b0                     ),
+  .BypassReq    ( 1'b0                     ),
+  .BypassRsp    ( 1'b0                     )
+) i_obi_instr_cut (
+  .clk_i,
+  .rst_ni,
+  .sbr_port_req_i ( core_inst_req     ),
+  .sbr_port_rsp_o ( core_inst_rsp     ),
+  .mgr_port_req_o ( core_inst_req_cut ),
+  .mgr_port_rsp_i ( core_inst_rsp_cut )
+);
+assign core_inst_req_o.req  = core_inst_req_cut.req;
+assign core_inst_req_o.addr = core_inst_req_cut.a.addr;
+assign core_inst_rsp_cut.gnt     = core_inst_rsp_i.gnt;
+assign core_inst_rsp_cut.r.rdata = core_inst_rsp_i.data;
+assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
+
   if (CoreType == CV32P) begin: gen_cv32e40p
 
     typedef enum logic [NumDemuxIdx-1:0] {
@@ -134,27 +198,10 @@ cv32e40x_if_xif#(
                           end_addr: 'hFFFFFFFF}
     };
 
-    localparam obi_pkg::obi_cfg_t ObiDemuxCfg = '{
-      UseRReady: 1'b0,
-      CombGnt:   1'b0,
-      AddrWidth: AddrWidth,
-      DataWidth: SysDataWidth,
-      IdWidth:   ID_WIDTH,
-      Integrity: 1'b0,
-      BeFull:    1'b1,
-      OptionalCfg: '{default: '0}
-    };
-
-    `OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, SysDataWidth, ID_WIDTH, logic)
-    `OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, SysDataWidth, ID_WIDTH, logic)
-    `OBI_TYPEDEF_REQ_T(redmule_complex_req_t, redmule_complex_a_chan_t)
-    `OBI_TYPEDEF_RSP_T(redmule_complex_rsp_t, redmule_complex_r_chan_t)
-
-    redmule_complex_req_t core_req;
-    redmule_complex_rsp_t core_rsp;
-
-    redmule_complex_req_t [NumDemuxIdx-1:0] target_req;
-    redmule_complex_rsp_t [NumDemuxIdx-1:0] target_rsp;
+    redmule_complex_req_t core_local_data_req;
+    redmule_complex_rsp_t core_local_data_rsp;
+    redmule_complex_req_t [NumDemuxIdx-1:0] target_data_req;
+    redmule_complex_rsp_t [NumDemuxIdx-1:0] target_data_rsp;
 
   `ifdef CV32E40P_TRACE_EXECUTION
     cv32e40p_wrapper #(
@@ -177,20 +224,20 @@ cv32e40x_if_xif#(
       .hart_id_i           ( '0                    ),
       .dm_exception_addr_i ( '0                    ),
       // Instruction memory interface
-      .instr_req_o         ( core_inst_req_o.req   ),
-      .instr_addr_o        ( core_inst_req_o.addr  ),
-      .instr_gnt_i         ( core_inst_rsp_i.gnt   ),
-      .instr_rvalid_i      ( core_inst_rsp_i.valid ),
-      .instr_rdata_i       ( core_inst_rsp_i.data  ),
+      .instr_req_o         ( core_inst_req.req     ),
+      .instr_addr_o        ( core_inst_req.a.addr  ),
+      .instr_gnt_i         ( core_inst_rsp.gnt     ),
+      .instr_rvalid_i      ( core_inst_rsp.rvalid  ),
+      .instr_rdata_i       ( core_inst_rsp.r.rdata ),
       // Data memory interface
-      .data_req_o          ( core_req.req     ),
-      .data_we_o           ( core_req.a.we    ),
-      .data_be_o           ( core_req.a.be    ),
-      .data_addr_o         ( core_req.a.addr  ),
-      .data_wdata_o        ( core_req.a.wdata ),
-      .data_gnt_i          ( core_rsp.gnt     ),
-      .data_rvalid_i       ( core_rsp.rvalid  ),
-      .data_rdata_i        ( core_rsp.r.rdata ),
+      .data_req_o          ( core_local_data_req.req     ),
+      .data_we_o           ( core_local_data_req.a.we    ),
+      .data_be_o           ( core_local_data_req.a.be    ),
+      .data_addr_o         ( core_local_data_req.a.addr  ),
+      .data_wdata_o        ( core_local_data_req.a.wdata ),
+      .data_gnt_i          ( core_local_data_rsp.gnt     ),
+      .data_rvalid_i       ( core_local_data_rsp.rvalid  ),
+      .data_rdata_i        ( core_local_data_rsp.r.rdata ),
       // apu-interconnect
       // handshake signals
       .apu_req_o           (                   ),
@@ -217,28 +264,32 @@ cv32e40x_if_xif#(
       .core_sleep_o        ( core_sleep_o      )
     );
     // Tie to 0 unused buses
-    assign core_req.rready = '0;
-    assign core_req.a.aid = '0;
-    assign core_req.a.a_optional = '0;
+    assign core_local_data_req.rready = '0;
+    assign core_local_data_req.a.aid = '0;
+    assign core_local_data_req.a.a_optional = '0;
+    assign core_inst_req.a.we = '0;
+    assign core_inst_req.a.be = '0;
+    assign core_inst_req.a.wdata = '0;
 
-    logic target_sel;
+    logic [$clog2(NumDemuxIdx)-1:0] target_sel, default_idx;
+    assign default_idx = '0;
     addr_decode #(
       .NoIndices ( NumDemuxIdx           ),
       .NoRules   ( NumDemuxRules         ),
       .addr_t    ( logic [AddrWidth-1:0] ),
       .rule_t    ( addr_map_rule_t       )
     ) i_addr_decode (
-      .addr_i          ( core_req.a.addr ),
-      .addr_map_i      ( LocalAddrMap    ),
-      .idx_o           ( target_sel      ),
+      .addr_i          ( core_local_data_req.a.addr ),
+      .addr_map_i      ( LocalAddrMap               ),
+      .idx_o           ( target_sel                 ),
       .dec_valid_o     ( ),
       .dec_error_o     ( ),
-      .en_default_idx_i( 1'b1            ),
-      .default_idx_i   ( 0               )
+      .en_default_idx_i( 1'b1                       ),
+      .default_idx_i   ( default_idx                )
     );
 
     obi_demux #(
-      .ObiCfg      ( ObiDemuxCfg           ),
+      .ObiCfg      ( LocalObiCfg           ),
       .obi_req_t   ( redmule_complex_req_t ),
       .obi_rsp_t   ( redmule_complex_rsp_t ),
       .NumMgrPorts ( NumDemuxIdx           ),
@@ -246,32 +297,26 @@ cv32e40x_if_xif#(
     ) i_demux (
       .clk_i,
       .rst_ni,
-      .sbr_port_select_i ( target_sel ),
-      .sbr_port_req_i    ( core_req   ),
-      .sbr_port_rsp_o    ( core_rsp   ),
-      .mgr_ports_req_o   ( target_req ),
-      .mgr_ports_rsp_i   ( target_rsp )
+      .sbr_port_select_i ( target_sel          ),
+      .sbr_port_req_i    ( core_local_data_req ),
+      .sbr_port_rsp_o    ( core_local_data_rsp ),
+      .mgr_ports_req_o   ( target_data_req     ),
+      .mgr_ports_rsp_i   ( target_data_rsp     )
     );
 
     // Bind redmule config bus to HWPE Control interface
-    assign periph.req            = target_req[1].req;
-    assign periph.add            = target_req[1].a.addr;
-    assign periph.wen            = ~target_req[1].a.we;
-    assign periph.be             = target_req[1].a.be;
-    assign periph.data           = target_req[1].a.wdata;
-    assign periph.id             = target_req[1].a.aid;
-    assign target_rsp[1].gnt     = periph.gnt;
-    assign target_rsp[1].r.rdata = periph.r_data;
-    assign target_rsp[1].rvalid  = periph.r_valid;
+    assign periph.req            = target_data_req[1].req;
+    assign periph.add            = target_data_req[1].a.addr;
+    assign periph.wen            = ~target_data_req[1].a.we;
+    assign periph.be             = target_data_req[1].a.be;
+    assign periph.data           = target_data_req[1].a.wdata;
+    assign periph.id             = target_data_req[1].a.aid;
+    assign target_data_rsp[1].gnt     = periph.gnt;
+    assign target_data_rsp[1].r.rdata = periph.r_data;
+    assign target_data_rsp[1].rvalid  = periph.r_valid;
 
-    assign core_data_req_o.req  = target_req[0].req;
-    assign core_data_req_o.addr = target_req[0].a.addr;
-    assign core_data_req_o.we   = target_req[0].a.we;
-    assign core_data_req_o.be   = target_req[0].a.be;
-    assign core_data_req_o.data = target_req[0].a.wdata;
-    assign target_rsp[0].gnt     = core_data_rsp_i.gnt;
-    assign target_rsp[0].r.rdata = core_data_rsp_i.data;
-    assign target_rsp[0].rvalid  = core_data_rsp_i.valid;
+    assign core_data_req = target_data_req[0];
+    assign target_data_rsp[0] = core_data_rsp;
 
     // Kill Xif on the coprocessor side
     assign core_xif.coproc_compressed.compressed_valid = '0;
@@ -298,75 +343,81 @@ cv32e40x_if_xif#(
       .X_ECS_XS    ( XifEcsXs        )
     ) i_core       (
       // Clock and Reset
-      .clk_i               ( s_clk                      ),
-      .rst_ni              ( rst_ni                     ),
-      .scan_cg_en_i        ( 1'b0                       ),  // Enable all clock gates for testing
+      .clk_i               ( s_clk                   ),
+      .rst_ni              ( rst_ni                  ),
+      .scan_cg_en_i        ( 1'b0                    ),  // Enable all clock gates for testing
       // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
-      .boot_addr_i         ( boot_addr_i                ),
-      .dm_exception_addr_i ( '0                         ),
-      .dm_halt_addr_i      ( '0                         ),
-      .mhartid_i           ( '0                         ),
-      .mimpid_patch_i      ( '0                         ),
-      .mtvec_addr_i        ( '0                         ),
+      .boot_addr_i         ( boot_addr_i             ),
+      .dm_exception_addr_i ( '0                      ),
+      .dm_halt_addr_i      ( '0                      ),
+      .mhartid_i           ( '0                      ),
+      .mimpid_patch_i      ( '0                      ),
+      .mtvec_addr_i        ( '0                      ),
       // Instruction memory interface
-      .instr_req_o         ( core_inst_req_o.req        ),
-      .instr_gnt_i         ( core_inst_rsp_i.gnt        ),
-      .instr_rvalid_i      ( core_inst_rsp_i.valid      ),
-      .instr_addr_o        ( core_inst_req_o.addr       ),
-      .instr_memtype_o     (                            ),
-      .instr_prot_o        (                            ),
-      .instr_dbg_o         (                            ),
-      .instr_rdata_i       ( core_inst_rsp_i.data       ),
-      .instr_err_i         ( '0                         ),
+      .instr_req_o         ( core_inst_req.req      ),
+      .instr_gnt_i         ( core_inst_rsp.gnt      ),
+      .instr_rvalid_i      ( core_inst_rsp.rvalid   ),
+      .instr_addr_o        ( core_inst_req.a.addr   ),
+      .instr_memtype_o     (                         ),
+      .instr_prot_o        (                         ),
+      .instr_dbg_o         (                         ),
+      .instr_rdata_i       ( core_inst_rsp.r.rdata  ),
+      .instr_err_i         ( '0                      ),
       // Data memory interface
-      .data_req_o          ( core_data_req_o.req        ),
-      .data_gnt_i          ( core_data_rsp_i.gnt        ),
-      .data_rvalid_i       ( core_data_rsp_i.valid      ),
-      .data_addr_o         ( core_data_req_o.addr       ),
-      .data_be_o           ( core_data_req_o.be         ),
-      .data_we_o           ( core_data_req_o.we         ),
-      .data_wdata_o        ( core_data_req_o.data       ),
-      .data_memtype_o      (                            ),
-      .data_prot_o         (                            ),
-      .data_dbg_o          (                            ),
-      .data_atop_o         (                            ),
-      .data_rdata_i        ( core_data_rsp_i.data       ),
-      .data_err_i          ( '0                         ),
-      .data_exokay_i       ( '1                         ),
+      .data_req_o          ( core_data_req.req       ),
+      .data_gnt_i          ( core_data_rsp.gnt       ),
+      .data_rvalid_i       ( core_data_rsp.rvalid    ),
+      .data_addr_o         ( core_data_req.a.addr    ),
+      .data_be_o           ( core_data_req.a.be      ),
+      .data_we_o           ( core_data_req.a.we      ),
+      .data_wdata_o        ( core_data_req.a.wdata   ),
+      .data_memtype_o      (                         ),
+      .data_prot_o         (                         ),
+      .data_dbg_o          (                         ),
+      .data_atop_o         (                         ),
+      .data_rdata_i        ( core_data_rsp.r.rdata   ),
+      .data_err_i          ( '0                      ),
+      .data_exokay_i       ( '1                      ),
       // Cycle, Time
-      .mcycle_o            (                            ),
-      .time_i              ( '0                         ),
+      .mcycle_o            (                         ),
+      .time_i              ( '0                      ),
       // eXtension interface
-      .xif_compressed_if   ( core_xif.cpu_compressed    ),
-      .xif_issue_if        ( core_xif.cpu_issue         ),
-      .xif_commit_if       ( core_xif.cpu_commit        ),
-      .xif_mem_if          ( core_xif.cpu_mem           ),
-      .xif_mem_result_if   ( core_xif.cpu_mem_result    ),
-      .xif_result_if       ( core_xif.cpu_result        ),
+      .xif_compressed_if   ( core_xif.cpu_compressed ),
+      .xif_issue_if        ( core_xif.cpu_issue      ),
+      .xif_commit_if       ( core_xif.cpu_commit     ),
+      .xif_mem_if          ( core_xif.cpu_mem        ),
+      .xif_mem_result_if   ( core_xif.cpu_mem_result ),
+      .xif_result_if       ( core_xif.cpu_result     ),
       // Basic interrupt architecture
-      .irq_i               ( {27'd0, evt, 3'd0}         ),
+      .irq_i               ( {27'd0, evt, 3'd0}      ),
       // Event wakeup signals
-      .wu_wfe_i            ( '0                         ), // Wait-for-event wakeup
+      .wu_wfe_i            ( '0                      ), // Wait-for-event wakeup
       // CLIC interrupt architecture
-      .clic_irq_i          ( '0                         ),
-      .clic_irq_id_i       ( '0                         ),
-      .clic_irq_level_i    ( '0                         ),
-      .clic_irq_priv_i     ( '0                         ),
-      .clic_irq_shv_i      ( '0                         ),
+      .clic_irq_i          ( '0                      ),
+      .clic_irq_id_i       ( '0                      ),
+      .clic_irq_level_i    ( '0                      ),
+      .clic_irq_priv_i     ( '0                      ),
+      .clic_irq_shv_i      ( '0                      ),
       // Fence.i flush handshake
-      .fencei_flush_req_o  (                            ),
-      .fencei_flush_ack_i  ( '0                         ),
+      .fencei_flush_req_o  (                         ),
+      .fencei_flush_ack_i  ( '0                      ),
       // Debug Interface
-      .debug_req_i         ( '0                         ),
-      .debug_havereset_o   (                            ),
-      .debug_running_o     (                            ),
-      .debug_halted_o      (                            ),
-      .debug_pc_valid_o    (                            ),
-      .debug_pc_o          (                            ),
+      .debug_req_i         ( '0                      ),
+      .debug_havereset_o   (                         ),
+      .debug_running_o     (                         ),
+      .debug_halted_o      (                         ),
+      .debug_pc_valid_o    (                         ),
+      .debug_pc_o          (                         ),
       // CPU Control Signals
-      .fetch_enable_i      ( fetch_enable_i             ),
-      .core_sleep_o        ( core_sleep_o               )
+      .fetch_enable_i      ( fetch_enable_i          ),
+      .core_sleep_o        ( core_sleep_o            )
     );
+    assign core_data_req.rready = '0;
+    assign core_data_req.a.aid = '0;
+    assign core_data_req.a.a_optional = '0;
+    assign core_inst_req.a.we = '0;
+    assign core_inst_req.a.be = '0;
+    assign core_inst_req.a.wdata = '0;
 
     // Kill coprocessor periph interface
     assign periph.req  = '0;
