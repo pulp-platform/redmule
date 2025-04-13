@@ -7,9 +7,3 @@
 
 common_targs += -t rtl
 common_defs  += -D COREV_ASSERT_OFF
-
-ifeq ($(UseXif),1)
-	common_targs += -t redmule_complex
-else
-	common_targs += -t redmule_hwpe
-endif
