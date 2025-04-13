@@ -6,11 +6,12 @@
 #
 
 sim_targs += -t redmule_test
+sim_defs  += -D COREV_ASSERT_OFF
 
 ifneq ($(target),verilator)
 ifeq ($(UseXif),1)
 	sim_targs += -t cv32e40x_bhv
-	common_defs += -D CV32E40X_TRACE_EXECUTION
+	sim_defs  += -D CV32E40X_TRACE_EXECUTION
 else
 	sim_targs += -t cv32e40p_include_tracer
 	sim_defs  += -D CV32E40P_TRACE_EXECUTION

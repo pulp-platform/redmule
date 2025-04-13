@@ -20,26 +20,41 @@ module redmule_complex
   parameter int unsigned N_CORES = 8,
   // TCDM port dimension (in bits)
   parameter int unsigned DW = DATA_W,
-  parameter int unsigned MP = DW/redmule_pkg::MemDw,
   parameter int unsigned NumIrqs = 32,
   parameter int unsigned AddrWidth = 32,
+  parameter int unsigned CoreDataWidth = 32,
   parameter int unsigned XPulp = 0,
   parameter int unsigned FpuPresent = 0,
   parameter int unsigned Zfinx = 0,
-  parameter int unsigned NumDemuxIdx = 2,
-  parameter int unsigned NumDemuxRules = 3,
   parameter int unsigned RedMulERegionStartAddr = 'h00100000,
   parameter int unsigned RedMulERegionSize = 'h400,
-  parameter type core_data_req_t = logic,
-  parameter type core_data_rsp_t = logic,
-  parameter type core_inst_req_t = logic,
-  parameter type core_inst_rsp_t = logic,
   // Data format (default is FP16)
-  localparam fp_format_e  FpFormat = FPFORMAT,
+  parameter fp_format_e  FpFormat = FPFORMAT,
   // Number of PEs within a row
-  localparam int unsigned Height = ARRAY_HEIGHT,
+  parameter int unsigned Height = ARRAY_HEIGHT,
   // Number of parallel rows
-  localparam int unsigned Width = ARRAY_WIDTH,
+  parameter int unsigned Width = ARRAY_WIDTH,
+  parameter type core_data_req_t = struct packed {
+    logic req;
+    logic we;
+    logic [(CoreDataWidth/8)-1:0] be;
+    logic [AddrWidth-1:0] addr;
+    logic [CoreDataWidth-1:0] data;
+  },
+  parameter type core_data_rsp_t = struct packed {
+    logic gnt;
+    logic valid;
+    logic [CoreDataWidth-1:0] data;
+  },
+  parameter type core_inst_req_t = struct packed {
+    logic        req;
+    logic [AddrWidth-1:0] addr;
+  },
+  parameter type core_inst_rsp_t = struct packed {
+    logic        gnt;
+    logic        valid;
+    logic [CoreDataWidth-1:0] data;
+  },
   // Number of pipeline registers within each PE
   localparam int unsigned NumPipeRegs = PIPE_REGS,
   localparam pipe_config_t PipeConfig  = DISTRIBUTED,
@@ -65,6 +80,8 @@ module redmule_complex
 localparam int unsigned XExt = (CoreType == CV32X) ? 1 : 0;
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
 localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
+localparam int unsigned NumDemuxIdx = 2;
+localparam int unsigned NumDemuxRules = 3;
 
 logic busy;
 logic s_clk, s_clk_en;
@@ -188,14 +205,14 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
 
     localparam addr_map_rule_t [NumDemuxRules-1:0] LocalAddrMap = '{
        // Before Accelerator
-      '{ idx: ExternalId, start_addr: 'h00000000,
-                          end_addr: RedMulERegionStartAddr},
+      '{idx: ExternalId, start_addr: 'h00000000,
+                         end_addr: RedMulERegionStartAddr},
       // Accelerator configuration port
-      '{ idx: RedMulEId, start_addr: RedMulERegionStartAddr,
-                         end_addr: RedMulERegionStartAddr + RedMulERegionSize},
+      '{idx: RedMulEId, start_addr: RedMulERegionStartAddr,
+                        end_addr: RedMulERegionStartAddr + RedMulERegionSize},
       // After Accelerator
-      '{ idx: ExternalId, start_addr: RedMulERegionStartAddr + RedMulERegionSize,
-                          end_addr: 'hFFFFFFFF}
+      '{idx: ExternalId, start_addr: RedMulERegionStartAddr + RedMulERegionSize,
+                         end_addr: 'hFFFFFFFF}
     };
 
     redmule_complex_req_t core_local_data_req;
@@ -434,7 +451,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
 
 redmule_top #(
   .ID_WIDTH           ( ID_WIDTH              ),
-  .N_CORES            ( 1                     ),
+  .N_CORES            ( N_CORES               ),
   .DW                 ( DW                    ),
   .X_EXT              ( XExt                  ),
   .SysInstWidth       ( SysInstWidth          ),

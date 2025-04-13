@@ -16,7 +16,6 @@ VsimPath      := target/sim/vsim
 SW         ?= $(RootDir)sw
 BUILD_DIR  ?= $(SW)/build
 SIM_DIR    ?= $(RootDir)vsim
-QUESTA     ?= questa-2023.4
 Bender     ?= $(CargoInstallDir)/bin/bender
 Gcc        ?= $(GccInstallDir)/bin/
 ISA        ?= riscv
