@@ -49,7 +49,7 @@ hw-build: hw-script
 
 hw-run:
 	cd $(VsimDir);                \
-	$(QUESTA) $(target) $(Tb)_opt \
+	$(Questa) $(target) $(Tb)_opt \
 	$(VsimFlags)                  \
 	$(CoreTraces)                 \
 	+STIM_INSTR=$(STIM_INSTR)     \
