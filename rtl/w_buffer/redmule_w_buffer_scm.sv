@@ -96,10 +96,14 @@ module redmule_w_buffer_scm #(
     for (genvar r = 0; r < ROWS; r++) begin : gen_rows
       for (genvar c = 0; c < COLS; c++) begin : gen_cols
         always_ff @(posedge clk_i or negedge rst_ni) begin : wdata
-          if (~rst_ni)
+          if (~rst_ni) begin
             buffer_q[r][c] <= '0;
-          else if (write_addr_i == r && write_en_i || clear_i) begin
-            buffer_q[r][c] <= wdata_i[c];
+          end else begin
+            if (clear_i) begin
+              buffer_q[r][c] <= '0;
+            end else if (write_addr_i == r && write_en_i) begin
+              buffer_q[r][c] <= wdata_i[c];
+            end
           end
         end
       end

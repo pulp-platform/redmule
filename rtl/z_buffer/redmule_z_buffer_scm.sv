@@ -132,7 +132,9 @@ module redmule_z_buffer_scm #(
           if (~rst_ni) begin
             buffer_q[r][c] <= '0;
           end else begin
-            if (row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i || clear_i) begin
+            if (clear_i) begin
+              buffer_q[r][c] <= '0;
+            end else if (row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i) begin
               buffer_q[r][c] <= row_write_en_i ? row_wdata_i[c] : col_wdata_i[r];
             end
           end
