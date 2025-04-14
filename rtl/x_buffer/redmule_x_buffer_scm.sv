@@ -6,10 +6,11 @@
 //
 
 module redmule_x_buffer_scm #(
-  parameter int unsigned WORD_SIZE = 32,
-  parameter int unsigned WIDTH     = 1 ,
-  parameter int unsigned HEIGHT    = 2 ,
-  parameter int unsigned N_OUTPUTS = 1
+  parameter int unsigned WORD_SIZE   = 32,
+  parameter int unsigned WIDTH       = 1 ,
+  parameter int unsigned HEIGHT      = 2 ,
+  parameter int unsigned N_OUTPUTS   = 1 ,
+  parameter int unsigned USE_LATCHES = LATCH_BUFFERS
 ) (
   input  logic                                           clk_i        ,
   input  logic                                           rst_ni       ,
@@ -63,22 +64,38 @@ module redmule_x_buffer_scm #(
   assign row_w_addr  = write_addr_i[$clog2(N_OUTPUTS)-1:0];
   assign slot_w_addr = write_addr_i[$clog2(N_OUTPUTS)+:$clog2(HEIGHT)];
 
-  for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots_cg
-    for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows_cg
-      tc_clk_gating i_row_cg (
-        .clk_i     ( clk_i                                                        ),
-        .en_i      ( row_w_addr == o && slot_w_addr == h && write_en_i || clear_i ),
-        .test_en_i ( '0                                                           ),
-        .clk_o     ( clk_w[h][o]                                                  )
-      );
+  if (USE_LATCHES) begin : gen_latches
+    for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots_cg
+      for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows_cg
+        tc_clk_gating i_row_cg (
+          .clk_i     ( clk_i                                                        ),
+          .en_i      ( row_w_addr == o && slot_w_addr == h && write_en_i || clear_i ),
+          .test_en_i ( '0                                                           ),
+          .clk_o     ( clk_w[h][o]                                                  )
+        );
+      end
     end
-  end
 
-  for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots
-    for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows
-      always_latch begin : latch_wdata
-        if (clk_w[h][o]) begin
-          buffer_q[h][o] = wdata_q;
+    for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots
+      for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows
+        always_latch begin : wdata
+          if (clk_w[h][o]) begin
+            buffer_q[h][o] = wdata_q;
+          end
+        end
+      end
+    end
+  end else begin : gen_flip_flops
+    for (genvar h = 0; h < HEIGHT; h++) begin : gen_slots
+      for (genvar o = 0; o < N_OUTPUTS; o++) begin : gen_rows
+        always_ff @(posedge clk_i or negedge rst_ni) begin : wdata
+          if (~rst_ni) begin
+            buffer_q[h][o] <= '0;
+          end else begin
+            if (row_w_addr == o && slot_w_addr == h && write_en_i || clear_i) begin
+              buffer_q[h][o] <= wdata_i;
+            end
+          end
         end
       end
     end
