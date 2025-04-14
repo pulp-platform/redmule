@@ -5,7 +5,9 @@
 // Andrea Belano <andrea.belano2@unibo.it>
 //
 
-module redmule_x_buffer_scm #(
+module redmule_x_buffer_scm
+  import redmule_pkg::*;
+#(
   parameter int unsigned WORD_SIZE   = 32,
   parameter int unsigned WIDTH       = 1 ,
   parameter int unsigned HEIGHT      = 2 ,

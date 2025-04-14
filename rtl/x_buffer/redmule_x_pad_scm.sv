@@ -5,7 +5,9 @@
 // Andrea Belano <andrea.belano2@unibo.it>
 //
 
-module redmule_x_pad_scm #(
+module redmule_x_pad_scm
+  import redmule_pkg::*;
+#(
   parameter int unsigned WORD_SIZE   = 32,
   parameter int unsigned ROWS        = 1 ,
   parameter int unsigned COLS        = 1 ,
@@ -84,7 +86,7 @@ module redmule_x_pad_scm #(
             if (clear_i) begin
               buffer_q[r][c] <= '0;
             end else if (write_addr_i == r && write_en_i) begin
-              buffer_q[r][c] = wdata_i[c];
+              buffer_q[r][c] <= wdata_i[c];
             end
           end
         end
