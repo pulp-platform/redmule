@@ -6,9 +6,10 @@
 //
 
 module redmule_x_pad_scm #(
-  parameter int unsigned WORD_SIZE = 32,
-  parameter int unsigned ROWS      = 1 ,
-  parameter int unsigned COLS      = 1
+  parameter int unsigned WORD_SIZE   = 32,
+  parameter int unsigned ROWS        = 1 ,
+  parameter int unsigned COLS        = 1 ,
+  parameter int unsigned USE_LATCHES = LATCH_BUFFERS
 ) (
   input  logic                           clk_i        ,
   input  logic                           rst_ni       ,
@@ -54,20 +55,32 @@ module redmule_x_pad_scm #(
     end
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin : gen_write_clock_gates
-    tc_clk_gating i_rows_cg (
-      .clk_i     ( clk_i                                      ),
-      .en_i      ( write_addr_i == r && write_en_i || clear_i ),
-      .test_en_i ( '0                                         ),
-      .clk_o     ( clk_w[r]                                   )
-    );
-  end
+  if (USE_LATCHES) begin : gen_latches
+    for (genvar r = 0; r < ROWS; r++) begin : gen_write_clock_gates
+      tc_clk_gating i_rows_cg (
+        .clk_i     ( clk_i                                      ),
+        .en_i      ( write_addr_i == r && write_en_i || clear_i ),
+        .test_en_i ( '0                                         ),
+        .clk_o     ( clk_w[r]                                   )
+      );
+    end
 
-  for (genvar r = 0; r < ROWS; r++) begin : gen_rows
-    for (genvar c = 0; c < COLS; c++) begin : gen_cols
-      always_latch begin : latch_wdata
-        if (clk_w[r]) begin
-          buffer_q[r][c] = wdata_q[c];
+    for (genvar r = 0; r < ROWS; r++) begin : gen_rows
+      for (genvar c = 0; c < COLS; c++) begin : gen_cols
+        always_latch begin : wdata
+          if (clk_w[r]) begin
+            buffer_q[r][c] = wdata_q[c];
+          end
+        end
+      end
+    end
+  end else begin : gen_flip_flops
+    for (genvar r = 0; r < ROWS; r++) begin : gen_rows
+      for (genvar c = 0; c < COLS; c++) begin : gen_cols
+        always_latch begin : wdata
+          if (write_addr_i == r && write_en_i || clear_i) begin
+            buffer_q[r][c] = wdata_i[c];
+          end
         end
       end
     end
