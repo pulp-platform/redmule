@@ -35,6 +35,12 @@ package redmule_pkg;
   parameter int unsigned ECC_N_CHUNK             = DATA_W / ECC_CHUNK_SIZE;
   parameter int unsigned LATCH_BUFFERS           = 0;
 
+  //Quantization parameters
+  parameter logic DEQUANT_EN      = 1; //This enables support for 2, 4, and 8-bit quantization
+  parameter logic DEQUANT_INT3_EN = 0; //Enable support for INT3 quantized weights (currently unsupported)
+
+  parameter int unsigned  GROUP_ID_WIDTH  = 16;
+
   // Register File mapping
   /**********************
   ** Slave RF indexing **
