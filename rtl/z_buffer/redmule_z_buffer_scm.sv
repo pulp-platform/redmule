@@ -6,9 +6,10 @@
 //
 
 module redmule_z_buffer_scm #(
-  parameter int unsigned WORD_SIZE = 32,
-  parameter int unsigned ROWS      = 1 ,
-  parameter int unsigned COLS      = 1
+  parameter int unsigned WORD_SIZE   = 32,
+  parameter int unsigned ROWS        = 1 ,
+  parameter int unsigned COLS        = 1 ,
+  parameter int unsigned USE_LATCHES = LATCH_BUFFERS
 ) (
   input  logic                           clk_i            ,
   input  logic                           rst_ni           ,
@@ -103,22 +104,38 @@ module redmule_z_buffer_scm #(
     end
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin : gen_write_clock_gates
-    for (genvar c = 0; c < COLS; c++) begin : gen_col_write_clock_gates
-      tc_clk_gating i_rows_cg (
-        .clk_i     ( clk_i                                                                                         ),
-        .en_i      ( row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i || clear_i ),
-        .test_en_i ( '0                                                                                            ),
-        .clk_o     ( clk_w[r][c]                                                                                   )
-      );
+  if (USE_LATCHES) begin : gen_latches
+    for (genvar r = 0; r < ROWS; r++) begin : gen_write_clock_gates
+      for (genvar c = 0; c < COLS; c++) begin : gen_col_write_clock_gates
+        tc_clk_gating i_rows_cg (
+          .clk_i     ( clk_i                                                                                         ),
+          .en_i      ( row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i || clear_i ),
+          .test_en_i ( '0                                                                                            ),
+          .clk_o     ( clk_w[r][c]                                                                                   )
+        );
+      end
     end
-  end
 
-  for (genvar r = 0; r < ROWS; r++) begin : gen_rows
-    for (genvar c = 0; c < COLS; c++) begin : gen_cols
-      always_latch begin : latch_wdata
-        if (clk_w[r][c]) begin
-          buffer_q[r][c] = row_write_en_q ? row_wdata_q[c] : col_wdata_q[r];
+    for (genvar r = 0; r < ROWS; r++) begin : gen_rows
+      for (genvar c = 0; c < COLS; c++) begin : gen_cols
+        always_latch begin : wdata
+          if (clk_w[r][c]) begin
+            buffer_q[r][c] = row_write_en_q ? row_wdata_q[c] : col_wdata_q[r];
+          end
+        end
+      end
+    end
+  end else begin : gen_flip_flops
+    for (genvar r = 0; r < ROWS; r++) begin : gen_rows
+      for (genvar c = 0; c < COLS; c++) begin : gen_cols
+        always_ff @(posedge clk_i or negedge rst_ni) begin : wdata
+          if (~rst_ni) begin
+            buffer_q[r][c] <= '0;
+          end else begin
+            if (row_write_addr_i == r && row_write_en_i || col_write_addr_i == c && col_write_en_i || clear_i) begin
+              buffer_q[r][c] <= row_write_en_i ? row_wdata_i[c] : col_wdata_i[r];
+            end
+          end
         end
       end
     end
