@@ -92,7 +92,9 @@ module redmule_x_buffer_scm #(
           if (~rst_ni) begin
             buffer_q[h][o] <= '0;
           end else begin
-            if (row_w_addr == o && slot_w_addr == h && write_en_i || clear_i) begin
+            if (clear_i) begin
+              buffer_q[h][o] <= '0;
+            end else if (row_w_addr == o && slot_w_addr == h && write_en_i) begin
               buffer_q[h][o] <= wdata_i;
             end
           end
