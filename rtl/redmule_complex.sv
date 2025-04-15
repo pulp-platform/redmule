@@ -336,13 +336,9 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
     assign target_data_rsp[0] = core_data_rsp;
 
     // Kill Xif on the coprocessor side
-    assign core_xif.coproc_compressed.compressed_valid = '0;
-    assign core_xif.coproc_compressed.compressed_req = '0;
-    assign core_xif.coproc_issue.issue_valid = '0;
-    assign core_xif.coproc_issue.issue_req = '0;
-    assign core_xif.coproc_mem.mem_ready = '0;
-    assign core_xif.coproc_mem.mem_resp = '0;
-    assign core_xif.coproc_result.result_ready = '0;
+    // We do not tie to 0 the Xif bus here because Design Compiler
+    // complains when interfaces hierarchy is driven by hand. Also
+    // Questasim complains but raises just a warning (not an error).
   end else if (CoreType == CV32X) begin: gen_cv32e40x
   `ifdef CV32E40X_TRACE_EXECUTION
     cv32e40x_wrapper #(
