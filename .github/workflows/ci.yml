@@ -42,8 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       Target: verilator
-      REDMULE_COMPLEX: 0
-      BENDER: ./bender
+      Gcc: vendor/install/riscv/bin/
+      UseXif: 0
 
     needs:
       install-tools
@@ -69,8 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       Target: verilator
-      REDMULE_COMPLEX: 1
-      BENDER: ./bender
+      Gcc: vendor/install/riscv/bin/
+      UseXif: 1
 
     needs:
       install-tools
