@@ -10,16 +10,26 @@
 Red="\e[31m"
 Green="\e[32m"
 EndColor="\e[0m"
+Start=1
 
 if [ -z "$Target" ]; then
-    echo -e "${Red}Error: no Target defined. Set the  Target variable to "vsim" or "verilator" before continue.${EndColor}"
-else
+    echo -e "${Red}Error: no Target defined. Set the Target variable to "vsim" or "verilator" before continue.${EndColor}"
+    Start=0
+fi
+
+if [ -z "$Gcc" ]; then
+    echo -e "${Red}Error: no Gcc toolchain defined. Set the Gcc variable to your toolchain path before continue.${EndColor}"
+    Start=0
+fi
+
+if [[ "$Start" -eq 1 ]]; then
 
   BASE_TIMEOUT=500
 
   PARAMS=(
       96 96 96
       128 128 128
+      48 48 48
       12 16 16
       24 16 16
       48 32 32
