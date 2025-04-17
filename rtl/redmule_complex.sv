@@ -5,6 +5,7 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+`include "hci_helpers.svh"
 `include "obi/typedef.svh"
 module redmule_complex
   import cv32e40x_pkg::*;
@@ -19,9 +20,9 @@ module redmule_complex
   parameter int unsigned ID_WIDTH = 8,
   parameter int unsigned N_CORES = 8,
   // TCDM port dimension (in bits)
-  parameter int unsigned DW = DATA_W,
   parameter int unsigned NumIrqs = 32,
   parameter int unsigned AddrWidth = 32,
+  parameter int unsigned ByteWidth = 8,
   parameter int unsigned CoreDataWidth = 32,
   parameter int unsigned XPulp = 0,
   parameter int unsigned FpuPresent = 0,
@@ -34,6 +35,7 @@ module redmule_complex
   parameter int unsigned Height = ARRAY_HEIGHT,
   // Number of parallel rows
   parameter int unsigned Width = ARRAY_WIDTH,
+  parameter hci_package::hci_size_parameter_t HciRedmuleSize = '0,
   parameter type core_data_req_t = struct packed {
     logic req;
     logic we;
@@ -460,12 +462,12 @@ tc_clk_gating redmule_clock_gating (
 );
 
 redmule_top #(
-  .ID_WIDTH           ( ID_WIDTH              ),
-  .N_CORES            ( N_CORES               ),
-  .DW                 ( DW                    ),
-  .X_EXT              ( XExt                  ),
-  .SysInstWidth       ( SysInstWidth          ),
-  .SysDataWidth       ( SysDataWidth          )
+  .ID_WIDTH              ( ID_WIDTH       ),
+  .N_CORES               ( N_CORES        ),
+  .X_EXT                 ( XExt           ),
+  .SysInstWidth          ( SysInstWidth   ),
+  .SysDataWidth          ( SysDataWidth   ),
+  .`HCI_SIZE_PARAM(tcdm) ( HciRedmuleSize )
 ) i_redmule_top       (
   .clk_i              ( redmule_clk                ),
   .rst_ni             ( rst_ni                     ),

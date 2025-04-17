@@ -10,6 +10,7 @@ import hci_package::*;
 import redmule_pkg::*;
 
 module redmule_castin #(
+  parameter int unsigned DATA_W = redmule_pkg::DATA_W,
   parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
   parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
   parameter fpnew_pkg::fp_format_e   DstFormat    = FPFORMAT,
