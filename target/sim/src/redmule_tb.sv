@@ -40,6 +40,17 @@ module redmule_tb
   localparam redmule_pkg::core_type_e CoreType = UseXif ? redmule_pkg::CV32X
                                                         : redmule_pkg::CV32P;
 
+  localparam hci_package::hci_size_parameter_t HciRedmuleSize = '{
+    DW:  DW,
+    AW:  hci_package::DEFAULT_AW,
+    BW:  hci_package::DEFAULT_BW,
+    UW:  hci_package::DEFAULT_UW,
+    IW:  hci_package::DEFAULT_IW,
+    EW:  EW,
+    EHW: hci_package::DEFAULT_EHW,
+    default: '0
+  };
+
   // global signals
   string stim_instr, stim_data, stack_init;
   logic test_mode;
@@ -241,9 +252,9 @@ module redmule_tb
     .CoreType           ( CoreType            ), // CV32E40P, CV32E40X, IBEX, SNITCH, CVA6
     .ID_WIDTH           ( ID                  ),
     .N_CORES            ( NC                  ),
-    .DW                 ( DW                  ), // TCDM port dimension (in bits)
     .NumIrqs            ( 1                   ),
     .AddrWidth          ( 32                  ),
+    .HciRedmuleSize     ( HciRedmuleSize      ),
     .core_data_req_t    ( core_data_req_t     ),
     .core_data_rsp_t    ( core_data_rsp_t     ),
     .core_inst_req_t    ( core_inst_req_t     ),

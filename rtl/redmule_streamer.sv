@@ -14,10 +14,8 @@ module redmule_streamer
   import hci_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter  int unsigned DW      = 288   ,
-  parameter  int unsigned AW      = ADDR_W,
-  localparam int unsigned REALIGN = 1     ,
-  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0,
+  localparam int unsigned REALIGN = 1
 )(
   input logic                    clk_i,
   input logic                    rst_ni,
@@ -40,6 +38,7 @@ module redmule_streamer
   output flgs_streamer_t         flags_o
 );
 
+localparam int unsigned DW  = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
@@ -255,6 +254,7 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 // This unit uses only the data bus of the TCDM interface. The other buses
 // are assigned manually.
 redmule_castout #(
+  .DATA_W        ( DW ),
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
   .SrcFormat     ( FPFORMAT     )
@@ -384,6 +384,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   // This unit uses only the data bus of the TCDM interface. The other buses
   // are assigned manually.
   redmule_castin #(
+    .DATA_W       ( DW           ),
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
     .DstFormat    ( FPFORMAT     )

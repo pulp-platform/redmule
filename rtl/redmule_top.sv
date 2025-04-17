@@ -46,7 +46,7 @@ module redmule_top
   hci_core_intf.initiator tcdm
 );
 
-localparam int unsigned DATAW_ALIGN = DATAW;
+localparam int unsigned DATAW_ALIGN = `HCI_SIZE_GET_DW(tcdm) - SysDataWidth;
 
 logic                       enable, clear;
 logic                       reg_enable;
@@ -164,7 +164,6 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .c
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW                           ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i           ( clk_i           ),
