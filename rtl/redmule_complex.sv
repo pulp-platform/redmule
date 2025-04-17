@@ -26,6 +26,10 @@ module redmule_complex
   parameter int unsigned XPulp = 0,
   parameter int unsigned FpuPresent = 0,
   parameter int unsigned Zfinx = 0,
+  parameter int unsigned NumDemuxIdx = 2,
+  parameter int unsigned NumDemuxRules = 3,
+  parameter int unsigned RedMulERegionStartAddr = 'h00100000,
+  parameter int unsigned RedMulERegionSize = 'h400,
   parameter type core_data_req_t = logic,
   parameter type core_data_rsp_t = logic,
   parameter type core_inst_req_t = logic,
@@ -61,18 +65,6 @@ module redmule_complex
 localparam int unsigned XExt = (CoreType == CV32X) ? 1 : 0;
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;
 localparam int unsigned SysInstWidth = (CoreType == CVA6) ? 64 : 32;
-
-typedef struct packed {
-  logic [31:0] idx;
-  logic [31:0] start_addr;
-  logic [31:0] end_addr;
-} addr_map_rule_t;
-
-localparam addr_map_rule_t [2:0] LocalAddrMap = '{
-  '{ idx: 0, start_addr: 'h00000000, end_addr: 'h00100000}, // Before Accelerator
-  '{ idx: 1, start_addr: 'h00100000, end_addr: 'h00100400}, // Accelerator configuration
-  '{ idx: 0, start_addr: 'h00100400, end_addr: 'hFFFFFFFF}  // After Accelerator
-};
 
 logic busy;
 logic s_clk, s_clk_en;
@@ -117,41 +109,54 @@ cv32e40x_if_xif#(
   .X_ECS_XS    ( XifEcsXs        )
 ) core_xif ();
 
-cv32e40x_if_xif#(
-  .X_NUM_RS    ( NumRs           ),
-  .X_ID_WIDTH  ( ID_WIDTH        ),
-  .X_MEM_WIDTH ( XifMemWidth     ),
-  .X_RFR_WIDTH ( XifRFReadWidth  ),
-  .X_RFW_WIDTH ( XifRFWriteWidth ),
-  .X_MISA      ( XifMisa         ),
-  .X_ECS_XS    ( XifEcsXs        )
-) redmule_xif ();
-
   if (CoreType == CV32P) begin: gen_cv32e40p
+
+    typedef enum logic [NumDemuxIdx-1:0] {
+      ExternalId = 'h0,
+      RedMulEId  = 'h1
+    } local_demux_ids_e;
+
+    typedef struct packed {
+      logic [NumDemuxIdx-1:0] idx;
+      logic [  AddrWidth-1:0] start_addr;
+      logic [  AddrWidth-1:0] end_addr;
+    } addr_map_rule_t;
+
+    localparam addr_map_rule_t [NumDemuxRules-1:0] LocalAddrMap = '{
+       // Before Accelerator
+      '{ idx: ExternalId, start_addr: 'h00000000,
+                          end_addr: RedMulERegionStartAddr},
+      // Accelerator configuration port
+      '{ idx: RedMulEId, start_addr: RedMulERegionStartAddr,
+                         end_addr: RedMulERegionStartAddr + RedMulERegionSize},
+      // After Accelerator
+      '{ idx: ExternalId, start_addr: RedMulERegionStartAddr + RedMulERegionSize,
+                          end_addr: 'hFFFFFFFF}
+    };
 
     localparam obi_pkg::obi_cfg_t ObiDemuxCfg = '{
       UseRReady: 1'b0,
       CombGnt:   1'b0,
       AddrWidth: AddrWidth,
-      DataWidth: 32,
+      DataWidth: SysDataWidth,
       IdWidth:   ID_WIDTH,
       Integrity: 1'b0,
       BeFull:    1'b1,
-      OptionalCfg: {default: '0}
+      OptionalCfg: '{default: '0}
     };
 
-    `OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, 32, ID_WIDTH, logic)
-    `OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, 32, ID_WIDTH, logic)
+    `OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, SysDataWidth, ID_WIDTH, logic)
+    `OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, SysDataWidth, ID_WIDTH, logic)
     `OBI_TYPEDEF_REQ_T(redmule_complex_req_t, redmule_complex_a_chan_t)
     `OBI_TYPEDEF_RSP_T(redmule_complex_rsp_t, redmule_complex_r_chan_t)
 
     redmule_complex_req_t core_req;
     redmule_complex_rsp_t core_rsp;
 
-    redmule_complex_req_t [1:0] target_req;
-    redmule_complex_rsp_t [1:0] target_rsp;
+    redmule_complex_req_t [NumDemuxIdx-1:0] target_req;
+    redmule_complex_rsp_t [NumDemuxIdx-1:0] target_rsp;
 
-  `ifdef TARGET_CV32E40P_INCLUDE_TRACER
+  `ifdef CV32E40P_TRACE_EXECUTION
     cv32e40p_wrapper #(
   `else
     cv32e40p_core #(
@@ -218,8 +223,8 @@ cv32e40x_if_xif#(
 
     logic target_sel;
     addr_decode #(
-      .NoIndices ( 2 ),
-      .NoRules   ( 3 ),
+      .NoIndices ( NumDemuxIdx           ),
+      .NoRules   ( NumDemuxRules         ),
       .addr_t    ( logic [AddrWidth-1:0] ),
       .rule_t    ( addr_map_rule_t       )
     ) i_addr_decode (
@@ -236,7 +241,7 @@ cv32e40x_if_xif#(
       .ObiCfg      ( ObiDemuxCfg           ),
       .obi_req_t   ( redmule_complex_req_t ),
       .obi_rsp_t   ( redmule_complex_rsp_t ),
-      .NumMgrPorts ( 2                     ),
+      .NumMgrPorts ( NumDemuxIdx           ),
       .NumMaxTrans ( 1                     )
     ) i_demux (
       .clk_i,
@@ -277,7 +282,11 @@ cv32e40x_if_xif#(
     assign core_xif.coproc_mem.mem_resp = '0;
     assign core_xif.coproc_result.result_ready = '0;
   end else if (CoreType == CV32X) begin: gen_cv32e40x
+  `ifdef CV32E40X_TRACE_EXECUTION
+    cv32e40x_wrapper #(
+  `else
     cv32e40x_core #(
+  `endif
       .M_EXT       ( cv32e40x_pkg::M ),
       .X_EXT       ( 1               ),
       .X_NUM_RS    ( NumRs           ),

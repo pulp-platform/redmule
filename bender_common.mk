@@ -5,14 +5,11 @@
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 #
 
-# common_targs += -t cv32e40p_exclude_tracer
+common_targs += -t rtl
+common_defs  += -D COREV_ASSERT_OFF
 
-ifeq ($(REDMULE_COMPLEX),1)
+ifeq ($(UseXif),1)
 	common_targs += -t redmule_complex
-	# common_targs += -e cv32e40p
 else
 	common_targs += -t redmule_hwpe
-	# common_targs += -e cv32e40x
 endif
-
-common_defs  += -D COREV_ASSERT_OFF
