@@ -34,14 +34,13 @@ hw-build: hw-script
 	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK \
 	--x-assign unique --x-initial unique --top-module $(Module)_tb --Mdir $(VerilatorAbsObjDir) \
 	-GPROB_STALL=$(P_STALL) -GUseXif=$(UseXif) \
-	+define+STIM_INSTR=$(STIM_INSTR) +define+STIM_DATA=$(STIM_DATA) +define+STACK_INIT=$(STACK_INIT) \
 	-CFLAGS "-DTbName=$(Vmodule)_tb -DWafeformPath=$(VerilatorWaves)" \
 	-sv -cc -f $(VerilatorCompileScript) --exe $(VerilatorSrc)/$(Module)_tb.cpp
 	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb
 
 hw-run:
 	cd $(VerilatorDir);           \
-	./$(ObjDirName)/$(Vmodule)_tb
+	./$(ObjDirName)/$(Vmodule)_tb +STIM_INSTR=$(STIM_INSTR) +STIM_DATA=$(STIM_DATA) +STACK_INIT=$(STACK_INIT)
 ifeq ($(gui),1)
 	$(GtkWave) $(VerilatorWaves)
 endif
