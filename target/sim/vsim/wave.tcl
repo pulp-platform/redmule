@@ -8,13 +8,12 @@ onerror {resume}
 quietly WaveActivateNextPane {} 0
 
 set Testbench redmule_tb_wrap/i_redmule_tb
-if {$TbType == {redmule_tb}} {
-  set TopLevelPath i_redmule_wrap/i_redmule_top
-  set CorePath i_cv32e40p_core
-} elseif {$TbType == {redmule_complex_tb}} {
-  set DutPath i_dut
-  set TopLevelPath $DutPath/i_redmule_top
+set DutPath i_dut
+set TopLevelPath $DutPath/i_redmule_top
+if {$XifSel == {1}} {
   set CorePath $DutPath/gen_cv32e40x/i_core
+} else {
+  set CorePath $DutPath/gen_cv32e40p/i_core
 }
 set MinHeight 16
 set MaxHeight 32

@@ -13,17 +13,13 @@ VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
 
 Tb := redmule_tb_wrap
-CompileFlags := +acc -permissive -suppress 2583 -suppress 13314
-
-ifeq ($(REDMULE_COMPLEX),1)
-	TbType := redmule_complex_tb
-else
-	TbType := redmule_tb
-endif
-
+CompileFlags := +acc -permissive -floatparameters+$(Tb) -suppress 2583 -suppress 13314 -suppress vlog-1952
 VsimFlags += -suppress vsim-3009
+ifeq ($(UseXif),1)
+	CoreTraces := "+log_file=$(VsimDir)/trace_core_00000000.log"
+endif
 ifeq ($(gui),1)
-	VsimFlags += -do "set TbType $(TbType)" \
+	VsimFlags += -do "set XifSel $(UseXif)" \
                -do "log -r /*"            \
                -do "source $(VsimWaves)"
 else
@@ -33,7 +29,7 @@ endif
 VsimFlags += -suppress 3009
 
 hw-clean:
-	rm -rf $(VsimCompileScript) $(VsimDir)/transcript $(VsimDir)/modelsim.ini $(VsimDir)/*.wlf $(VsimDir)/work
+	rm -rf $(VsimCompileScript) $(VsimDir)/transcript $(VsimDir)/modelsim.ini $(VsimDir)/*.wlf $(VsimDir)/work $(VsimDir)/trace*
 
 hw-script:
 	$(Bender) update
@@ -48,16 +44,19 @@ hw-script:
 hw-build: hw-script
 	cd $(VsimDir); \
 	$(Questa) $(target) -c    \
-	+STIM_INSTR=$(STIM_INSTR) \
-	+STIM_INSTR=$(STIM_DATA)  \
-	+PROB_STALL=$(P_STALL)    \
-  +UseXif=$(UseXif)         \
+	-do 'echo XifSel'         \
 	-do 'quit -code [source $(VsimCompileScript)]'
 
 hw-run:
 	cd $(VsimDir);                \
 	$(QUESTA) $(target) $(Tb)_opt \
 	$(VsimFlags)                  \
+	$(CoreTraces)                 \
+	+STIM_INSTR=$(STIM_INSTR)     \
+	+STIM_DATA=$(STIM_DATA)       \
+	+STACK_INIT=$(STACK_INIT)     \
+	-gPROB_STALL=$(P_STALL)       \
+  -gUseXif=$(UseXif)            \
 	-do "run -a"
 
 hw-all: hw-clean hw-script hw-build hw-run
