@@ -87,6 +87,7 @@ localparam int unsigned NumDemuxRules = 3;
 logic busy;
 logic s_clk, s_clk_en;
 logic [N_CORES-1:0][1:0] evt;
+logic [31:0] irq;
 
 `OBI_TYPEDEF_A_CHAN_T(redmule_complex_a_chan_t, AddrWidth, SysDataWidth, ID_WIDTH, logic)
 `OBI_TYPEDEF_R_CHAN_T(redmule_complex_r_chan_t, SysDataWidth, ID_WIDTH, logic)
@@ -120,6 +121,10 @@ localparam int unsigned XifRFReadWidth = 32;
 localparam int unsigned XifRFWriteWidth = 32;
 localparam logic [31:0] XifMisa = '0;
 localparam logic [ 1:0] XifEcsXs = '0;
+
+assign irq [31:4] = '0;
+assign irq [3] = evt;
+assign irq [2:0] = '0;
 
 cv32e40x_if_xif#(
   .X_NUM_RS    ( NumRs           ),
@@ -269,7 +274,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       .apu_result_i        ( '0                ),
       .apu_flags_i         ( '0                ),
       // Interrupt inputs
-      .irq_i               ({27'd0, evt, 3'd0} ),  // CLINT interrupts + CLINT extension interrupts
+      .irq_i               ( irq ),  // CLINT interrupts + CLINT extension interrupts
       .irq_ack_o           (                   ),
       .irq_id_o            (                   ),
       // Debug Interface
@@ -403,7 +408,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       .xif_mem_result_if   ( core_xif.cpu_mem_result ),
       .xif_result_if       ( core_xif.cpu_result     ),
       // Basic interrupt architecture
-      .irq_i               ( {27'd0, evt, 3'd0}      ),
+      .irq_i               ( irq ),
       // Event wakeup signals
       .wu_wfe_i            ( '0                      ), // Wait-for-event wakeup
       // CLIC interrupt architecture
