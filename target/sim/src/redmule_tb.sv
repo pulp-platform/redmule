@@ -253,6 +253,7 @@ module redmule_tb
     .rst_ni             ( rst_ni           ),
     .test_mode_i        ( test_mode        ),
     .fetch_enable_i     ( fetch_enable_i   ),
+    .redmule_clk_en_i   ( 1'b1             ),
     .boot_addr_i        ( core_boot_addr   ),
     .irq_i              ( '0               ),
     .irq_id_o           (                  ),
@@ -271,7 +272,7 @@ module redmule_tb
   int errors = -1;
   always_ff @(posedge clk_i)
   begin
-    if((core_data_req.addr == 32'h80000000 ) &&
+    if((core_data_req.addr == 32'h80000000) &&
        (core_data_req.we & core_data_req.req == 1'b1)) begin
       errors = core_data_req.data;
     end
