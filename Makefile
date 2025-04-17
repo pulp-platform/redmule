@@ -44,10 +44,10 @@ compile_script_synth ?= $(RootDir)scripts/synth_compile.tcl
 INI_PATH  = $(RootDir)modelsim.ini
 WORK_PATH = $(SIM_DIR)/work
 
+TEST_SRCS := $(SW)/redmule.c
+
 ifeq ($(UseXif),1)
-	TEST_SRCS := $(SW)/redmule_complex.c
-else
-	TEST_SRCS := $(SW)/redmule.c
+  FLAGS += -DCOMPLEX_OFFLOADER
 endif
 
 ifeq ($(verbose),1)
