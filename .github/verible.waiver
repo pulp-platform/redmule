@@ -8,3 +8,5 @@ waive --rule=line-length
 waive --rule=parameter-name-style
 # Disable default check in case statements
 waive --rule=case-missing-default
+# Disable default check typedef structure parameters
+waive --rule=typedef-structs-unions
