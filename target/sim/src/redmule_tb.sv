@@ -242,7 +242,7 @@ module redmule_tb
     .ID_WIDTH           ( ID                  ),
     .N_CORES            ( NC                  ),
     .DW                 ( DW                  ), // TCDM port dimension (in bits)
-    .NumIrqs            ( 0                   ),
+    .NumIrqs            ( 1                   ),
     .AddrWidth          ( 32                  ),
     .core_data_req_t    ( core_data_req_t     ),
     .core_data_rsp_t    ( core_data_rsp_t     ),
