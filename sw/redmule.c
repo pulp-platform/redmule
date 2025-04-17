@@ -44,9 +44,6 @@ int main() {
 
   hwpe_soft_clear();
 
-  while ((offload_id_tmp = hwpe_acquire_job()) < 0)
-    ;
-
   redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
               (uint8_t)gemm_ops, float_fmt);
 
@@ -67,9 +64,12 @@ int main() {
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
     errors = redmule8_compare_int(y, golden, m_size * k_size / 4);
 
-  *(int *)0x80000000 = errors;
+  // *(int *)0x80000000 = errors;
+  *(int *)(REDMULE_SUBSYSTEM_RETURN_ADDR) = errors;
 
   tfp_printf("Terminated test with %d errors. See you!\n", errors);
+
+  *(int *)(REDMULE_SUBSYSTEM_EOC_ADDR) = 1;
 
   return errors;
 }

@@ -49,9 +49,9 @@ static inline void hwpe_soft_clear() {
   HWPE_WRITE(0, REDMULE_SOFT_CLEAR);
 }
 
-static inline void hwpe_cg_enable() { return; }
+static inline void hwpe_cg_enable() { *(int *)(REDMULE_SUBSYSTEM_REDMULE_CLK_GATE_ADDR) = 1; }
 
-static inline void hwpe_cg_disable() { return; }
+static inline void hwpe_cg_disable() { *(int *)(REDMULE_SUBSYSTEM_REDMULE_CLK_GATE_ADDR) = 0; }
 
 void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size, uint16_t n_size,
                  uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt) {
