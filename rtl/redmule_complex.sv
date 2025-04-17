@@ -65,6 +65,7 @@ module redmule_complex
   input  logic                         rst_ni            ,
   input  logic                         test_mode_i       ,
   input  logic                         fetch_enable_i    ,
+  input  logic                         redmule_clk_en_i  ,
   input  logic   [      AddrWidth-1:0] boot_addr_i       ,
   input  logic   [        NumIrqs-1:0] irq_i             ,
   output logic   [$clog2(NumIrqs)-1:0] irq_id_o          ,
@@ -445,6 +446,14 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
     $error("CVA6 connection not yet implemented");
   end
 
+logic redmule_clk;
+tc_clk_gating redmule_clock_gating (
+  .clk_i     ( clk_i            ),
+  .en_i      ( redmule_clk_en_i ),
+  .test_en_i ( test_mode_i      ),
+  .clk_o     ( redmule_clk      )
+);
+
 redmule_top #(
   .ID_WIDTH           ( ID_WIDTH              ),
   .N_CORES            ( N_CORES               ),
@@ -453,7 +462,7 @@ redmule_top #(
   .SysInstWidth       ( SysInstWidth          ),
   .SysDataWidth       ( SysDataWidth          )
 ) i_redmule_top       (
-  .clk_i              ( s_clk                      ),
+  .clk_i              ( redmule_clk                ),
   .rst_ni             ( rst_ni                     ),
   .test_mode_i        ( test_mode_i                ),
   .evt_o              ( evt                        ),
