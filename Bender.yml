@@ -48,9 +48,12 @@ sources:
     - rtl/redmule_inst_decoder.sv
     - rtl/redmule_top.sv
     - rtl/redmule_memory_scheduler.sv
-    - rtl/redmule_wrap.sv
     - rtl/redmule_complex.sv
-    - rtl/redmule_complex_wrap.sv
+
+    - target: redmule_deprecated
+      files:
+        - rtl/redmule_wrap.sv
+        - rtl/redmule_complex_wrap.sv
 
     - target: redmule_test
       files:
