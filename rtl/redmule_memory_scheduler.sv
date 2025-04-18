@@ -240,7 +240,7 @@ module redmule_memory_scheduler
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d0_stride = '0;
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP >> q_shift;
-    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][31:16];
+    cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d2_len = 'd0;
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d3_stride = 'd0;
