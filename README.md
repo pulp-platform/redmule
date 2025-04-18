@@ -249,7 +249,7 @@ Bender installation is not mandatory. If any bender version is already installed
 
 To clone the dependencies and generate the compilation script we need to define the target we intend to use to simulate the accelerator testbench. The target selection is done by using the `target = <target_type>` at compilation time. Let's assume we want to use Verilator. To clone the dependencies and create the compilation scripts for hardware simulation, run:
 ```bash
-make hw-scripts target=verilator
+make hw-script target=verilator
 ```
 
 The compiled hardware is then built with the command:
