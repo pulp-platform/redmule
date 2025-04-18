@@ -154,7 +154,11 @@ always_comb begin : fsm
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
       if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
         if (pad_read_cnt == ctrl_i.slots) begin
-          next_state = PAD_EMPTY;
+          if (~flags_o.full) begin
+            next_state = PAD_EMPTY;
+          end else begin
+            next_state = WAIT_FIRST_READ;
+          end
         end else if (first_block) begin
           next_state = WAIT_FIRST_READ;
         end else begin
@@ -169,7 +173,11 @@ always_comb begin : fsm
 
     WAIT_FIRST_READ: begin
       if (h_index_r == H-1 && ctrl_i.h_shift) begin
-        next_state = FILL;
+        if (ctrl_i.rst_w_index) begin
+          next_state = PAD_EMPTY;
+        end  else begin
+          next_state = FILL;
+        end
       end
     end
 
