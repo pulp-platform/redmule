@@ -139,6 +139,7 @@ package redmule_pkg;
     logic [$clog2(TOT_DEPTH):0]   slots;
 
     logic                         rst_w_index;
+    logic                         last_x;
   } x_buffer_ctrl_t;
 
   typedef struct packed {
