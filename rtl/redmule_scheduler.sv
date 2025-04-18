@@ -184,7 +184,7 @@ module redmule_scheduler
   logic x_reload_q;
   logic x_reload_en, x_reload_rst;
 
-  logic x_empty_full;
+  logic x_empty;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_reload_register
     if(~rst_ni) begin
@@ -197,18 +197,18 @@ module redmule_scheduler
     end
   end
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : x_empty_full_register
+  always_ff @(posedge clk_i or negedge rst_ni) begin : x_empty_register
     if(~rst_ni) begin
-      x_empty_full <= '0;
+      x_empty <= '0;
     end else begin
       if (clear_i || cntrl_scheduler_i.rst || ~flgs_x_buffer_i.full)
-        x_empty_full <= '0;
+        x_empty <= '0;
       else if (flgs_x_buffer_i.full && flgs_x_buffer_i.empty)
-        x_empty_full <= '1;
+        x_empty <= '1;
     end
   end
 
-  assign x_reload_en  = start || x_cols_iter_en || x_empty_full && ~flgs_x_buffer_i.full;
+  assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full;
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
   assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
@@ -229,6 +229,8 @@ module redmule_scheduler
                       w_mat_iters_en, w_done_en;
 
   logic [$clog2(H):0] w_zero_cnt_d, w_zero_cnt_q;
+
+  logic        w_stride_cnt;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_rows_iteration
     if(~rst_ni) begin
@@ -546,6 +548,8 @@ module redmule_scheduler
   assign cntrl_engine_o.out_ready        = 1'b1;
   assign cntrl_engine_o.accumulate       = ~pushing_y;
   assign cntrl_engine_o.dequant_enable   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
+
+  logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
   logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
