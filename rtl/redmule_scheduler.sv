@@ -226,6 +226,8 @@ module redmule_scheduler
 
   logic [$clog2(H):0] w_zero_cnt_d, w_zero_cnt_q;
 
+  logic        w_stride_cnt;
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_rows_iteration
     if(~rst_ni) begin
       w_rows_iter_q <= '0;
@@ -542,6 +544,8 @@ module redmule_scheduler
   assign cntrl_engine_o.out_ready        = 1'b1;
   assign cntrl_engine_o.accumulate       = ~pushing_y;
   assign cntrl_engine_o.dequant_enable   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
+
+  logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
   logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
