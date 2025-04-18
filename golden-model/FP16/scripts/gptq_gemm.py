@@ -34,7 +34,7 @@ args = parser.parse_args()
 m_size = args.m_size
 n_size = args.n_size
 k_size = args.k_size
-n_groups = args.n_groups
+n_groups = 1#args.n_groups
 
 f = open(args.file_name, "w")
 
@@ -61,10 +61,41 @@ f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 print("\nComputing matrix multiplication..")
 
 
-zeros = B + 1
-dqweights = S[G.long()] * (W - zeros[G.long()])
+#zeros = B + 1
+#dqweights = S[G.long()] * (W - zeros[G.long()])
+#
+#Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = dqweights))
 
-Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = dqweights))
+zeros_32 = B[G.long()].to(torch.int32)
+weights_32 = W.to(torch.int32)
+
+wb_32 = weights_32 - (zeros_32 + 1)
+
+wbu_32 = torch.where(wb_32 > 0, wb_32, torch.abs(wb_32))
+w_sign = wb_32 > 0
+
+scales_mant = (S[G.long()].view(torch.int16).bitwise_and(0x03FF)).to(torch.int32) + (2**10)
+scales_exp  = (S[G.long()].view(torch.int16).bitwise_and(0x7C00) >> 10).to(torch.int32)
+scales_sign = (S[G.long()].view(torch.int16).bitwise_and(0x8000) >> 15).to(torch.int32)
+
+mant_prod = wbu_32 * scales_mant
+
+shift = torch.log2(mant_prod).ceil().to(torch.int32) - 13
+
+mant_pre_round = torch.where(shift > 0, mant_prod >> shift, mant_prod << -shift)
+mant_sticky    = mant_pre_round.bitwise_and(0x00000003)
+
+a = torch.where(mant_sticky == 2, mant_pre_round.bitwise_and(0x00000004) >> 2, torch.tensor([1], dtype = torch.int))
+
+round = torch.where(mant_sticky < 2, torch.tensor([0], dtype = torch.int32), torch.where(mant_sticky == 2, mant_pre_round.bitwise_and(0x00000004) >> 2, torch.tensor([1], dtype = torch.int32)))
+
+res_mant = mant_pre_round >> 2
+res_exp  = scales_exp + shift + 1
+res_sign = scales_sign ^ ~w_sign
+
+res = torch.where(wb_32 == 0, torch.tensor([0], dtype = torch.int32), (res_mant + (res_exp << 10) + (res_sign << 15) + round)).to(torch.int16).view(torch.float16)
+
+Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = res))
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
@@ -283,10 +314,10 @@ f_z.close()
 
 f_w = open(''+inc_path+'/dqw_input.h', "w")
 f_w.write(''+header+'')
-f_w.write('uint16_t w_inp ['+w_dim+'] = {\n')
+f_w.write('uint16_t dwq_inp ['+w_dim+'] = {\n')
 for i in range(n_size):
     for j in range (k_size):
-        w_bin = bin(np.float16(dqweights[i][j]).view('H'))[2:].zfill(16)
+        w_bin = bin(np.float16(res[i][j]).view('H'))[2:].zfill(16)
         w_hex = hex(int(w_bin, 2))[2:]
         if (i == n_size - 1 and j == k_size - 1):
           f_w.write('0x'+w_hex+' ')
