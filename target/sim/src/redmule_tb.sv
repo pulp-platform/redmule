@@ -56,6 +56,7 @@ module redmule_tb
   logic test_mode;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
+  logic scan_cg_en;
 
   hwpe_stream_intf_tcdm instr[0:0]  (.clk(clk_i));
   hwpe_stream_intf_tcdm stack[0:0]  (.clk(clk_i));
@@ -248,6 +249,11 @@ module redmule_tb
     .tcdm                ( stack             )
   );
 
+`ifdef TARGET_VERILATOR
+  assign scan_cg_en = UseXif ? 1'b1 : 1'b0;
+`else
+  assign scan_cg_en = 1'b0;
+`endif
   redmule_complex #(
     .CoreType           ( CoreType            ), // CV32E40P, CV32E40X, IBEX, SNITCH, CVA6
     .ID_WIDTH           ( ID                  ),
@@ -264,6 +270,7 @@ module redmule_tb
     .rst_ni             ( rst_ni           ),
     .test_mode_i        ( test_mode        ),
     .fetch_enable_i     ( fetch_enable_i   ),
+    .scan_cg_en_i       ( scan_cg_en       ),
     .redmule_clk_en_i   ( 1'b1             ),
     .boot_addr_i        ( core_boot_addr   ),
     .irq_i              ( '0               ),
