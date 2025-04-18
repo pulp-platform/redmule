@@ -125,7 +125,7 @@ localparam int unsigned XifRFWriteWidth = 32;
 localparam logic [31:0] XifMisa = '0;
 localparam logic [ 1:0] XifEcsXs = '0;
 
-assign irq [31:11] = '0;
+assign irq [31:5] = '0;
 assign irq [4:3]  = evt;
 assign irq [2:0]  = '0;
 
