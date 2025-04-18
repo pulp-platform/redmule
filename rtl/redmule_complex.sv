@@ -54,7 +54,7 @@ module redmule_complex
   output core_inst_req_t               core_inst_req_o   ,
   input  core_data_rsp_t               core_data_rsp_i   ,
   output core_data_req_t               core_data_req_o   ,
-  hci_core_intf.master                 tcdm
+  hci_core_intf.initiator              tcdm
 );
 
 localparam int unsigned SysDataWidth = (CoreType == CVA6) ? 64 : 32;

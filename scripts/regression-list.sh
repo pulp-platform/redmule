@@ -36,15 +36,17 @@ else
       23 31 31
       24 17 32
       24 20 32
-      #23 17 33
-      #23 20 33
-      #3  11 32
-      #17 13 16
-      #17 13 17
+      23 17 33
+      23 20 33
+      3  11 32
+      17 13 16
+      17 13 17
   )
 
   i=0
   error=0
+
+  make hw-clean hw-build target=$Target 1>/dev/null 2>&1
 
   while [[ $i -lt ${#PARAMS[@]} ]]
   do
@@ -54,7 +56,6 @@ else
 
       i=$(( $i + 3 ))
 
-      make hw-clean hw-build target=$Target 1>/dev/null 2>&1
       make golden M=$M N=$N K=$K 1>/dev/null 2>&1
       make sw-clean sw-build 1>/dev/null 2>&1
       timeout $BASE_TIMEOUT make hw-run target=$Target > $PWD/target/sim/$Target/transcript_${M}_${N}_${K}

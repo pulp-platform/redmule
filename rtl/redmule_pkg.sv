@@ -11,17 +11,17 @@ import hwpe_stream_package::*;
 
 package redmule_pkg;
 
-  parameter int unsigned            DATA_W       = 288; // TCDM port dimension (in bits)
+  parameter int unsigned            DATA_W       = 128 + 32; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W - MemDw;
-  parameter int unsigned            REDMULE_REGS = 18;
+  parameter int unsigned            REDMULE_REGS = 22;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
   parameter int unsigned            ARRAY_HEIGHT = 4;
-  parameter int unsigned            PIPE_REGS    = 3;
+  parameter int unsigned            PIPE_REGS    = 1;
   parameter int unsigned            ARRAY_WIDTH  = ARRAY_HEIGHT*PIPE_REGS; // Superior limit, smaller values are allowed.
   parameter int unsigned            TOT_DEPTH    = DATAW/BITW;
   parameter int unsigned            DEPTH        = TOT_DEPTH/ARRAY_HEIGHT;
@@ -29,8 +29,11 @@ package redmule_pkg;
   parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101;
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000;
   parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
-  parameter int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
-  parameter int unsigned DW_CUT   = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned MIN_FMT                 = fpnew_pkg::min_fp_width(FpFmtConfig);
+  parameter int unsigned DW_CUT                  = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
+  parameter int unsigned ECC_CHUNK_SIZE          = 32;
+  parameter int unsigned ECC_N_CHUNK             = DATA_W / ECC_CHUNK_SIZE;
+  parameter int unsigned LATCH_BUFFERS           = 0;
 
   // Register File mapping
   /**********************
@@ -101,10 +104,10 @@ package redmule_pkg;
     CSR_REDMULE_MACFG  = 12'h805
   } redmule_csr_num_e;
 
-  parameter int unsigned NumStreamSources = 3; // X, W, Y
-  parameter int unsigned XsourceStreamId  = 0;
-  parameter int unsigned WsourceStreamId  = 1;
-  parameter int unsigned YsourceStreamId  = 2;
+  parameter int unsigned NumStreamSources     = 3; // X, W, Y
+  parameter int unsigned XsourceStreamId      = 0;
+  parameter int unsigned WsourceStreamId      = 1;
+  parameter int unsigned YsourceStreamId      = 2;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
@@ -128,13 +131,15 @@ package redmule_pkg;
   } flgs_streamer_t;
 
   typedef struct packed {
-    logic d_shift;
     logic h_shift;
-    logic blck_shift;
     logic load;
-    logic [$clog2(TOT_DEPTH):0]   cols_lftovr;
-    logic [$clog2(ARRAY_WIDTH):0] rows_lftovr;
-    logic [$clog2(DEPTH)-1:0]     slots;
+    logic pad_setup;
+    logic [$clog2(ARRAY_WIDTH):0] width;
+    logic [$clog2(TOT_DEPTH):0]   height;
+    logic [$clog2(TOT_DEPTH):0]   slots;
+
+    logic                         rst_w_index;
+    logic                         last_x;
   } x_buffer_ctrl_t;
 
   typedef struct packed {
@@ -145,31 +150,32 @@ package redmule_pkg;
   typedef struct packed {
     logic                          shift;
     logic                          load;
-    logic [$clog2(TOT_DEPTH):0]    cols_lftovr;
-    logic [$clog2(ARRAY_HEIGHT):0] rows_lftovr;
+    logic [$clog2(TOT_DEPTH):0]    width;
+    logic [$clog2(ARRAY_HEIGHT):0] height;
   } w_buffer_ctrl_t;
 
   typedef struct packed {
-    logic [ARRAY_HEIGHT-1:0] empty;
+    logic                    w_ready;
   } w_buffer_flgs_t;
 
   typedef struct packed {
-    logic                         buffer_clk_en;
     logic                         y_push_enable;
     logic                         fill;
-    logic                         load;
     logic                         ready;
-    logic                         store;
     logic                         y_valid;
-    logic [$clog2(TOT_DEPTH):0]   cols_lftovr;
-    logic [$clog2(ARRAY_WIDTH):0] rows_lftovr;
+    logic                         first_load;
+    logic [$clog2(ARRAY_WIDTH):0] y_width;
+    logic [$clog2(TOT_DEPTH):0]   y_height;
+    logic [$clog2(ARRAY_WIDTH):0] z_width;
+    logic [$clog2(TOT_DEPTH):0]   z_height;
   } z_buffer_ctrl_t;
 
   typedef struct packed {
     logic y_pushed;
     logic empty;
-    logic full;
     logic loaded;
+    logic y_ready;
+    logic z_valid;
   } z_buffer_flgs_t;
 
   typedef struct packed {
@@ -183,6 +189,7 @@ package redmule_pkg;
     logic                         in_valid;
     logic                         flush;
     logic                         out_ready;
+    logic                         accumulate;
     logic       [ARRAY_WIDTH-1:0] row_clk_gate_en;
   } cntrl_engine_t;
 
@@ -197,26 +204,13 @@ package redmule_pkg;
   } flgs_engine_t;
 
   typedef struct packed {
-    logic start_fsm;
     logic first_load;
-    logic engine_working;
-    logic storing;
     logic rst;
     logic finished;
-    logic done;
   } cntrl_scheduler_t;
 
   typedef struct packed {
-    logic            y_push_enable;
-    logic            x_ready;
-    logic            w_ready;
-    logic            y_ready;
-    logic            z_valid;
-    logic            x_full;
     logic            w_loaded;
-    logic            w_shift;
-    logic            stored;
-    logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
 
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;

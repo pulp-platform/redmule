@@ -29,6 +29,8 @@ else
 	VsimFlags += -c
 endif
 
+VsimFlags += -suppress 3009
+
 hw-clean:
 	rm -rf $(VsimCompileScript) $(VsimDir)/transcript $(VsimDir)/modelsim.ini $(VsimDir)/*.wlf $(VsimDir)/work
 
