@@ -67,6 +67,7 @@ module redmule_complex
   input  logic                         rst_ni            ,
   input  logic                         test_mode_i       ,
   input  logic                         fetch_enable_i    ,
+  input  logic                         scan_cg_en_i      ,
   input  logic                         redmule_clk_en_i  ,
   input  logic   [      AddrWidth-1:0] boot_addr_i       ,
   input  logic   [        NumIrqs-1:0] irq_i             ,
@@ -124,9 +125,9 @@ localparam int unsigned XifRFWriteWidth = 32;
 localparam logic [31:0] XifMisa = '0;
 localparam logic [ 1:0] XifEcsXs = '0;
 
-assign irq [31:4] = '0;
-assign irq [3] = evt;
-assign irq [2:0] = '0;
+assign irq [31:11] = '0;
+assign irq [4:3]  = evt;
+assign irq [2:0]  = '0;
 
 cv32e40x_if_xif#(
   .X_NUM_RS    ( NumRs           ),
@@ -241,7 +242,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       .clk_i               ( s_clk                 ),
       .rst_ni              ( rst_ni                ),
       .pulp_clock_en_i     ( s_clk_en              ),  // PULP clock enable (only used if PULP_CLUSTER = 1)
-      .scan_cg_en_i        ( 1'b0                  ),  // Enable all clock gates for testing
+      .scan_cg_en_i        ( scan_cg_en_i          ),  // Enable all clock gates for testing
       // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
       .boot_addr_i         ( boot_addr_i           ),
       .mtvec_addr_i        ( '0                    ),
@@ -366,7 +367,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       // Clock and Reset
       .clk_i               ( s_clk                   ),
       .rst_ni              ( rst_ni                  ),
-      .scan_cg_en_i        ( 1'b0                    ),  // Enable all clock gates for testing
+      .scan_cg_en_i        ( scan_cg_en_i            ),  // Enable all clock gates for testing
       // Core ID, Cluster ID, debug mode halt address and boot address are considered more or less static
       .boot_addr_i         ( boot_addr_i             ),
       .dm_exception_addr_i ( '0                      ),
@@ -375,14 +376,14 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       .mimpid_patch_i      ( '0                      ),
       .mtvec_addr_i        ( '0                      ),
       // Instruction memory interface
-      .instr_req_o         ( core_inst_req.req      ),
-      .instr_gnt_i         ( core_inst_rsp.gnt      ),
-      .instr_rvalid_i      ( core_inst_rsp.rvalid   ),
-      .instr_addr_o        ( core_inst_req.a.addr   ),
+      .instr_req_o         ( core_inst_req.req       ),
+      .instr_gnt_i         ( core_inst_rsp.gnt       ),
+      .instr_rvalid_i      ( core_inst_rsp.rvalid    ),
+      .instr_addr_o        ( core_inst_req.a.addr    ),
       .instr_memtype_o     (                         ),
       .instr_prot_o        (                         ),
       .instr_dbg_o         (                         ),
-      .instr_rdata_i       ( core_inst_rsp.r.rdata  ),
+      .instr_rdata_i       ( core_inst_rsp.r.rdata   ),
       .instr_err_i         ( '0                      ),
       // Data memory interface
       .data_req_o          ( core_data_req.req       ),
