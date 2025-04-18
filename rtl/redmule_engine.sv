@@ -76,7 +76,7 @@ redmule_dequantizer #(
   .DW       ( H*BITW   ),
   .FpFormat ( FpFormat ),
   .Height   ( H        )
-) (
+) i_deq (
   .clk_i     ( clk_i      ),
   .rst_ni    ( rst_ni     ),
   .clear_i   ( flush_i    ),
