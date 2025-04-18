@@ -206,13 +206,14 @@ module redmule_scheduler
         x_empty_full <= '1;
     end
   end
-                                              // HACK vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
   assign x_reload_en  = start || x_cols_iter_en || x_empty_full && ~flgs_x_buffer_i.full;
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
-  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;   // PAY ATTENTION, we may want to also check the next wrow is ready
+  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && x_shift_cnt_q == H-1) && flgs_x_buffer_i.full && ~stall_engine;
+  assign cntrl_x_buffer_o.last_x      = x_done_en;
 
   /************************
    * W Iteration counters *
@@ -225,6 +226,8 @@ module redmule_scheduler
 
   logic        w_cols_iter_en, w_rows_iter_en,
                w_mat_iters_en, w_done_en;
+
+  logic        w_stride_cnt;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_rows_iteration
     if(~rst_ni) begin
@@ -270,7 +273,7 @@ module redmule_scheduler
 
   assign w_mat_iters_en = w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && w_cols_iter_en;
 
-    always_ff @(posedge clk_i or negedge rst_ni) begin : w_done_register
+  always_ff @(posedge clk_i or negedge rst_ni) begin : w_done_register
     if(~rst_ni) begin
       w_done <= '0;
     end else begin
@@ -278,6 +281,18 @@ module redmule_scheduler
         w_done <= '0;
       end else if (w_done_en) begin
         w_done <= '1;
+      end
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : w_stride_counter
+    if(~rst_ni) begin
+      w_stride_cnt <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        w_stride_cnt <= '0;
+      end else if (w_cols_iter_en) begin
+        w_stride_cnt <= ~w_stride_cnt;
       end
     end
   end
@@ -292,6 +307,8 @@ module redmule_scheduler
 
   assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
   assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
+
+  assign cntrl_w_buffer_o.stride_cnt = w_stride_cnt;
 
   /****************************
    * Y & Z Iteration counters *
@@ -453,7 +470,7 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i;
   assign cntrl_z_buffer_o.y_push_enable = y_push_en && ~stall_engine;
-  assign cntrl_z_buffer_o.fill          = z_avail_en && ~stall_engine;
+  assign cntrl_z_buffer_o.fill          = z_avail_en && reg_enable_o;
   assign cntrl_z_buffer_o.first_load    = y_cols_iter_q == '0 && y_rows_iter_q == '0;
 
   assign cntrl_z_buffer_o.y_width       = y_width;
@@ -486,7 +503,23 @@ module redmule_scheduler
    *       ENGINE CONTROL      *
    *****************************/
 
-  assign reg_enable_o = computing & ~stall_engine;
+  logic reg_enable_d, reg_enable_q;
+
+  assign reg_enable_d = computing & ~stall_engine;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : reg_enable_register
+    if (~rst_ni) begin
+      reg_enable_q <= '0;
+    end else begin
+      if (clear_i) begin
+        reg_enable_q <= '0;
+      end else begin
+        reg_enable_q <= reg_enable_d;
+      end
+    end
+  end
+
+  assign reg_enable_o = reg_enable_q;
 
   assign cntrl_engine_o.fma_is_boxed     = 3'b111;
   assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
@@ -501,15 +534,31 @@ module redmule_scheduler
   assign cntrl_engine_o.accumulate       = ~pushing_y;
   assign cntrl_engine_o.dequant_enable   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
 
+  logic [W-1:0] row_clk_en_d, row_clk_en_q;
+
   always_comb begin
-    cntrl_engine_o.row_clk_gate_en = '0;
+    row_clk_en_d = '0;
 
     if (computing && ~stall_engine) begin
       for (int i = 0; i < z_width; i++) begin
-        cntrl_engine_o.row_clk_gate_en[i] = 1'b1;
+        row_clk_en_d[i] = 1'b1;
       end
     end
   end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : row_clk_en_register
+    if (~rst_ni) begin
+      row_clk_en_q <= '0;
+    end else begin
+      if (clear_i) begin
+        row_clk_en_q <= '0;
+      end else begin
+        row_clk_en_q <= row_clk_en_d;
+      end
+    end
+  end
+
+  assign cntrl_engine_o.row_clk_gate_en = row_clk_en_q;
 
   /*****************************
    *         CHECKS            *
@@ -594,7 +643,7 @@ module redmule_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
         pushing_y <= '0;
-      end else if ((y_push_en /*HACK*/&& reg_enable_o/*HACK*/) || pushing_y) begin
+      end else begin
         pushing_y <= y_push_en;
       end
     end

@@ -171,6 +171,7 @@ package redmule_pkg;
     logic [$clog2(TOT_DEPTH):0]   slots;
 
     logic                         rst_w_index;
+    logic                         last_x;
   } x_buffer_ctrl_t;
 
   typedef struct packed {
@@ -185,6 +186,8 @@ package redmule_pkg;
     qint_fmt_e                     q_int_fmt;
     logic [$clog2(TOT_DEPTH):0]    width;
     logic [$clog2(ARRAY_HEIGHT):0] height;
+
+    logic                          stride_cnt;
   } w_buffer_ctrl_t;
 
   typedef struct packed {
