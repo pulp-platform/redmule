@@ -1,22 +1,22 @@
 packages:
   cluster_interconnect:
-    revision: 7d0a4f8acae71a583a6713cab5554e60b9bb8d27
-    version: 1.2.1
+    revision: 2967d8d17be0a6139229ca8d3d4956e182aec3de
+    version: 1.3.0
     source:
       Git: https://github.com/pulp-platform/cluster_interconnect.git
     dependencies:
     - common_cells
   common_cells:
-    revision: c27bce39ebb2e6bae52f60960814a2afca7bd4cb
-    version: 1.37.0
+    revision: 9afda9abb565971649c2aa0985639c096f351171
+    version: 1.38.0
     source:
       Git: https://github.com/pulp-platform/common_cells.git
     dependencies:
     - common_verification
     - tech_cells_generic
   common_verification:
-    revision: 9c07fa860593b2caabd9b5681740c25fac04b878
-    version: 0.2.3
+    revision: fb1885f48ea46164a10568aeff51884389f67ae3
+    version: 0.2.5
     source:
       Git: https://github.com/pulp-platform/common_verification.git
     dependencies: []
@@ -30,7 +30,7 @@ packages:
     - fpnew
     - tech_cells_generic
   cv32e40x:
-    revision: baba1eeb3b845306c45be714f677ff786753f136
+    revision: 96b933ac2f723351872da55e7d2e9a82abd5df34
     version: null
     source:
       Git: https://github.com/pulp-platform/cv32e40x.git
@@ -67,8 +67,8 @@ packages:
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: 65c99a4a2f37a79acee800ab0151f67dfb1edef1
-    version: 1.8.0
+    revision: b3d33afdd27e79bcda1348d0ab5f4afd52c03106
+    version: 1.9.0
     source:
       Git: https://github.com/pulp-platform/hwpe-stream.git
     dependencies:
@@ -86,6 +86,14 @@ packages:
     source:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
+  obi:
+    revision: 8097928cf1b43712f93d5356f336397879b4ad2c
+    version: 0.1.6
+    source:
+      Git: https://github.com/pulp-platform/obi.git
+    dependencies:
+    - common_cells
+    - common_verification
   tech_cells_generic:
     revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
     version: 0.2.13
