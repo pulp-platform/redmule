@@ -160,6 +160,8 @@ package redmule_pkg;
     logic                          load;
     logic [$clog2(TOT_DEPTH):0]    width;
     logic [$clog2(ARRAY_HEIGHT):0] height;
+
+    logic                          stride_cnt;
   } w_buffer_ctrl_t;
 
   typedef struct packed {

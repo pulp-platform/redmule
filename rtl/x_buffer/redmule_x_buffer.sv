@@ -112,7 +112,7 @@ redmule_x_pad_scm #(
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
 assign buf_write_en = ( current_state == FAST_FILL ||
                         current_state == FILL && ctrl_i.h_shift)
-                      && ~refilling && (~ctrl_i.dequant || next_wrow_valid_i);
+                      && ~refilling && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x);
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),
@@ -176,7 +176,7 @@ always_comb begin : fsm
 
     WAIT_FIRST_READ: begin
       if (h_index_r == H-1 && ctrl_i.h_shift) begin
-        if (pad_read_cnt_rst) begin
+        if (ctrl_i.rst_w_index) begin
           next_state = PAD_EMPTY;
         end  else begin
           next_state = FILL;

@@ -206,7 +206,7 @@ module redmule_scheduler
   assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full;
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
-  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;   // PAY ATTENTION, we may want to also check the next wrow is ready
+  assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && x_shift_cnt_q == H-1) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en;
@@ -281,6 +281,17 @@ module redmule_scheduler
     end
   end
 
+  always_ff @(posedge clk_i or negedge rst_ni) begin : w_stride_counter
+    if(~rst_ni) begin
+      w_stride_cnt <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        w_stride_cnt <= '0;
+      end else if (w_cols_iter_en) begin
+        w_stride_cnt <= ~w_stride_cnt;
+      end
+    end
+  end
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
 
@@ -289,6 +300,11 @@ module redmule_scheduler
 
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine;
   assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
+
+  assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
+  assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
+
+  assign cntrl_w_buffer_o.stride_cnt = w_stride_cnt;
 
   /****************************
    * Y & Z Iteration counters *
