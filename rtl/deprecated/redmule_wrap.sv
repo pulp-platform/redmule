@@ -17,12 +17,13 @@ module redmule_wrap
   parameter  int unsigned  ID_WIDTH    = 8                    ,
   parameter  int unsigned  N_CORES     = 8                    ,
   parameter  int unsigned  DW          = DATA_W               , // TCDM port dimension (in bits)
-  parameter  int unsigned  MP          = DW/redmule_pkg::MemDw,
+  parameter  int unsigned  MEMDW       = MemDw                ,
+  parameter  int unsigned  MP          = DW/MEMDW             ,
   parameter  int unsigned  EW          = 0                    , // ECC signals width
   localparam fp_format_e   FpFormat    = FPFORMAT             , // Data format (default is FP16)
   localparam int unsigned  Height      = ARRAY_HEIGHT         , // Number of PEs within a row
   localparam int unsigned  Width       = ARRAY_WIDTH          , // Number of parallel rows
-  localparam int unsigned  NumPipeRegs = PIPE_REGS            , // Number of pipeline registers within each PE 
+  localparam int unsigned  NumPipeRegs = PIPE_REGS            , // Number of pipeline registers within each PE
   localparam pipe_config_t PipeConfig  = DISTRIBUTED          ,
   localparam int unsigned  BITW        = fp_width(FpFormat)  // Number of bits for the given format
 )(
@@ -187,6 +188,9 @@ redmule_top #(
   .ID_WIDTH              ( ID_WIDTH              ),
   .N_CORES               ( N_CORES               ),
   .DW                    ( DW                    ),
+  .Height                ( Height                ),
+  .Width                 ( Width                 ),
+  .NumPipeRegs           ( NumPipeRegs           ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_redmule_top       (
   .clk_i              ( clk_i              ),
