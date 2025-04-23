@@ -35,29 +35,29 @@ module redmule_wrap
   output logic [N_CORES-1:0][1:0]   evt_o         ,
   output logic                      busy_o        ,
   // tcdm master ports
-  output logic [      MP-1:0]       tcdm_req_o      ,
-  input  logic [      MP-1:0]       tcdm_gnt_i      ,
-  output logic [      MP-1:0][31:0] tcdm_add_o      ,
-  output logic [      MP-1:0]       tcdm_wen_o      ,
-  output logic [      MP-1:0][ 3:0] tcdm_be_o       ,
-  output logic [      MP-1:0][31:0] tcdm_data_o     ,
-  output logic [      EW-1:0]       tcdm_ecc_o      ,
-  input  logic [      MP-1:0][31:0] tcdm_r_data_i   ,
-  input  logic [      MP-1:0]       tcdm_r_valid_i  ,
-  input  logic                      tcdm_r_opc_i    ,
-  input  logic                      tcdm_r_user_i   ,
-  input  logic [      EW-1:0]       tcdm_r_ecc_i    ,
+  output logic [      MP-1:0]            tcdm_req_o      ,
+  input  logic [      MP-1:0]            tcdm_gnt_i      ,
+  output logic [      MP-1:0][31:0]      tcdm_add_o      ,
+  output logic [      MP-1:0]            tcdm_wen_o      ,
+  output logic [      MP-1:0][ 3:0]      tcdm_be_o       ,
+  output logic [      MP-1:0][MEMDW-1:0] tcdm_data_o     ,
+  output logic [      EW-1:0]            tcdm_ecc_o      ,
+  input  logic [      MP-1:0][MEMDW-1:0] tcdm_r_data_i   ,
+  input  logic [      MP-1:0]            tcdm_r_valid_i  ,
+  input  logic                           tcdm_r_opc_i    ,
+  input  logic                           tcdm_r_user_i   ,
+  input  logic [      EW-1:0]            tcdm_r_ecc_i    ,
   // periph slave port
-  input  logic                      periph_req_i    ,
-  output logic                      periph_gnt_o    ,
-  input  logic [        31:0]       periph_add_i    ,
-  input  logic                      periph_wen_i    ,
-  input  logic [         3:0]       periph_be_i     ,
-  input  logic [        31:0]       periph_data_i   ,
-  input  logic [ID_WIDTH-1:0]       periph_id_i     ,
-  output logic [        31:0]       periph_r_data_o ,
-  output logic                      periph_r_valid_o,
-  output logic [ID_WIDTH-1:0]       periph_r_id_o
+  input  logic                           periph_req_i    ,
+  output logic                           periph_gnt_o    ,
+  input  logic [        31:0]            periph_add_i    ,
+  input  logic                           periph_wen_i    ,
+  input  logic [         3:0]            periph_be_i     ,
+  input  logic [        31:0]            periph_data_i   ,
+  input  logic [ID_WIDTH-1:0]            periph_id_i     ,
+  output logic [        31:0]            periph_r_data_o ,
+  output logic                           periph_r_valid_o,
+  output logic [ID_WIDTH-1:0]            periph_r_id_o
 );
 
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '{
@@ -125,7 +125,7 @@ logic [N_CORES-1:0][1:0] evt;
         tcdm_add_o  [ii] <= tcdm.add + ii*4;
         tcdm_wen_o  [ii] <= tcdm.wen;
         tcdm_be_o   [ii] <= tcdm.be[ii*4+:4];
-        tcdm_data_o [ii] <= tcdm.data[ii*32+:32];
+        tcdm_data_o [ii] <= tcdm.data[ii*MEMDW+:MEMDW];
       end
       tcdm_ecc_o    <= tcdm.ecc;
       tcdm.gnt      <= &(tcdm_gnt_i);
@@ -159,7 +159,7 @@ logic [N_CORES-1:0][1:0] evt;
     assign tcdm_add_o  [ii] = tcdm.add + ii*4;
     assign tcdm_wen_o  [ii] = tcdm.wen;
     assign tcdm_be_o   [ii] = tcdm.be[(ii+1)*4-1:ii*4];
-    assign tcdm_data_o [ii] = tcdm.data[(ii+1)*32-1:ii*32];
+    assign tcdm_data_o [ii] = tcdm.data[(ii+1)*MEMDW-1:ii*MEMDW];
   end
   assign tcdm_ecc_o    = tcdm.ecc;
   assign tcdm.gnt      = &(tcdm_gnt_i);
