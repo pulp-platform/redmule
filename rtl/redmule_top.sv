@@ -5,6 +5,8 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+`include "hci_helpers.svh"
+
 module redmule_top
   import fpnew_pkg::*;
   import redmule_pkg::*;
@@ -25,7 +27,8 @@ module redmule_top
   parameter int unsigned  Width              = ARRAY_WIDTH       , // Number of parallel rows
   parameter int unsigned  NumPipeRegs        = PIPE_REGS         , // Number of pipeline registers within each PE
   parameter pipe_config_t PipeConfig         = DISTRIBUTED       ,
-  parameter int unsigned  BITW               = fp_width(FpFormat)  // Number of bits for the given format
+  parameter int unsigned  BITW               = fp_width(FpFormat),  // Number of bits for the given format
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
@@ -42,26 +45,14 @@ module redmule_top
   hwpe_ctrl_intf_periph.slave periph,
 `endif
   // TCDM master ports for the memory side
-  hci_core_intf.master tcdm
+  hci_core_intf.initiator tcdm
 );
 
 localparam int unsigned DATAW_ALIGN = DATAW;
 
-logic                       fsm_z_clk_en, ctrl_z_clk_en;
-logic                       enable, clear, soft_clear;
-logic                       y_buffer_depth_count,
-                            y_buffer_load,
-                            z_buffer_fill,
-                            z_buffer_store;
-logic                       w_shift;
-logic                       w_load;
-logic                       reg_enable,
-                            gate_en;
+logic                       enable, clear;
+logic                       reg_enable;
 logic                       start_cfg, cfg_complete;
-logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
-                            y_cols_lftovr;
-logic [$clog2(Height):0]    w_rows_lftovr;
-logic [$clog2(Width):0]     y_rows_lftovr;
 
 `ifdef TARGET_REDMULE_HWPE
   /* If there is no Xif we directly plug the
@@ -132,41 +123,42 @@ flags_fifo_t   w_fifo_flgs;
 // Implementation of the incoming and outgoing streaming interfaces (one for each kind of data)
 
 // X streaming interface + X FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo      ( .clk( clk_i ) );
 
 // W streaming interface + W FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .clk( clk_i ) );
 
 // Y streaming interface + Y FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_i ) );
 
 // Z streaming interface + Z FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW             )
+  .DW             ( DW                           ),
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
-  .clk_i          ( clk_i          ),
-  .rst_ni         ( rst_ni         ),
-  .test_mode_i    ( test_mode_i    ),
+  .clk_i           ( clk_i           ),
+  .rst_ni          ( rst_ni          ),
+  .test_mode_i     ( test_mode_i     ),
   // Controller generated signals
-  .enable_i       ( 1'b1           ),
-  .clear_i        ( clear          ),
+  .enable_i        ( 1'b1            ),
+  .clear_i         ( clear           ),
   // Source interfaces for the incoming streams
-  .x_stream_o     ( x_buffer_d     ),
-  .w_stream_o     ( w_buffer_d     ),
-  .y_stream_o     ( y_buffer_d     ),
+  .x_stream_o      ( x_buffer_d      ),
+  .w_stream_o      ( w_buffer_d      ),
+  .y_stream_o      ( y_buffer_d      ),
   // Sink interface for the outgoing stream
-  .z_stream_i     ( z_buffer_fifo  ),
+  .z_stream_i      ( z_buffer_fifo   ),
   // Master TCDM interface ports for the memory side
-  .tcdm           ( tcdm           ),
-  .ctrl_i         ( cntrl_streamer ),
-  .flags_o        ( flgs_streamer  )
+  .tcdm            ( tcdm            ),
+  .ctrl_i          ( cntrl_streamer  ),
+  .flags_o         ( flgs_streamer   )
 );
 
 hwpe_stream_fifo #(
@@ -218,27 +210,16 @@ hwpe_stream_fifo #(
 );
 
 // Valid/Ready assignment
-assign x_buffer_fifo.ready = flgs_scheduler.x_ready;
-assign w_buffer_fifo.ready = flgs_scheduler.w_ready;
-assign y_buffer_fifo.ready = flgs_scheduler.y_ready;
+assign x_buffer_fifo.ready = x_buffer_ctrl.load;
+assign w_buffer_fifo.ready = w_buffer_flgs.w_ready;
 
-assign z_buffer_q.valid            = flgs_scheduler.z_valid;
-assign z_buffer_q.strb             = flgs_scheduler.z_strb;
-assign z_buffer_ctrl.ready         = z_buffer_q.ready;
-assign z_buffer_ctrl.y_valid       = y_buffer_fifo.valid;
-assign z_buffer_ctrl.y_push_enable = flgs_scheduler.y_push_enable;
+assign y_buffer_fifo.ready = z_buffer_flgs.y_ready;
+
+assign z_buffer_q.valid    = z_buffer_flgs.z_valid;
 
 /*----------------------------------------------------------------*/
 /* |                          Buffers                           | */
 /*----------------------------------------------------------------*/
-
-logic x_buffer_clk_en, x_buffer_clock;
-tc_clk_gating i_x_buffer_clock_gating (
-  .clk_i     ( clk_i           ),
-  .en_i      ( x_buffer_clk_en ),
-  .test_en_i ( '0              ),
-  .clk_o     ( x_buffer_clock  )
-);
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
 redmule_x_buffer #(
@@ -247,13 +228,13 @@ redmule_x_buffer #(
   .Height     ( Height              ),
   .Width      ( Width               )
 ) i_x_buffer  (
-  .clk_i      ( x_buffer_clock      ),
-  .rst_ni     ( rst_ni              ),
-  .clear_i    ( clear || soft_clear ),
-  .ctrl_i     ( x_buffer_ctrl       ),
-  .flags_o    ( x_buffer_flgs       ),
-  .x_buffer_o ( x_buffer_q          ),
-  .x_buffer_i ( x_buffer_fifo.data  )
+  .clk_i       ( clk_i              ),
+  .rst_ni      ( rst_ni             ),
+  .clear_i     ( clear              ),
+  .ctrl_i      ( x_buffer_ctrl      ),
+  .flags_o     ( x_buffer_flgs      ),
+  .x_buffer_o  ( x_buffer_q         ),
+  .x_buffer_i  ( x_buffer_fifo.data )
 );
 
 logic [Height-1:0][BITW-1:0] w_buffer_q;
@@ -262,45 +243,33 @@ redmule_w_buffer #(
   .FpFormat   ( FpFormat            ),
   .Height     ( Height              )
 ) i_w_buffer  (
-  .clk_i      ( clk_i               ),
-  .rst_ni     ( rst_ni              ),
-  .clear_i    ( clear || soft_clear ),
-  .ctrl_i     ( w_buffer_ctrl       ),
-  .flags_o    ( w_buffer_flgs       ),
-  .w_buffer_o ( w_buffer_q          ),
-  .w_buffer_i ( w_buffer_fifo.data  )
+  .clk_i       ( clk_i              ),
+  .rst_ni      ( rst_ni             ),
+  .clear_i     ( clear              ),
+  .ctrl_i      ( w_buffer_ctrl      ),
+  .flags_o     ( w_buffer_flgs      ),
+  .w_buffer_o  ( w_buffer_q         ),
+  .w_buffer_i  ( w_buffer_fifo.data )
 );
 
 logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
 redmule_z_buffer #(
-  .DW            ( DATAW_ALIGN         ),
-  .FpFormat      ( FpFormat            ),
-  .Width         ( Width               )
+  .DW            ( DATAW_ALIGN        ),
+  .FpFormat      ( FpFormat           ),
+  .Width         ( Width              )
 ) i_z_buffer     (
-  .clk_i         ( clk_i               ),
-  .rst_ni        ( rst_ni              ),
-  .clear_i       ( clear || soft_clear ),
-  .reg_enable_i  ( reg_enable          ),
-  .ctrl_i        ( z_buffer_ctrl       ),
-  .flags_o       ( z_buffer_flgs       ),
-  .y_buffer_i    ( y_buffer_fifo.data  ),
-  .z_buffer_i    ( z_buffer_d          ),
-  .y_buffer_o    ( y_bias_q            ),
-  .z_buffer_o    ( z_buffer_q.data     )
+  .clk_i         ( clk_i              ),
+  .rst_ni        ( rst_ni             ),
+  .clear_i       ( clear              ),
+  .reg_enable_i  ( reg_enable         ),
+  .ctrl_i        ( z_buffer_ctrl      ),
+  .flags_o       ( z_buffer_flgs      ),
+  .y_buffer_i    ( y_buffer_fifo.data ),
+  .z_buffer_i    ( z_buffer_d         ),
+  .y_buffer_o    ( y_bias_q           ),
+  .z_buffer_o    ( z_buffer_q.data    ),
+  .z_strb_o      ( z_buffer_q.strb    )
 );
-
-// Ready and valid assignments for wrapper registers
-// Wrapper cntrl assigments
-assign w_buffer_ctrl.load              = w_load;
-assign w_buffer_ctrl.shift             = w_shift & flgs_scheduler.w_shift;
-assign w_buffer_ctrl.cols_lftovr       = w_cols_lftovr;
-assign w_buffer_ctrl.rows_lftovr       = w_rows_lftovr;
-assign z_buffer_ctrl.fill              = z_buffer_fill;
-assign z_buffer_ctrl.load              = y_buffer_load;
-assign z_buffer_ctrl.store             = z_buffer_store;
-assign z_buffer_ctrl.buffer_clk_en     = (fsm_z_clk_en | ctrl_z_clk_en);
-assign z_buffer_ctrl.cols_lftovr       = y_cols_lftovr;
-assign z_buffer_ctrl.rows_lftovr       = y_rows_lftovr;
 
 /*---------------------------------------------------------------*/
 /* |                          Engine                           | */
@@ -377,7 +346,6 @@ redmule_engine     #(
   .w_input_i          ( w_buffer_q       ),
   .y_bias_i           ( y_bias_q         ),
   .z_output_o         ( z_buffer_d       ),
-  .accumulate_i       ( accumulate       ),
   .fma_is_boxed_i     ( fma_is_boxed     ),
   .noncomp_is_boxed_i ( noncomp_is_boxed ),
   .stage1_rnd_i       ( stage1_rnd       ),
@@ -404,6 +372,26 @@ redmule_engine     #(
 );
 
 /*---------------------------------------------------------------*/
+/* |                    Memory Controller                      | */
+/*---------------------------------------------------------------*/
+
+redmule_memory_scheduler #(
+  .DW (DATAW_ALIGN),
+  .W  (Width),
+  .H  (Height)
+) i_memory_scheduler (
+  .clk_i             ( clk_i               ),
+  .rst_ni            ( rst_ni              ),
+  .clear_i           ( clear               ),
+  .reg_file_i        ( reg_file            ),
+  .flgs_streamer_i   ( flgs_streamer       ),
+  .cntrl_scheduler_i ( cntrl_scheduler     ),
+  .cntrl_streamer_o  ( cntrl_streamer      )
+);
+
+
+
+/*---------------------------------------------------------------*/
 /* |                        Controller                         | */
 /*---------------------------------------------------------------*/
 
@@ -420,21 +408,16 @@ redmule_ctrl        #(
   .clk_i             ( clk_i                   ),
   .rst_ni            ( rst_ni                  ),
   .test_mode_i       ( test_mode_i             ),
+  .flgs_streamer_i   ( flgs_streamer           ),
   .busy_o            ( busy_o                  ),
   .clear_o           ( clear                   ),
   .evt_o             ( evt_o                   ),
-  .z_fill_o          ( z_buffer_fill           ),
-  .w_shift_o         ( w_shift                 ),
-  .z_buffer_clk_en_o ( ctrl_z_clk_en           ),
   .reg_file_o        ( reg_file                ),
   .reg_enable_i      ( reg_enable              ),
   .start_cfg_i       ( start_cfg               ),
   .cfg_complete_o    ( cfg_complete            ),
-  .flgs_z_buffer_i   ( z_buffer_flgs           ),
-  .flgs_engine_i     ( flgs_engine             ),
   .w_loaded_i        ( flgs_scheduler.w_loaded ),
   .flush_o           ( engine_flush            ),
-  .accumulate_o      ( accumulate              ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
   .periph            ( periph                  )
 );
@@ -443,50 +426,33 @@ redmule_ctrl        #(
 /*---------------------------------------------------------------*/
 /* |                        Local FSM                          | */
 /*---------------------------------------------------------------*/
-
-redmule_scheduler    #(
-  .Height             ( Height              ),
-  .Width              ( Width               ),
-  .NumPipeRegs        ( NumPipeRegs         )
-) i_scheduler         (
-  .clk_i              ( clk_i               ),
-  .rst_ni             ( rst_ni              ),
-  .test_mode_i        ( test_mode_i         ),
-  .clear_i            ( clear               ),
-  .x_valid_i          ( x_buffer_fifo.valid ),
-  .x_strb_i           ( x_buffer_fifo.strb  ),
-  .w_valid_i          ( w_buffer_fifo.valid ),
-  .w_strb_i           ( w_buffer_fifo.strb  ),
-  .y_fifo_valid_i     ( y_buffer_fifo.valid ),
-  .y_fifo_strb_i      ( y_buffer_fifo.strb  ),
-  .z_ready_i          ( z_buffer_q.ready    ),
-  .accumulate_i       ( accumulate          ),
-  .engine_flush_i     ( engine_flush        ),
-  .z_strb_o           (                     ),
-  .soft_clear_o       ( soft_clear          ),
-  .w_load_o           ( w_load              ),
-  .w_cols_lftovr_o    ( w_cols_lftovr       ),
-  .w_rows_lftovr_o    ( w_rows_lftovr       ),
-  .y_cols_lftovr_o    ( y_cols_lftovr       ),
-  .y_rows_lftovr_o    ( y_rows_lftovr       ),
-  .gate_en_o          ( gate_en             ),
-  .x_buffer_clk_en_o  ( x_buffer_clk_en     ),
-  .z_buffer_clk_en_o  ( fsm_z_clk_en        ),
-  .reg_enable_o       ( reg_enable          ),
-  .z_store_o          ( z_buffer_store      ),
-  .y_buffer_load_o    ( y_buffer_load       ),
-  .reg_file_i         ( reg_file            ),
-  .flgs_streamer_i    ( flgs_streamer       ),
-  .flgs_x_buffer_i    ( x_buffer_flgs       ),
-  .flgs_w_buffer_i    ( w_buffer_flgs       ),
-  .flgs_z_buffer_i    ( z_buffer_flgs       ),
-  .flgs_engine_i      ( flgs_engine         ),
-  .fifo_flgs_i        ( w_fifo_flgs         ),
-  .cntrl_scheduler_i  ( cntrl_scheduler     ),
-  .cntrl_engine_o     ( cntrl_engine        ),
-  .cntrl_streamer_o   ( cntrl_streamer      ),
-  .cntrl_x_buffer_o   ( x_buffer_ctrl       ),
-  .flgs_scheduler_o   ( flgs_scheduler      )
+redmule_scheduler #(
+  .Height      ( Height         ),
+  .Width       ( Width          ),
+  .NumPipeRegs ( NumPipeRegs    )
+) i_scheduler (
+  .clk_i             ( clk_i               ),
+  .rst_ni            ( rst_ni              ),
+  .test_mode_i       ( test_mode_i         ),
+  .clear_i           ( clear               ),
+  .x_valid_i         ( x_buffer_fifo.valid ),
+  .w_valid_i         ( w_buffer_fifo.valid ),
+  .y_valid_i         ( y_buffer_fifo.valid ),
+  .z_ready_i         ( z_buffer_q.ready    ),
+  .engine_flush_i    ( engine_flush        ),
+  .reg_file_i        ( reg_file            ),
+  .flgs_streamer_i   ( flgs_streamer       ),
+  .flgs_x_buffer_i   ( x_buffer_flgs       ),
+  .flgs_w_buffer_i   ( w_buffer_flgs       ),
+  .flgs_z_buffer_i   ( z_buffer_flgs       ),
+  .flgs_engine_i     ( flgs_engine         ),
+  .cntrl_scheduler_i ( cntrl_scheduler     ),
+  .reg_enable_o      ( reg_enable          ),
+  .cntrl_engine_o    ( cntrl_engine        ),
+  .cntrl_x_buffer_o  ( x_buffer_ctrl       ),
+  .cntrl_w_buffer_o  ( w_buffer_ctrl       ),
+  .cntrl_z_buffer_o  ( z_buffer_ctrl       ),
+  .flgs_scheduler_o  ( flgs_scheduler      )
 );
 
 endmodule : redmule_top

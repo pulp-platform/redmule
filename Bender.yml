@@ -17,7 +17,7 @@ dependencies:
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.7                                  }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: 0e95510c0f4d43452d21b7723d766ae92e45c101 } # branch: yt/task-interfaces
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: v1.1                                     }
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: v2.1.2                                   }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
@@ -32,15 +32,20 @@ sources:
     - rtl/redmule_castin.sv
     - rtl/redmule_castout.sv
     - rtl/redmule_streamer.sv
-    - rtl/redmule_x_buffer.sv
-    - rtl/redmule_w_buffer.sv
-    - rtl/redmule_z_buffer.sv
+    - rtl/x_buffer/redmule_x_buffer.sv
+    - rtl/x_buffer/redmule_x_pad_scm.sv
+    - rtl/x_buffer/redmule_x_buffer_scm.sv
+    - rtl/w_buffer/redmule_w_buffer.sv
+    - rtl/w_buffer/redmule_w_buffer_scm.sv
+    - rtl/z_buffer/redmule_z_buffer.sv
+    - rtl/z_buffer/redmule_z_buffer_scm.sv
     - rtl/redmule_fma.sv
     - rtl/redmule_noncomp.sv
     - rtl/redmule_ce.sv
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
+    - rtl/redmule_memory_scheduler.sv
 
     - target: redmule_hwpe
       files:
