@@ -36,15 +36,8 @@ module redmule_top
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
   output logic [N_CORES-1:0][1:0] evt_o      ,
-`ifdef TARGET_REDMULE_COMPLEX
-  cv32e40x_if_xif.coproc_issue    xif_issue_if_i,
-  cv32e40x_if_xif.coproc_result   xif_result_if_o,
-  cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
-  cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
-`elsif TARGET_REDMULE_HWPE
   // Periph slave port for the controller side
   hwpe_ctrl_intf_periph.slave periph,
-`endif
   // TCDM master ports for the memory side
   hci_core_intf.initiator tcdm
 );
@@ -72,40 +65,9 @@ logic [$clog2(Width):0]     y_rows_lftovr;
 
 logic                       gidx_out_valid;
 
-`ifdef TARGET_REDMULE_HWPE
-  /* If there is no Xif we directly plug the
-     control port into the hwpe-slave device */
-  assign start_cfg = ((periph.req) &&
-                      (periph.add[7:0] == 'h54) &&
-                      (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
-
-`elsif TARGET_REDMULE_COMPLEX
-  hwpe_ctrl_intf_periph #( .ID_WIDTH  (ID_WIDTH) ) periph ( .clk(clk_i) );
-  /* If there is the Xif, we pass through the
-     instruction decoder and then enter into
-     the hwpe slave device */
-  logic [SysDataWidth-1:0] cfg_reg;
-  logic [SysDataWidth-1:0] sizem, sizen, sizek;
-  logic [SysDataWidth-1:0] x_addr, w_addr, y_addr, z_addr;
-
-  redmule_inst_decoder #(
-    .SysInstWidth       ( SysInstWidth       ),
-    .SysDataWidth       ( SysDataWidth       ),
-    .NumRfReadPrts      ( 3                  ) // FIXME: parametric
-  ) i_inst_decoder      (
-    .clk_i               ( clk_i               ),
-    .rst_ni              ( rst_ni              ),
-    .clear_i             ( clear               ),
-    .xif_issue_if_i      ( xif_issue_if_i      ),
-    .xif_result_if_o     ( xif_result_if_o     ),
-    .xif_compressed_if_i ( xif_compressed_if_i ),
-    .xif_mem_if_o        ( xif_mem_if_o        ),
-    .periph              ( periph              ),
-    .cfg_complete_i      ( cfg_complete        ),
-    .start_cfg_o         ( start_cfg           )
-  );
-
-`endif
+assign start_cfg = ((periph.req) &&
+                    (periph.add[7:0] == 'h54) &&
+                    (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;
