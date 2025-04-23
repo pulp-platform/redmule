@@ -119,7 +119,7 @@ end else begin: gen_xif_decoder
   assign periph.r_id    = '0;
 end
 
-// Streamer control signals, flags and ecc info
+// Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
 errs_streamer_t  ecc_errors_streamer;
