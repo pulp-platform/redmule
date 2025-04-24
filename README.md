@@ -21,7 +21,7 @@ If you want to use RedMulE for academic purposes, please cite it as:
 
 ```
 @article{TORTORELLA2023122,
-title = {RedMule: A mixed-precision matrix–matrix operation engine for flexible and energy-efficient on-chip linear algebra and TinyML training acceleration},
+title = {RedMule: A mixed-precision matrix?matrix operation engine for flexible and energy-efficient on-chip linear algebra and TinyML training acceleration},
 journal = {Future Generation Computer Systems},
 volume = {149},
 pages = {122-135},
@@ -84,19 +84,18 @@ Each execution of the RedMulE Golden Model also generates data in `.txt` format 
 the generated matrices.
 
 ## RedMulE Testbench
-RedMulE offers a complete testing environment under the `tb` folder, providing two different testbenches.
+RedMulE offers a complete testing environment under the `target/sim/src/redmule_tb.sv` file, providing the testbench shown in the following diagram.
+
+![](doc/RedmuleSubsystem-CoreComplex.png)
+
+The testbench instantiates two synthetic memories for instruction and data that have a compile-configurable `PROB_STALL` parameter used only in the data memory to simulate the incurrence of stalls. A so-called Core Complex connects to such memories. The Core Complex complex configuration can be selected by enabling or disabling the `UseXif` parameter. 
 
 ### HWPE memory-mapped interface
-The `tb/redmule_tb.sv` is based on the [hwpe-tb](https://github.com/pulp-platform/hwpe-tb) example, and features a RedMulE instance, a [CV32E40P](https://github.com/pulp-platform/cv32e40p/tree/pulpissimo-v4.1.0) controller core, and dummy memories used to simulate instruction and data memories, as shown in the picture below.
-
-![](doc/redmule_testbench.png)
-
-In this configuration, RedMulE is connected to the core through a memory-mapped configuration interface based on the [hwpe-ctrl](https://github.com/pulp-platform/hwpe-ctrl). Through this interface, when the data request of the core is made to an address that corresponds to the accelerator register-file scope, the internal configuration registers of the accelerator are written to make it start an operation. This is the most typical implementation used for integration of tightly-coupled accelerators within a [PULP cluster](https://github.com/pulp-platform/pulp_cluster).
+The default value of the `UseXif` parameter is 0, meaning the Core complex provides a RedMulE instance, a [CV32E40P](https://github.com/pulp-platform/cv32e40p/tree/pulpissimo-v4.1.0) controller core, and an address decoder. In such configuration, RedMulE exposes its configuration interface as a memory-mapped request/response-based port, to which the core accesses via memory-mapped read/write operations. In the default configuration, such programmable port is reachable at the `0x00100000` base address and has a 1 kiB dedicated address range.
+The memory-mapped configuration interface is based on the [hwpe-ctrl](https://github.com/pulp-platform/hwpe-ctrl). This port exposes direct access to the accelerator register-file, where the internal configuration registers of the accelerator are written to make it start an operation. This is the most typical implementation used for integration of tightly-coupled accelerators within a [PULP cluster](https://github.com/pulp-platform/pulp_cluster).
 
 ### Tensor co-processor with ISA extension
-The `tb/redmule_complex_tb.sv` provides an implementatio of a complex core as an atomic unit. This unit features RedMulE as a tensor coprocessor of a [CV32E40X](https://github.com/openhwgroup/cv32e40x) core. In this configuration, the offloading of a matrix multiplication from the core to the accelerator is possible through the use of a general-purpose [eXtension Interface](https://github.com/openhwgroup/core-v-xif). Through such interface, it is possible to build a dedicated ISA instruction extension to offload an operation to an external co-processor without changing the core internal architecture. The RedMulE complex core is depicted in the figure below.
-
-![](doc/redmule_complex_testbench.png)
+If the `UseXif` parameter is set to 1, the Core Complex configuration implements RedMulE as a tensor coprocessor of a [CV32E40X](https://github.com/openhwgroup/cv32e40x) core. In this configuration, the operation offloading is no-longer memory-mapped, but is possible through the use of a general-purpose [eXtension Interface](https://github.com/openhwgroup/core-v-xif). Through such interface, it is possible to build a dedicated ISA instruction extension to offload an operation to an external co-processor without changing the core internal architecture.
 
 ## Programming model
 RedMulE is designed to reduce the effort required for the matrix multiplication tiling to the minimum. It features an internal hardware unit called "tiler" that needs very reduced input information (i.e. tesors dimensions, computing format, pointers to the input/output tensors and the operation to perform). Then, it is in charge of autonomously calculate the tiling of the tensors.
@@ -129,7 +128,6 @@ redmule_cfg ((unsigned int) x, (unsigned int) w, (unsigned int) y,
              (uint8_t) Float16);
 ```
 The `sw/hal_redmule.h` also contains other useful APIs for programming RedMulE, such as the `hwpe_soft_clear()` to provide a soft reset to all the internal accelerator state and configuration registers, or the `hwpe_trigger_job()` to trigger the accelerator operation after it is configured.
-The `sw/redmule.c` provides an example of code for programming RedMulE through its memory-mapped interface.
 
 ### Tensor co-processor with ISA extension
 The offloading mechanism through the dedicated ISA tensor extension requires the same information as in the memory-mapped case, meaning the pointers to the tensors, their dimensions, the encoding format, and the operation selection. All these pieces of information must be encapsulated into two dedicated ISA instructions: a `mcnfig` instruction and a `marith` instruction.
@@ -218,7 +216,8 @@ asm volatile(
             (0b001     <<  7) | \
             (0b0101011 <<  0)   \n");
 ```
-The `sw/redmule_complex.c` provides an example of code for programming RedMulE through a dedicate ISA extension.
+
+The unified `sw/redmule.c` provides an example of code for programming RedMulE either through its memory-mapped interface or through a dedicate ISA extension.
 
 ### Getting Started
 The RedMulE repository offers support for different simulation targets. At the moment, the support is for Questasim (`vsim`) and Verilator (`verilator`).
@@ -254,7 +253,7 @@ make hw-script target=verilator
 
 The compiled hardware is then built with the command:
 ```bash
-make hw-build target=verilator
+make hw-build target=verilator (UseXif=1 if you want to build for the XiF interface)
 ```
 
 In case one wants to run a simulation using Questasim, it sufficient to re-run the above commands replacing the `target=vsim` string.
@@ -263,11 +262,10 @@ In case one wants to run a simulation using Questasim, it sufficient to re-run t
 
 To run the available tests, just do:
 ```bash
-make sw-build
-make hw-run target=verilator (gui=1 to open the GtkWave tool or the Questasim Graphic User Interface depending on the value of `target`)
+make sw-build (UseXif=1 if you want to compile the test for the XiF interface)
+make hw-run target=verilator (gui=1 to open the GtkWave tool or the Questasim Graphic User Interface depending on the value of `target`, and UseXif=1 if you want to run test for the XiF interface)
 ```
 It is possible to run the test introducing a parametric probability of stall by explicitly passing the `P_STALL` parameter while running the test (`P_STALL=0.1` means a stall probability of the 10%).
-If the `scripts/setup-hwpe.sh` was sourced, the above commands will execute the `sw/redmule.c` example, while if the `scripts/setup-complex.sh` was source, the above commands will execute the `sw/redmule_complex.c` test.
 
 ### Golden Model Generation
 It is possible to generate fresh golden models directly from the `redmule` folder. The parameters that can be used to generate different golden models are the following:
