@@ -56,7 +56,7 @@ hw-run:
 	+STIM_DATA=$(STIM_DATA)       \
 	+STACK_INIT=$(STACK_INIT)     \
 	-gPROB_STALL=$(P_STALL)       \
-  -gUseXif=$(UseXif)            \
+	-gUseXif=$(UseXif)            \
 	-do "run -a"
 
 hw-all: hw-clean hw-script hw-build hw-run
