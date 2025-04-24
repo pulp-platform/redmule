@@ -171,7 +171,8 @@ module redmule_memory_scheduler
   end
 
   always_comb begin : req_start_assignment
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = (cntrl_scheduler_i.first_load || tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ]) &&
+                                                          flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;

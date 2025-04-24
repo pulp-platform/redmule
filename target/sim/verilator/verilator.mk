@@ -20,26 +20,27 @@ VerilatorCompileScript := $(VerilatorDir)/compile.$(target).tcl
 VerilatorWaves := $(VerilatorDir)/redmule.vcd
 
 hw-clean:
-	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves) $(VerilatorDir)/transcript
+	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves)
 
 hw-script:
 	$(Bender) update
 	$(Bender) script $(target)     \
 	$(common_targs) $(common_defs) \
-	$(sim_targs)                   \
+	$(sim_targs) $(sim_defs)       \
 	> $(VerilatorCompileScript)
 
 hw-build: hw-script
 	$(Verilator) --trace --timing --bbox-unsup \
 	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK \
 	--x-assign unique --x-initial unique --top-module $(Module)_tb --Mdir $(VerilatorAbsObjDir) \
+	-GPROB_STALL=$(P_STALL) -GUseXif=$(UseXif) \
 	-CFLAGS "-DTbName=$(Vmodule)_tb -DWafeformPath=$(VerilatorWaves)" \
 	-sv -cc -f $(VerilatorCompileScript) --exe $(VerilatorSrc)/$(Module)_tb.cpp
 	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb
 
 hw-run:
 	cd $(VerilatorDir);           \
-	./$(ObjDirName)/$(Vmodule)_tb
+	./$(ObjDirName)/$(Vmodule)_tb +STIM_INSTR=$(STIM_INSTR) +STIM_DATA=$(STIM_DATA) +STACK_INIT=$(STACK_INIT)
 ifeq ($(gui),1)
 	$(GtkWave) $(VerilatorWaves)
 endif

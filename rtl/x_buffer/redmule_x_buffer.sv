@@ -173,7 +173,7 @@ always_comb begin : fsm
 
     WAIT_FIRST_READ: begin
       if (h_index_r == H-1 && ctrl_i.h_shift) begin
-        if (ctrl_i.rst_w_index) begin
+        if (pad_read_cnt_rst) begin
           next_state = PAD_EMPTY;
         end  else begin
           next_state = FILL;
