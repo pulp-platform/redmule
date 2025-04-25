@@ -97,6 +97,7 @@
 #define MULMIN 0x5
 #define MAXMIN 0x6
 #define MINMAX 0x7
+#define PACE   0x8
 
 // GEMM formats
 #define Float8 0x0

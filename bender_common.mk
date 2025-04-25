@@ -7,3 +7,4 @@
 
 common_targs += -t rtl
 common_defs  += -D COREV_ASSERT_OFF
+common_defs  += -D PACE_ENABLED
