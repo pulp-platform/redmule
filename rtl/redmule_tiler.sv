@@ -4,6 +4,8 @@
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 // Francesco Conti <f.conti@unibo.it>
+// Arpan Suravi Prasad<prasadar@iis.ee.ethz.ch>
+
 
 module redmule_tiler
   import redmule_pkg::*;
@@ -49,6 +51,13 @@ assign config_d.z_addr          = reg_file_i.hwpe_params[Z_ADDR];
 assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
+`ifdef PACE_ENABLED
+  assign config_d.pace_tot_len  = reg_file_i.hwpe_params[MCFIG0][31:16];
+  assign config_d.pace_d0_stride= reg_file_i.hwpe_params[MCFIG1][15: 0];
+  assign config_d.pace_mode     = reg_file_i.hwpe_params[MACFG][13];
+  assign config_d.pace_in_addr  = reg_file_i.hwpe_params[W_ADDR];
+  assign config_d.pace_out_addr = reg_file_i.hwpe_params[Z_ADDR];
+`endif 
 assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
@@ -261,7 +270,15 @@ assign reg_file_o.hwpe_params[OP_SELECTION][25:21] = config_q.stage_1_op;
 assign reg_file_o.hwpe_params[OP_SELECTION][20:16] = config_q.stage_2_op;
 assign reg_file_o.hwpe_params[OP_SELECTION][15:13] = config_q.input_format;
 assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
-assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
-assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
+`ifdef PACE_ENABLED
+  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 2] = '0;
+  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
+  assign reg_file_o.hwpe_params[OP_SELECTION][1]     = config_q.pace_mode;
+  assign reg_file_o.hwpe_params[PACE_D0_STRIDE]      = config_q.pace_d0_stride;
+  assign reg_file_o.hwpe_params[PACE_D0_LENGTH]      = config_q.pace_tot_len;
+`else 
+  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
+  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
+`endif 
 
 endmodule: redmule_tiler

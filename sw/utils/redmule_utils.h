@@ -9,10 +9,7 @@
 
 #ifndef REDMULE_UTILS_H
 #define REDMULE_UTILS_H
-
-#define ERR 0x0011
-
-int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
+int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len, int tol) {
   uint32_t actual_word = 0;
   uint16_t actual_MSHWord, actual_LSHWord;
   uint32_t golden_word = 0;
@@ -39,7 +36,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_LSHWord < golden_LSHWord) ? (golden_LSHWord - actual_LSHWord)
                                                : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
@@ -55,7 +52,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_MSHWord < golden_MSHWord) ? (golden_MSHWord - actual_MSHWord)
                                                : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
@@ -66,7 +63,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
     errors += error;
 
 #ifdef DEBUG
-    tfp_printf("Golden: 0x%08x; Actual: 0x%08x,\n", golden_word, actual_word);
+    tfp_printf("iter: %d Golden[addr: %x]: 0x%08x; Actual[addr:%x]: 0x%08x,\n",i , (golden_z + i), golden_word, (actual_z + i) , actual_word);
 #endif
 
 #ifdef VERBOSE
@@ -80,7 +77,7 @@ int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   return errors;
 }
 
-int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
+int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len, int tol) {
   uint32_t actual_word = 0;
   uint8_t actual_Byte0, actual_Byte1, actual_Byte2, actual_Byte3;
   uint32_t golden_word = 0;
@@ -107,7 +104,7 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_Byte0 < golden_Byte0) ? (golden_Byte0 - actual_Byte0)
                                            : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
@@ -123,7 +120,7 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_Byte1 < golden_Byte1) ? (golden_Byte1 - actual_Byte1)
                                            : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
@@ -139,7 +136,7 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_Byte2 < golden_Byte2) ? (golden_Byte2 - actual_Byte2)
                                            : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);
@@ -155,7 +152,7 @@ int redmule8_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
            : (actual_Byte3 < golden_Byte3) ? (golden_Byte3 - actual_Byte3)
                                            : 0;
 
-    if (diff > ERR) {
+    if (diff > tol) {
       error = 1;
 #ifdef VERBOSE
       tfp_printf("diff: 0x%08x\n", diff);

@@ -15,6 +15,7 @@
 #include "y_input.h"
 #include "z_output.h"
 #include "golden.h"
+#define ERR 0x0011
 
 int main() {
 
@@ -46,6 +47,9 @@ int main() {
 
   while ((offload_id_tmp = hwpe_acquire_job()) < 0)
     ;
+  int pace_ops = 1;
+  // int pace_ops = 0;
+
 
   redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
               (uint8_t)gemm_ops, float_fmt);
@@ -63,9 +67,12 @@ int main() {
   hwpe_cg_disable();
 
   if (float_fmt == Float16 || float_fmt == Float16Alt)
-    errors = redmule16_compare_int(y, golden, m_size * k_size / 2);
+    if(gemm_ops == PACE)
+      errors = redmule16_compare_int(y, golden, K_SIZE*4, 0);
+    else 
+      errors = redmule16_compare_int(y, golden, m_size * k_size / 2, ERR);
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
-    errors = redmule8_compare_int(y, golden, m_size * k_size / 4);
+    errors = redmule8_compare_int(y, golden, m_size * k_size / 4, ERR);
 
   *(int *)0x80000000 = errors;
 

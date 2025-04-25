@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: SHL-0.51
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
-//
+// Arpan Suravi Prasad<prasadar@iis.ee.ethz.ch>
 
 `include "hci_helpers.svh"
 
@@ -138,6 +138,15 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
+`ifdef PACE_ENABLED
+// PACE streaming interface + PACE FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) pace_oup_d        ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) pace_oup_fifo     ( .clk( clk_i ) );
+// PACE streaming interface + PACE FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) pace_inp_d        ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) pace_inp_fifo     ( .clk( clk_i ) );
+`endif
+
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
   .DW             ( DW                           ),
@@ -155,6 +164,11 @@ redmule_streamer #(
   .y_stream_o      ( y_buffer_d      ),
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo   ),
+`ifdef PACE_ENABLED
+  // PACE interface
+  .pace_stream_o   ( pace_inp_d      ),         
+  .pace_stream_i   ( pace_oup_fifo   ),         
+`endif
   // Master TCDM interface ports for the memory side
   .tcdm            ( tcdm            ),
   .ctrl_i          ( cntrl_streamer  ),
@@ -208,6 +222,31 @@ hwpe_stream_fifo #(
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
 );
+`ifdef PACE_ENABLED
+  hwpe_stream_fifo #(
+    .DATA_WIDTH     ( DATAW_ALIGN   ),
+    .FIFO_DEPTH     ( 2             )
+  ) i_pace_oup_fifo (
+    .clk_i          ( clk_i         ),
+    .rst_ni         ( rst_ni        ),
+    .clear_i        ( clear         ),
+    .flags_o        (               ),
+    .push_i         ( pace_oup_d    ),
+    .pop_o          ( pace_oup_fifo )
+  );
+
+  hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .FIFO_DEPTH     ( 4             )
+  ) i_pace_inp_fifo (
+  .clk_i          ( clk_i         ),
+  .rst_ni         ( rst_ni        ),
+  .clear_i        ( clear         ),
+  .flags_o        (               ),
+  .push_i         ( pace_inp_d    ),
+  .pop_o          ( pace_inp_fifo )
+);
+`endif 
 
 // Valid/Ready assignment
 assign x_buffer_fifo.ready = x_buffer_ctrl.load;
@@ -270,7 +309,48 @@ redmule_z_buffer #(
   .z_buffer_o    ( z_buffer_q.data    ),
   .z_strb_o      ( z_buffer_q.strb    )
 );
+`ifdef PACE_ENABLED
 
+  logic [Width-1:0][BITW-1:0] pace_engine_inp;
+  logic [Width-1:0][BITW-1:0] engine_inp;
+  logic                       pace_inp_valid;
+  logic                       pace_oup_valid;
+  logic                       pace_inp_ready;
+  logic                       pace_oup_ready;
+  logic [Width-1:0]           pace_inp_ready_array;
+  logic [Width-1:0]           pace_oup_valid_array;
+
+  pace_pingpong_inp #(
+    .InpDataWidth  ( DATAW_ALIGN ),
+    .NumRows       ( Width       ),
+    .OupDataWidth  ( BITW        )
+  ) i_pace_pingpong_inp (
+    .clk_i    ( clk_i                  ),
+    .rst_ni   ( rst_ni                 ),
+    .clear_i  ( clear                  ),
+    .enable_i ( cntrl_engine.pace_mode ),
+    .output_o ( pace_engine_inp        ),
+    .valid_o  ( pace_inp_valid         ),
+    .ready_i  ( pace_inp_ready         ),
+    .input_i  ( pace_inp_fifo          )
+  );
+  assign engine_inp = cntrl_engine.pace_mode ? pace_engine_inp : y_bias_q;
+
+
+  pace_pingpong_oup #(
+    .NumRows        ( Width       ),
+    .InpDataWidth   ( BITW        )
+  ) i_pace_pingpong_oup (
+    .clk_i    ( clk_i                   ),
+    .rst_ni   ( rst_ni                  ),
+    .clear_i  ( clear                   ),
+    .enable_i ( cntrl_engine.pace_mode  ),
+    .input_i  ( z_buffer_d              ),
+    .valid_i  ( pace_oup_valid          ), 
+    .ready_o  ( pace_oup_ready          ),
+    .output_o ( pace_oup_d              )
+  );
+`endif
 /*---------------------------------------------------------------*/
 /* |                          Engine                           | */
 /*---------------------------------------------------------------*/
@@ -317,9 +397,17 @@ assign op2              = cntrl_engine.op2;
 assign op_mod           = cntrl_engine.op_mod;
 assign in_tag           = 1'b0;
 assign in_aux           = 1'b0;
-assign in_valid         = cntrl_engine.in_valid;
+`ifdef PACE_ENABLED
+  assign in_valid         = cntrl_engine.pace_mode ? pace_inp_valid : cntrl_engine.in_valid;
+`else 
+  assign in_valid         = cntrl_engine.in_valid;
+`endif 
 assign flush            = cntrl_engine.flush | clear;
-assign out_ready        = cntrl_engine.out_ready;
+`ifdef PACE_ENABLED
+  assign out_ready        = cntrl_engine.pace_mode ?  pace_oup_ready : cntrl_engine.out_ready;
+`else 
+  assign out_ready        = cntrl_engine.out_ready;
+`endif 
 always_comb begin
   for (int w = 0; w < Width; w++) begin
     for (int h = 0; h < Height; h++) begin
@@ -332,6 +420,17 @@ always_comb begin
   end
 end
 
+`ifdef PACE_ENABLED
+  // Ready array assignment
+  generate 
+    for (genvar w = 0; w < Width; w++) begin
+      assign pace_inp_ready_array[w] = in_ready[w][0];
+      assign pace_oup_valid_array[w] = out_valid[w][Height-1];
+    end
+  endgenerate
+  assign pace_inp_ready = (&pace_inp_ready_array) && cntrl_engine.pace_mode;
+  assign pace_oup_valid = (&pace_oup_valid_array) && cntrl_engine.pace_mode;
+`endif 
 // Engine instance
 redmule_engine     #(
   .FpFormat        ( FpFormat      ),
@@ -344,7 +443,11 @@ redmule_engine     #(
   .rst_ni             ( rst_ni           ),
   .x_input_i          ( x_buffer_q       ),
   .w_input_i          ( w_buffer_q       ),
+`ifdef PACE_ENABLED
+  .y_bias_i           ( engine_inp       ),
+`else 
   .y_bias_i           ( y_bias_q         ),
+`endif 
   .z_output_o         ( z_buffer_d       ),
   .fma_is_boxed_i     ( fma_is_boxed     ),
   .noncomp_is_boxed_i ( noncomp_is_boxed ),

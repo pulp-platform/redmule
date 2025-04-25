@@ -154,7 +154,6 @@ module redmule_ctrl
           next = REDMULE_COMPUTING;
         end
       end
-
       REDMULE_COMPUTING: begin
         if (flgs_streamer_i.z_stream_sink_flags.done) begin
           next = REDMULE_FINISHED;

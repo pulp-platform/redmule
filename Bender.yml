@@ -39,6 +39,9 @@ sources:
     - rtl/w_buffer/redmule_w_buffer_scm.sv
     - rtl/z_buffer/redmule_z_buffer.sv
     - rtl/z_buffer/redmule_z_buffer_scm.sv
+    - rtl/pace/pace_pingpong_inp.sv
+    - rtl/pace/pace_pingpong_oup.sv
+    - rtl/pace/pace_xmux.sv
     - rtl/redmule_fma.sv
     - rtl/redmule_noncomp.sv
     - rtl/redmule_ce.sv

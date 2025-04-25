@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: SHL-0.51
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
+// Arpan Suravi Prasad<prasadar@iis.ee.ethz.ch>
 //
 
 module redmule_engine
@@ -68,6 +69,22 @@ module redmule_engine
 logic [W-1:0] row_clk;
 logic [W-1:0]       [BITW-1:0] result, feedback;
 
+`ifdef PACE_ENABLED
+  logic [W-1:0][H-1:0][BITW-1:0] x_input_mux, x_input_pace;
+  logic [W-1:0][H-1:0][PIDW-1:0] pace_pid;// Partition Index for selecting right x
+  pace_xmux #(
+    .H(W),
+    .W(H),
+    .BITW(BITW)
+  ) i_pace_mux(
+    .x_input_i ( x_input_i   ),
+    .enable_i  ( ctrl_engine_i.pace_mode ),
+    .part_id_i ( pace_pid    ),
+    .x_output_o( x_input_pace)
+  );
+  assign x_input_mux = ctrl_engine_i.pace_mode ? x_input_pace : x_input_i;
+`endif 
+
 generate
   for (genvar index = 0; index < W; index++) begin: gen_redmule_rows
   /*--------------------------------------- Array ----------------------------------------*/
@@ -86,7 +103,13 @@ generate
     ) i_row            (
       .clk_i              ( row_clk[index]          ),
       .rst_ni             ( rst_ni                  ),
+`ifdef PACE_ENABLED
+      .x_input_i          ( x_input_mux     [index] ),
+      .pace_part_id_o     ( pace_pid        [index] ),
+      .pace_mode_i        ( ctrl_engine_i.pace_mode ),
+`else 
       .x_input_i          ( x_input_i       [index] ),
+`endif 
       .w_input_i          ( w_input_i               ),
       .y_bias_i           ( feedback        [index] ),
       .z_output_o         ( result          [index] ),

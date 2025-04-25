@@ -16,3 +16,4 @@ else
 endif
 
 common_defs  += -D COREV_ASSERT_OFF
+common_defs  += -D PACE_ENABLED
