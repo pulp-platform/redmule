@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: SHL-0.51
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
+// Arpan Suravi Prasad<prasadar@iis.ee.ethz.ch>
 //
 
 module redmule_ce
@@ -39,6 +40,10 @@ module redmule_ce
   output logic                               extension_bit_o   ,
   output fpnew_pkg::classmask_e              class_mask_o      ,
   output logic                               is_class_o        ,
+  `ifdef PACE_ENABLED
+  output logic                               is_greater_o      ,
+  input  logic                               pace_mode_i       ,
+  `endif 
   output TagType                             tag_o             ,
   output AuxType                             aux_o             ,
   output logic                               out_valid_o       ,
@@ -224,7 +229,11 @@ assign stage1_fma_out_ready  = out_ready_i ;
 always_comb begin : stage_one_clock_gating_selector
 stage1_fma_clk_en     = 1'b0;
 stage1_noncomp_clk_en = 1'b0;
+`ifdef PACE_ENABLED
+  if ( ((~pace_mode_i) && op1_int == fpnew_pkg::MINMAX) || (pace_mode_i && op1_int == fpnew_pkg::SGNJ))
+`else 
   if ( op1_int == fpnew_pkg::MINMAX )
+`endif 
     stage1_noncomp_clk_en = 1'b1;
   else
     stage1_fma_clk_en     = 1'b1;
@@ -245,7 +254,12 @@ redmule_noncomp #(
   .FpFormat      ( FpFormat    ),
   .NumPipeRegs   ( NumPipeRegs ),
   .PipeConfig    ( PipeConfig  ),
+`ifdef PACE_ENABLED
+  .Stallable     ( Stallable   ),
+  .TagType       ( TagType     )
+`else 
   .Stallable     ( Stallable   )
+`endif
 ) op1_minmax_i   (
   .clk_i           ( stage1_noncomp_clk           ),
   .rst_ni          ( rst_ni                       ),
@@ -265,6 +279,9 @@ redmule_noncomp #(
   .extension_bit_o ( stage1_noncomp_extension_bit ),
   .class_mask_o    ( stage1_class_mask            ),
   .is_class_o      ( stage1_is_class              ),
+`ifdef PACE_ENABLED
+  .is_opa_greater_o( stage1_is_greater            ),
+`endif 
   .tag_o           ( stage1_noncomp_output_tag    ),
   .aux_o           ( stage1_noncomp_output_aux    ),
   .out_valid_o     ( stage1_noncomp_out_valid     ),
@@ -284,7 +301,12 @@ redmule_fma   #(
   .FpFormat    ( FpFormat    ),
   .NumPipeRegs ( NumPipeRegs ),
   .PipeConfig  ( PipeConfig  ),
-  .Stallable   ( Stallable   )
+`ifdef PACE_ENABLED
+  .Stallable     ( Stallable   ),
+  .TagType       ( TagType     )
+`else 
+  .Stallable     ( Stallable   )
+`endif
 ) op1_fma_i    (
   .clk_i           ( stage1_fma_clk           ),
   .rst_ni          ( rst_ni                   ),
@@ -323,7 +345,11 @@ stage1_output_aux    = '0;
 stage1_out_valid     = '0;
 stage1_busy          = '0;
 
-  if (op1_int == fpnew_pkg::MINMAX) begin : minmax_output_selected
+`ifdef PACE_ENABLED
+  if ( ((~pace_mode_i) && (op1_int == fpnew_pkg::MINMAX)) || (pace_mode_i && (op1_int == fpnew_pkg::SGNJ)))  begin : minmax_output_selected
+`else 
+  if ( op1_int == fpnew_pkg::MINMAX )  begin : minmax_output_selected
+`endif 
     stage1_in_ready      = stage1_noncomp_in_ready     ;
     stage1_res           = stage1_noncomp_res          ;
     stage1_status        = stage1_noncomp_status       ;
@@ -406,7 +432,12 @@ redmule_noncomp #(
   .FpFormat      ( FpFormat    ),
   .NumPipeRegs   ( 0           ),
   .PipeConfig    ( PipeConfig  ),
+`ifdef PACE_ENABLED
+  .Stallable     ( Stallable   ),
+  .TagType       ( TagType     )
+`else 
   .Stallable     ( Stallable   )
+`endif
 ) op2_minmax_i   (
   .clk_i                                           ,
   .rst_ni                                          ,
@@ -451,7 +482,11 @@ stage2_output_aux    = '0;
 stage2_out_valid     = '0;
 stage2_busy          = '0;
 
-  if (op1_int == fpnew_pkg::FMADD) begin : stage2_noncomp_disabled
+`ifdef PACE_ENABLED
+  if (op1_int == fpnew_pkg::FMADD || (pace_mode_i && op1_int == fpnew_pkg::SGNJ))  begin : stage2_noncomp_disabled
+`else 
+  if ( op1_int == fpnew_pkg::FMADD )  begin : stage2_noncomp_disabled
+`endif 
     stage2_in_ready      = stage1_in_ready     ;
     stage2_res           = stage1_res          ;
     stage2_status        = stage1_status       ;
@@ -489,5 +524,7 @@ assign tag_o           = stage2_output_tag   ;
 assign aux_o           = stage2_output_aux   ;
 assign out_valid_o     = stage2_out_valid    ;
 assign busy_o          = stage2_busy         ;
-
+`ifdef PACE_ENABLED
+assign is_greater_o    = stage1_is_greater   ;
+`endif 
 endmodule: redmule_ce
