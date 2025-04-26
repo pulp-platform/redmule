@@ -128,7 +128,7 @@ module redmule_ctrl
 
   assign cntrl_scheduler_o.first_load = current == REDMULE_STARTING;
   assign tiler_setback                = current == REDMULE_IDLE && next == REDMULE_STARTING;
-  assign busy_o                       = current != REDMULE_LATCH_RST || current != REDMULE_IDLE || current != REDMULE_FINISHED;
+  assign busy_o                       = current != REDMULE_LATCH_RST && current != REDMULE_IDLE && current != REDMULE_FINISHED;
   assign flush_o                      = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
