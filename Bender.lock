@@ -51,8 +51,8 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 90d55999bf357df6af153d20fc2786fc35167c59
-    version: 2.1.2
+    revision: 06fcba671e060f2e1b03b7ebe2d3e719f1557099
+    version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
     dependencies:
@@ -60,7 +60,7 @@ packages:
     - hwpe-stream
     - l2_tcdm_hybrid_interco
   hwpe-ctrl:
-    revision: 0e95510c0f4d43452d21b7723d766ae92e45c101
+    revision: 3690a3c648f120546d8de2bc583d5170c36d2f20
     version: null
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
