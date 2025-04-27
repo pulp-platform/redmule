@@ -38,6 +38,7 @@ module redmule_ctrl
   output logic                    flush_o           ,
   // Control signals for the state machine
   output cntrl_scheduler_t        cntrl_scheduler_o ,
+  output cntrl_flags_t            cntrl_flags_o,
   // Peripheral slave port
   hwpe_ctrl_intf_periph.slave     periph
 );
@@ -137,14 +138,18 @@ module redmule_ctrl
   assign latch_clear                  = current == REDMULE_LATCH_RST;
 
   always_comb begin : controller_fsm
+    cntrl_flags_o.idle = 1'b0;
+    cntrl_slave = '0;
     next = current;
 
     case (current)
       REDMULE_LATCH_RST: begin
+        cntrl_flags_o.idle = 1'b1;
         next = REDMULE_IDLE;
       end
 
       REDMULE_IDLE: begin
+        cntrl_flags_o.idle = 1'b1;
         if ((slave_start & tiler_valid) || test_mode_i) begin
           next = REDMULE_STARTING;
         end

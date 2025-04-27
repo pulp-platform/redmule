@@ -318,6 +318,10 @@ package redmule_pkg;
     logic [STRB-1:0] z_strb;
   } flgs_scheduler_t;
 
+  typedef struct packed {
+    logic idle;
+  } cntrl_flags_t;
+
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;
   typedef enum logic [1:0] { Float8=2'h0, Float16=2'h1, Float8Alt=2'h2, Float16Alt=2'h3 } gemm_fmt_e;
   typedef enum logic       { RNE=1'h0, RTZ=1'h1 } rnd_mode_e;

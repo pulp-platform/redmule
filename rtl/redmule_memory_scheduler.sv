@@ -23,6 +23,7 @@ module redmule_memory_scheduler
   input  ctrl_regfile_t          reg_file_i       ,
   input  flgs_streamer_t         flgs_streamer_i  ,
   input  cntrl_scheduler_t       cntrl_scheduler_i,
+  input  cntrl_flags_t           cntrl_flags_i    ,
   output cntrl_streamer_t        cntrl_streamer_o ,
   hwpe_stream_intf_stream.sink   next_row_i       ,
   hwpe_stream_intf_stream.sink   next_gidx_i      ,
@@ -301,12 +302,12 @@ module redmule_memory_scheduler
     cntrl_streamer_o.pace_mode = reg_file_i.hwpe_params[OP_SELECTION][1];
     cntrl_streamer_o.pace_stream_source_ctrl.req_start  = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
     cntrl_streamer_o.pace_stream_sink_ctrl.req_start    = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
 `else
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
