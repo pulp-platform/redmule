@@ -139,6 +139,7 @@ flgs_scheduler_t  flgs_scheduler;
 // Register file binded from controller to FSM
 ctrl_regfile_t reg_file;
 flags_fifo_t   w_fifo_flgs;
+cntrl_flags_t  cntrl_flags;
 
 /*--------------------------------------------------------------*/
 /* |                         Streamer                         | */
@@ -409,6 +410,7 @@ redmule_memory_scheduler #(
   .reg_file_i        ( reg_file            ),
   .flgs_streamer_i   ( flgs_streamer       ),
   .cntrl_scheduler_i ( cntrl_scheduler     ),
+  .cntrl_flags_i     ( cntrl_flags         ),
   .cntrl_streamer_o  ( cntrl_streamer      )
 );
 
@@ -442,6 +444,7 @@ redmule_ctrl        #(
   .w_loaded_i        ( flgs_scheduler.w_loaded ),
   .flush_o           ( engine_flush            ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
+  .cntrl_flags_o     ( cntrl_flags             ),
   .periph            ( local_periph            )
 );
 
