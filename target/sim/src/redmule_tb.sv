@@ -140,6 +140,7 @@ module redmule_tb
   assign redmule_tcdm.gnt     = &tcdm_gnt;
   assign redmule_tcdm.r_data  = { >> {tcdm_r_data} };
   assign redmule_tcdm.r_valid = &tcdm_r_valid;
+  assign redmule_tcdm.r_id    = '0;
   assign redmule_tcdm.r_opc   = '0;
   assign redmule_tcdm.r_user  = '0;
 
@@ -171,9 +172,17 @@ module redmule_tb
       );
     end
 
+    // FixMe: How should we drive these?
+    // assign redmule_tcdm.egnt = '1;
+    // assign redmule_tcdm.r_evalid = '0;
+
   end else begin: gen_no_ecc
     for(genvar ii=0; ii<MP; ii++)
       assign tcdm[ii].data = redmule_tcdm.data[(ii+1)*32-1:ii*32];
+
+    assign redmule_tcdm.r_ecc = '0;
+    assign redmule_tcdm.egnt = '1;
+    assign redmule_tcdm.r_evalid = '0;
   end
 
   assign tcdm[MP].req  = core_data_req.req &
