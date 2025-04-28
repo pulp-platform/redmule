@@ -53,7 +53,7 @@ int main() {
   while ((offload_id_tmp = hwpe_acquire_job()) < 0)
     ;
 
-  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, (unsigned int)g, (unsigned int)b, (unsigned int)s, m_size, n_size, k_size,
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, (unsigned int)g, (unsigned int)s, (unsigned int)b, m_size, n_size, k_size,
               (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
