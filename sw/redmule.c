@@ -13,6 +13,9 @@
 #include "x_input.h"
 #include "w_input.h"
 #include "y_input.h"
+#include "g_input.h"
+#include "s_input.h"
+#include "b_input.h"
 #include "z_output.h"
 #include "golden.h"
 
@@ -25,6 +28,9 @@ int main() {
   uint8_t *x = x_inp;
   uint8_t *w = w_inp;
   uint8_t *y = y_inp;
+  uint8_t *g = g_inp;
+  uint8_t *s = s_inp;
+  uint8_t *b = b_inp;
   uint8_t *z = z_oup; // golden_out //1c010000
 
   volatile int errors = 0;
@@ -102,7 +108,7 @@ int main() {
   while ((offload_id_tmp = hwpe_acquire_job()) < 0)
     ;
 
-  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, (unsigned int)g, (unsigned int)b, (unsigned int)s, m_size, n_size, k_size,
               (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
