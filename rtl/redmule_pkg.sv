@@ -145,7 +145,7 @@ package redmule_pkg;
   parameter int unsigned NumStreamSources     = 7; // X, W/scales, Y, gidx, wq, zeros, PACE_IN
   parameter int unsigned PACEsourceStreamId   = 6;
 `else
-  pparameter int unsigned NumStreamSources     = 6; // X, W/scales, Y, gidx, wq, zeros
+  parameter int unsigned NumStreamSources     = 6; // X, W/scales, Y, gidx, wq, zeros
 `endif
 
   parameter int unsigned XsourceStreamId      = 0;

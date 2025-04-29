@@ -74,7 +74,7 @@ int main() {
 
   if (float_fmt == Float16 || float_fmt == Float16Alt)
     if(gemm_ops == PACE)
-      errors = redmule16_compare_int(y, golden, K_SIZE*4, 0);
+      errors = redmule16_compare_int(y, golden, K_SIZE * 4, 0);
     else 
       errors = redmule16_compare_int(y, golden, m_size * k_size / 2, ERR);
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
