@@ -137,7 +137,7 @@ module redmule_memory_scheduler
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-`else 
+`else
   cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
                                                                       + x_rows_offs_q + x_cols_offs_q;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;
@@ -147,7 +147,7 @@ module redmule_memory_scheduler
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-`endif 
+`endif
     // Here we initialize the streamer source signals
     // for the W stream source
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
@@ -201,10 +201,10 @@ module redmule_memory_scheduler
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 2'b11;
-`endif 
+`endif
   end
 `ifdef PACE_ENABLED
-    logic x_first_load_d, x_first_load_q; 
+    logic x_first_load_d, x_first_load_q;
     assign x_first_load_d = clear_i ? 1'b0 : (x_first_load_q ? x_first_load_q : cntrl_streamer_o.pace_stream_source_ctrl.req_start);
     always_ff @(posedge clk_i or negedge rst_ni) begin
       if (~rst_ni) begin
@@ -214,7 +214,7 @@ module redmule_memory_scheduler
       end
   end
 
-`endif 
+`endif
   always_comb begin : req_start_assignment
 `ifdef PACE_ENABLED
     cntrl_streamer_o.pace_mode = reg_file_i.hwpe_params[OP_SELECTION][1];

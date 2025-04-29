@@ -83,7 +83,7 @@ logic [W-1:0]       [BITW-1:0] result, feedback;
     .x_output_o( x_input_pace)
   );
   assign x_input_mux = ctrl_engine_i.pace_mode ? x_input_pace : x_input_i;
-`endif 
+`endif
 
 generate
   for (genvar index = 0; index < W; index++) begin: gen_redmule_rows
@@ -107,9 +107,9 @@ generate
       .x_input_i          ( x_input_mux     [index] ),
       .pace_part_id_o     ( pace_pid        [index] ),
       .pace_mode_i        ( ctrl_engine_i.pace_mode ),
-`else 
+`else
       .x_input_i          ( x_input_i       [index] ),
-`endif 
+`endif
       .w_input_i          ( w_input_i               ),
       .y_bias_i           ( feedback        [index] ),
       .z_output_o         ( result          [index] ),

@@ -57,7 +57,7 @@ assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
   assign config_d.pace_mode     = reg_file_i.hwpe_params[MACFG][13];
   assign config_d.pace_in_addr  = reg_file_i.hwpe_params[W_ADDR];
   assign config_d.pace_out_addr = reg_file_i.hwpe_params[Z_ADDR];
-`endif 
+`endif
 assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
@@ -276,9 +276,9 @@ assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
   assign reg_file_o.hwpe_params[OP_SELECTION][1]     = config_q.pace_mode;
   assign reg_file_o.hwpe_params[PACE_D0_STRIDE]      = config_q.pace_d0_stride;
   assign reg_file_o.hwpe_params[PACE_D0_LENGTH]      = config_q.pace_tot_len;
-`else 
+`else
   assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
   assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
-`endif 
+`endif
 
 endmodule: redmule_tiler
