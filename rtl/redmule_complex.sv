@@ -160,7 +160,7 @@ obi_cut #(
   .BypassReq    ( 1'b0                     ),
   .BypassRsp    ( 1'b0                     )
 ) i_obi_data_cut (
-  .clk_i,
+  .clk_i ( s_clk ),
   .rst_ni,
   .sbr_port_req_i ( core_data_req     ),
   .sbr_port_rsp_o ( core_data_rsp     ),
@@ -186,7 +186,7 @@ obi_cut #(
   .BypassReq    ( 1'b0                     ),
   .BypassRsp    ( 1'b0                     )
 ) i_obi_instr_cut (
-  .clk_i,
+  .clk_i ( s_clk ),
   .rst_ni,
   .sbr_port_req_i ( core_inst_req     ),
   .sbr_port_rsp_o ( core_inst_rsp     ),
@@ -321,7 +321,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
       .NumMgrPorts ( NumDemuxIdx           ),
       .NumMaxTrans ( 1                     )
     ) i_demux (
-      .clk_i,
+      .clk_i ( s_clk ),
       .rst_ni,
       .sbr_port_select_i ( target_sel          ),
       .sbr_port_req_i    ( core_local_data_req ),
@@ -456,7 +456,7 @@ assign core_inst_rsp_cut.rvalid  = core_inst_rsp_i.valid;
 
 logic redmule_clk;
 tc_clk_gating redmule_clock_gating (
-  .clk_i     ( clk_i            ),
+  .clk_i     ( s_clk            ),
   .en_i      ( redmule_clk_en_i ),
   .test_en_i ( test_mode_i      ),
   .clk_o     ( redmule_clk      )
