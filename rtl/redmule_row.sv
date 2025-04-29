@@ -31,7 +31,7 @@ module redmule_row
 `ifdef PACE_ENABLED
   input   logic                                     pace_mode_i       ,
   output  logic                   [H-1:0][PIDW-1:0] pace_part_id_o    , // Partition Index for selecting right x from x_buffer
-`endif 
+`endif
   // fpnew_fma Input Signals
   input  logic                    [2:0]             fma_is_boxed_i    ,
   input  logic                    [1:0]             noncomp_is_boxed_i,
@@ -75,19 +75,19 @@ logic [H-1:0]      [BITW-1:0]       output_q;
   logic [H-1:0] [2:0][BITW-1:0]       pace_input_operands;
   fpnew_pkg::operation_e [H-1:0] op1_row, op2_row;
 
-generate 
-  for(genvar h=0; h<H; h++) begin 
-    if(h <= PACE_PART_BST_STAGES) begin 
+generate
+  for(genvar h=0; h<H; h++) begin
+    if(h <= PACE_PART_BST_STAGES) begin
       assign op1_row[h] = pace_mode_i ? fpnew_pkg::SGNJ : op1_i;
       assign op2_row[h] = pace_mode_i ? fpnew_pkg::SGNJ : op2_i;
-    end else begin 
+    end else begin
       assign op1_row[h] = pace_mode_i ? fpnew_pkg::FMADD : op1_i;
       assign op2_row[h] = pace_mode_i ? fpnew_pkg::MINMAX : op2_i;
-    end 
-  end 
+    end
+  end
 endgenerate
 
-`endif 
+`endif
 `ifdef PACE_ENABLED
 
   logic [H-1:0][2*BITW+PIDW-1:0]    tag_in, tag_out;
@@ -95,7 +95,7 @@ endgenerate
   logic [H-1:0]                     is_greater;
   logic [H-1:0]                     pace_inp_valid, pace_oup_valid;
 
-`endif 
+`endif
 
 // Generate PEs
 generate
@@ -109,12 +109,12 @@ generate
 `ifdef PACE_ENABLED
 
   if (index == 0) begin
-    assign pace_inp_valid[index] = in_valid_i; 
+    assign pace_inp_valid[index] = in_valid_i;
     assign out_valid_o[index]    = pace_oup_valid[index];
-  end else begin 
-    assign pace_inp_valid[index] = pace_mode_i ? pace_oup_valid[index-1] : in_valid_i; 
+  end else begin
+    assign pace_inp_valid[index] = pace_mode_i ? pace_oup_valid[index-1] : in_valid_i;
     assign out_valid_o[index]    = pace_oup_valid[index];
-  end  
+  end
 
   localparam int unsigned TBITW = (index == 0) ? 0 :
                                   (index < PACE_PART_BST_STAGES) ? index - 1 :
@@ -127,30 +127,29 @@ generate
       assign stage1_rnd_mode[index] = stage1_rnd_i;
       assign stage2_rnd_mode[index] = stage2_rnd_i;
     end
-    
     if(index == 0) begin
-      assign pace_input_operands[index][0] =  pace_mode_i ? input_operands[index][2] : input_operands[index][0]; 
-      assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1]; 
-      assign pace_input_operands[index][2] =  input_operands[index][2]; 
-    end else if (index < PACE_PART_BST_STAGES) begin 
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; 
-      assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1]; 
-      assign pace_input_operands[index][2] =  input_operands[index][2]; 
+      assign pace_input_operands[index][0] =  pace_mode_i ? input_operands[index][2] : input_operands[index][0];
+      assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1];
+      assign pace_input_operands[index][2] =  input_operands[index][2];
+    end else if (index < PACE_PART_BST_STAGES) begin
+      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0];
+      assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1];
+      assign pace_input_operands[index][2] =  input_operands[index][2];
     end else if (index == PACE_PART_BST_STAGES) begin
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; 
-      assign pace_input_operands[index][2] =  input_operands[index][2]; 
-      assign pace_input_operands[index][1] =  input_operands[index][1]; 
+      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0];
+      assign pace_input_operands[index][2] =  input_operands[index][2];
+      assign pace_input_operands[index][1] =  input_operands[index][1];
     end else if (index == PACE_PART_BST_STAGES + 1) begin
       // ax + b
       assign pace_input_operands[index][0] =  pace_mode_i ? tag_out[index-1][PIDW+BITW-1:PIDW] : input_operands[index][0]; //a
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0]   : input_operands[index][2]; //b
       assign pace_input_operands[index][1] =  pace_mode_i ? partial_result[index-1] : input_operands[index][1]; // x
-    end else begin 
+    end else begin
       // pres * x + b
       assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; //pres
       assign pace_input_operands[index][1] =  pace_mode_i ? tag_out[index-1][BITW+PIDW-1:PIDW] : input_operands[index][1]; //x
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0] : input_operands[index][2]; // b
-    end 
+    end
 
 
   if (index == 0) begin
@@ -174,11 +173,11 @@ generate
       assign tag_in[index]         = ~pace_mode_i ? '0 : {input_operands [index][0], {tag_out[index-1][PIDW-2:0], is_greater[index-1]}};
       assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out[index-1][PIDW-2:0], is_greater[index-1]};
     end else begin
-      if(index == PACE_PART_BST_STAGES + 1) begin 
+      if(index == PACE_PART_BST_STAGES + 1) begin
           assign tag_in[index]     = ~pace_mode_i ? '0 : {partial_result[index-1], tag_out[index-1][PIDW-1:0]};
       end else begin
         assign tag_in[index]       = ~pace_mode_i ? '0 : tag_out[index-1][TBITW-1:0];
-      end 
+      end
       assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out[index-1][PIDW-1:0]};
 
     end
@@ -195,7 +194,7 @@ generate
     .NumPipeRegs        ( NumPipeRegs ),
 `ifdef PACE_ENABLED
     .TagType            ( PACETagType ),
-`endif 
+`endif
     .PipeConfig         ( PipeConfig  ),
     .Stallable          ( 1'b1        )
     ) i_computing_element (
@@ -207,28 +206,28 @@ generate
       .y_bias_i           ( pace_input_operands [index][2] ),
       .is_greater_o       ( is_greater     [index]    ),
       .pace_mode_i        ( pace_mode_i               ),
-`else 
+`else
       .x_input_i          ( input_operands [index][0] ),
       .w_input_i          ( input_operands [index][1] ),
       .y_bias_i           ( input_operands [index][2] ),
-`endif 
+`endif
       .fma_is_boxed_i     ( fma_is_boxed_i            ),
       .noncomp_is_boxed_i ( noncomp_is_boxed_i        ),
 `ifdef PACE_ENABLED
-      .stage1_rnd_i       ( stage1_rnd_mode[index]    ), 
+      .stage1_rnd_i       ( stage1_rnd_mode[index]    ),
       .stage2_rnd_i       ( stage2_rnd_mode[index]    ),
       .op1_i              ( op1_row     [index]       ),
       .op2_i              ( op2_row     [index]       ),
       .tag_i              ( tag_in  [index][TBITW:0]  ),
       .in_valid_i         ( pace_inp_valid[index]     ),
-`else 
+`else
       .stage1_rnd_i       ( stage1_rnd_i              ),
       .stage2_rnd_i       ( stage2_rnd_i              ),
       .op1_i              ( op1_i                     ),
       .op2_i              ( op2_i                     ),
       .tag_i              ( tag_i                     ),
       .in_valid_i         ( in_valid_i                ),
-`endif 
+`endif
       .op_mod_i           ( op_mod_i                  ),
       .aux_i              ( aux_i                     ),
       .in_ready_o         ( in_ready_o      [index]   ),
@@ -242,10 +241,10 @@ generate
 `ifdef PACE_ENABLED
       .tag_o              ( tag_out  [index][TBITW:0] ),
       .out_valid_o        ( pace_oup_valid  [index]   ),
-`else 
+`else
       .tag_o              ( tag_o           [index]   ),
       .out_valid_o        ( out_valid_o     [index]   ),
-`endif 
+`endif
       .aux_o              ( aux_o           [index]   ),
       .out_ready_i        ( out_ready_i               ),
       .busy_o             ( busy_o          [index]   )
@@ -270,7 +269,7 @@ end
 
 `ifdef PACE_ENABLED
   assign z_output_o = pace_mode_i ? partial_result[H-1] : output_q [H-1];
-`else 
+`else
   assign z_output_o = output_q [H-1];
-`endif 
+`endif
 endmodule : redmule_row

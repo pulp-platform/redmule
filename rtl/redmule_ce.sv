@@ -43,7 +43,7 @@ module redmule_ce
   `ifdef PACE_ENABLED
   output logic                               is_greater_o      ,
   input  logic                               pace_mode_i       ,
-  `endif 
+  `endif
   output TagType                             tag_o             ,
   output AuxType                             aux_o             ,
   output logic                               out_valid_o       ,
@@ -231,9 +231,9 @@ stage1_fma_clk_en     = 1'b0;
 stage1_noncomp_clk_en = 1'b0;
 `ifdef PACE_ENABLED
   if ( ((~pace_mode_i) && op1_int == fpnew_pkg::MINMAX) || (pace_mode_i && op1_int == fpnew_pkg::SGNJ))
-`else 
+`else
   if ( op1_int == fpnew_pkg::MINMAX )
-`endif 
+`endif
     stage1_noncomp_clk_en = 1'b1;
   else
     stage1_fma_clk_en     = 1'b1;
@@ -257,7 +257,7 @@ redmule_noncomp #(
 `ifdef PACE_ENABLED
   .Stallable     ( Stallable   ),
   .TagType       ( TagType     )
-`else 
+`else
   .Stallable     ( Stallable   )
 `endif
 ) op1_minmax_i   (
@@ -281,7 +281,7 @@ redmule_noncomp #(
   .is_class_o      ( stage1_is_class              ),
 `ifdef PACE_ENABLED
   .is_opa_greater_o( stage1_is_greater            ),
-`endif 
+`endif
   .tag_o           ( stage1_noncomp_output_tag    ),
   .aux_o           ( stage1_noncomp_output_aux    ),
   .out_valid_o     ( stage1_noncomp_out_valid     ),
@@ -304,7 +304,7 @@ redmule_fma   #(
 `ifdef PACE_ENABLED
   .Stallable     ( Stallable   ),
   .TagType       ( TagType     )
-`else 
+`else
   .Stallable     ( Stallable   )
 `endif
 ) op1_fma_i    (
@@ -347,9 +347,9 @@ stage1_busy          = '0;
 
 `ifdef PACE_ENABLED
   if ( ((~pace_mode_i) && (op1_int == fpnew_pkg::MINMAX)) || (pace_mode_i && (op1_int == fpnew_pkg::SGNJ)))  begin : minmax_output_selected
-`else 
+`else
   if ( op1_int == fpnew_pkg::MINMAX )  begin : minmax_output_selected
-`endif 
+`endif
     stage1_in_ready      = stage1_noncomp_in_ready     ;
     stage1_res           = stage1_noncomp_res          ;
     stage1_status        = stage1_noncomp_status       ;
@@ -435,7 +435,7 @@ redmule_noncomp #(
 `ifdef PACE_ENABLED
   .Stallable     ( Stallable   ),
   .TagType       ( TagType     )
-`else 
+`else
   .Stallable     ( Stallable   )
 `endif
 ) op2_minmax_i   (
@@ -484,9 +484,9 @@ stage2_busy          = '0;
 
 `ifdef PACE_ENABLED
   if (op1_int == fpnew_pkg::FMADD || (pace_mode_i && op1_int == fpnew_pkg::SGNJ))  begin : stage2_noncomp_disabled
-`else 
+`else
   if ( op1_int == fpnew_pkg::FMADD )  begin : stage2_noncomp_disabled
-`endif 
+`endif
     stage2_in_ready      = stage1_in_ready     ;
     stage2_res           = stage1_res          ;
     stage2_status        = stage1_status       ;
@@ -526,5 +526,5 @@ assign out_valid_o     = stage2_out_valid    ;
 assign busy_o          = stage2_busy         ;
 `ifdef PACE_ENABLED
 assign is_greater_o    = stage1_is_greater   ;
-`endif 
+`endif
 endmodule: redmule_ce

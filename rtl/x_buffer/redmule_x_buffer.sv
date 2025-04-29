@@ -129,7 +129,7 @@ redmule_x_buffer_scm #(
   .wdata_i      ( ctrl_i.pace_mode ? x_pad_q: (pad_read_cnt <= ctrl_i.height ? x_pad_q : '0) ),
 `else
   .wdata_i      ( pad_read_cnt <= ctrl_i.height ? x_pad_q : '0 ),
-`endif 
+`endif
   .read_en_i    ( ctrl_i.h_shift                               ),
   .read_addr_i  ( {buf_r_addr, h_index_r}                      ),
   .rdata_o      ( x_buffer_q                                   )

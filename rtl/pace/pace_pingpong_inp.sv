@@ -51,7 +51,7 @@ module pace_pingpong_inp #(
 
   // Output slicing
   generate
-    for (genvar r = 0; r < NumRows; r++) begin : output_unpack
+    for (genvar r = 0; r < NumRows; r++) begin : gen_output_unpack
       assign output_o[r] = output_buffer[(OupDataWidth*(r+1))-1 -: OupDataWidth];
     end
   endgenerate
@@ -63,10 +63,7 @@ module pace_pingpong_inp #(
   assign ping_pong_status_d = clear_i             ? 1'b0 :
                               output_handshake    ? ~ping_pong_status_q :
                                                     ping_pong_status_q;
-  
-
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin : ping_pong_status_ff
+  always_ff @(posedge clk_i or negedge rst_ni) begin : gen_ping_pong_status_ff
     if (~rst_ni) begin
       ping_pong_status_q <= 1'b0;
     end else begin

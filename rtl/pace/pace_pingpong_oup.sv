@@ -6,7 +6,7 @@
 //
 // This module takes a InpDataWidth*NumRows data from the engine and combines it over 2 cycles
 // to generate a datawidth of 2*InpDataWidth*NumRows bits thus utilizing whole bandwidth once in 2 cycles.
-// The average bandwidth requirement is half the provided external bandwidth 
+// The average bandwidth requirement is half the provided external bandwidth
 
 module pace_pingpong_oup #(
   parameter int unsigned NumRows        = 8,
@@ -28,7 +28,7 @@ module pace_pingpong_oup #(
   logic                               ping_pong_status_d, ping_pong_status_q;
   logic                               input_handshake;
 
-  // Handshake 
+  // Handshake
   assign input_handshake = valid_i & ready_o;
 
   // Input buffering logic
@@ -38,9 +38,9 @@ module pace_pingpong_oup #(
   // Flatten the buffered output
   generate
     for (genvar r = 0; r < 2*NumRows; r++) begin : gen_flattened_output
-      if (r < NumRows) begin
+      if (r < NumRows) begin : gen_even_entry
         assign flattened_oup_buffer[(r+1)*InpDataWidth-1 -: InpDataWidth] = input_buffer_q[(r+1)*InpDataWidth-1 -: InpDataWidth];
-      end else begin
+      end else begin : gen_odd_entry
         assign flattened_oup_buffer[(r+1)*InpDataWidth-1 -: InpDataWidth] = input_i[r-NumRows];
       end
     end
@@ -52,7 +52,7 @@ module pace_pingpong_oup #(
   assign output_o.strb  = '1;
   assign ready_o        = enable_i && (((output_o.ready & output_o.valid) && ping_pong_status_q) || ~ping_pong_status_q);
   // When the input data is not latched that is ping_pong_status_q == 0
-  // Else when one input data is latched(ping_pong_status_q == 1) and there is a handhake then one data could be taken 
+  // Else when one input data is latched(ping_pong_status_q == 1) and there is a handhake then one data could be taken
 
   // Ping-pong status control
   assign ping_pong_status_d = clear_i         ? 1'b0 :
