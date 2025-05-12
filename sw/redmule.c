@@ -5,16 +5,16 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
-#include <stdint.h>
-#include "redmule_utils.h"
 #include "archi_redmule.h"
 #include "hal_redmule.h"
+#include "redmule_utils.h"
+#include <stdint.h>
 
-#include "x_input.h"
+#include "golden.h"
 #include "w_input.h"
+#include "x_input.h"
 #include "y_input.h"
 #include "z_output.h"
-#include "golden.h"
 #define ERR 0x0011
 
 int main() {
@@ -50,9 +50,8 @@ int main() {
   int pace_ops = 1;
   // int pace_ops = 0;
 
-
-  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
-              (uint8_t)gemm_ops, float_fmt);
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size,
+              k_size, (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
   printf("Triggering accelerator and going to sleep...\n");
@@ -67,9 +66,9 @@ int main() {
   hwpe_cg_disable();
 
   if (float_fmt == Float16 || float_fmt == Float16Alt)
-    if(gemm_ops == PACE)
+    if (gemm_ops == PACE)
       errors = redmule16_compare_int(y, golden, K_SIZE * 4, 0);
-    else 
+    else
       errors = redmule16_compare_int(y, golden, m_size * k_size / 2, ERR);
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
     errors = redmule8_compare_int(y, golden, m_size * k_size / 4, ERR);

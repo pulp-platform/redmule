@@ -42,7 +42,9 @@ static inline void hwpe_trigger_job() { HWPE_WRITE(0, REDMULE_TRIGGER); }
 
 static inline int hwpe_acquire_job() { return HWPE_READ(REDMULE_ACQUIRE); }
 
-static inline unsigned int hwpe_get_status() { return HWPE_READ(REDMULE_STATUS); }
+static inline unsigned int hwpe_get_status() {
+  return HWPE_READ(REDMULE_STATUS);
+}
 
 static inline void hwpe_soft_clear() {
   volatile int i;
@@ -53,8 +55,9 @@ static inline void hwpe_cg_enable() { return; }
 
 static inline void hwpe_cg_disable() { return; }
 
-void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size, uint16_t n_size,
-                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt) {
+void redmule_cfg(unsigned int x, unsigned int w, unsigned int z,
+                 uint16_t m_size, uint16_t n_size, uint16_t k_size,
+                 uint8_t gemm_op, uint8_t gemm_fmt) {
 
   uint32_t mcfg_reg0 = 0;
   uint32_t mcfg_reg1 = 0;
