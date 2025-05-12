@@ -68,7 +68,7 @@ if [[ "$Start" -eq 1 ]]; then
 
       make golden M=$M N=$N K=$K 1>/dev/null 2>&1
       make sw-clean sw-build 1>/dev/null 2>&1
-      timeout $BASE_TIMEOUT make hw-run target=$Target > $PWD/target/sim/$Target/transcript_${M}_${N}_${K}
+      timeout $BASE_TIMEOUT make hw-run target=$Target > $PWD/target/sim/$Target/transcript_${M}_${N}_${K} > artifacts/logs/test_${M}_${N}_${K}.log
       if grep -rn "\[TB\] - Success!" "$PWD/target/sim/$Target/transcript_${M}_${N}_${K}" 1>/dev/null 2>&1; then
           echo -e "${Green}OK  ${EndColor}: M=$M N=$N K=$K"
       else
