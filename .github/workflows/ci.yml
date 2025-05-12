@@ -90,3 +90,9 @@ jobs:
     - name: Run Tests
       run: |
         source scripts/regression-list.sh
+    - name: Upload Simulation Logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: simulation-logs
+        path: |
+          target/sim/**/transcript_*
