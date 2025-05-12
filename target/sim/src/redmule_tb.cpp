@@ -19,15 +19,15 @@
 
 #define TbHeader TbName.h
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <exception>
-#include <cstdio>
-#include <cstdint>
 #include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <exception>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 #include <verilated.h>
 #include <verilated_vcd_c.h>
 #include ToString(TbHeader)
@@ -42,13 +42,17 @@
 
 vluint64_t sim_time = 0;
 
-void dut_reset(Vredmule_tb *dut, vluint64_t &sim_time, vluint64_t rst_time, vluint64_t rst_cycles) {
+void dut_reset(Vredmule_tb *dut, vluint64_t &sim_time, vluint64_t rst_time,
+               vluint64_t rst_cycles) {
   dut->rst_ni = 0;
-  if (sim_time > rst_time && sim_time < rst_time + rst_cycles) dut->rst_ni = 1;
+  if (sim_time > rst_time && sim_time < rst_time + rst_cycles)
+    dut->rst_ni = 1;
 
-  if (sim_time > rst_time + rst_cycles && sim_time < rst_time + 2 * rst_cycles) dut->rst_ni = 0;
+  if (sim_time > rst_time + rst_cycles && sim_time < rst_time + 2 * rst_cycles)
+    dut->rst_ni = 0;
 
-  if (sim_time > rst_time + 2 * rst_cycles) dut->rst_ni = 1;
+  if (sim_time > rst_time + 2 * rst_cycles)
+    dut->rst_ni = 1;
 }
 
 void dut_set_fetch_en(Vredmule_tb *dut, vluint64_t &sim_time, bool value) {
