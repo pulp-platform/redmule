@@ -121,7 +121,7 @@ sw-clean:
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
-OP     ?= pace
+OP     ?= gemm
 fp_fmt ?= FP16
 M      ?= 24
 N      ?= 16
