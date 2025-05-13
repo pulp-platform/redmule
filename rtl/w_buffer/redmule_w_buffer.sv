@@ -19,30 +19,23 @@ module redmule_w_buffer
   localparam int unsigned D         = DW/BITW           ,
   localparam int unsigned DWQ       = DW/(BITW/8)
 )(
-  input  logic                             clk_i     ,
-  input  logic                             rst_ni    ,
-  input  logic                             clear_i   ,
-  input  w_buffer_ctrl_t                   ctrl_i    ,
-  output w_buffer_flgs_t                   flags_o   ,
-  output logic           [H-1:0][BITW-1:0] w_buffer_o,
-  input  logic                    [DW-1:0] w_buffer_i,  //Normally the rows of the W matrix; in quantization mode, the vectors of scales
+  input  logic                             clk_i      ,
+  input  logic                             rst_ni     ,
+  input  logic                             clear_i    ,
+  input  w_buffer_ctrl_t                   ctrl_i     ,
+  output w_buffer_flgs_t                   flags_o    ,
+  output logic           [H-1:0][BITW-1:0] w_buffer_o ,
+  input  logic                    [DW-1:0] w_buffer_i ,  //Normally the rows of the W matrix; in quantization mode, the vectors of scales
 
-  input  logic                   [DWQ-1:0] qw_i      ,
-  input  logic                   [DWQ-1:0] zeros_i   ,
+  input  logic                   [DWQ-1:0] qw_i       ,
+  input  logic                   [DWQ-1:0] zeros_i    ,
 
-  output logic                [H-1:0][7:0] qw_o      ,
-  output logic                [H-1:0][7:0] zeros_o   ,
+  output logic                [H-1:0][7:0] qw_o       ,
+  output logic                [H-1:0][7:0] zeros_o    ,
 
-  input  logic             [GID_WIDTH-1:0] next_gidx_i   //Tentative name
+  input  logic             [$clog2(H)-1:0] next_gidx_i,
+  input  logic                             new_gidx_i
 );
-
-/*
- TODO LIST
-
- Add a signal that indicates wether the current line is from the current column or the next.
- Flush the cache if there is a mismatch
-
-*/
 
 localparam int unsigned C         = (D+N_REGS)/(N_REGS+1);
 localparam int unsigned EL_ADDR_W = $clog2(N_REGS+1);
@@ -50,20 +43,19 @@ localparam int unsigned EL_DATA_W = (N_REGS+1)*BITW;
 
 logic [$clog2(H):0]            w_row;
 
+logic [H-1:0][BITW-1:0]        w_buffer_q;
+logic [H-1:0][7:0]             qw_q;
+logic [H-1:0][7:0]             zeros_q;
+
 logic [EL_ADDR_W-1:0]          el_addr_d, el_addr_q;
 logic [$clog2(C)-1:0]          col_addr_d, col_addr_q;
 
 logic [D-1:0][BITW-1:0]        w_data;
 
-          //  Actual group id width + 1 bit for the stride counter
-logic [H-1:0][GID_WIDTH/*-1*/:0]   cache_r_id_d, cache_r_id_q, cache_w_id_d, cache_w_id_q;
-logic [H-1:0]                  cache_r_id_valid_d, cache_r_id_valid_q, cache_w_id_valid_d, cache_w_id_valid_q;
-
 logic [H-1:0][$clog2(H)-1:0]   buffer_r_addr_d, buffer_r_addr_q, wq_buffer_raddr;
 logic [H-1:0]                  buffer_r_addr_valid_d, buffer_r_addr_valid_q;
 
-logic [H-1:0][$clog2(D/(PIPE_REGS+1)):0]   usage_counter_q;
-logic [$clog2(H)-1:0]                        evict_pointer;
+logic [$clog2(H)-1:0]         evict_pointer;
 
 logic gidx_present;
 
@@ -74,8 +66,8 @@ for (genvar d = 0; d < D; d++) begin : gen_zero_padding
   assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
 end
 
-assign buf_write_en   = ctrl_i.load;
-assign buf_write_addr = w_row;
+assign buf_write_en   = ctrl_i.load && (~ctrl_i.dequant || ~new_gidx_i);
+assign buf_write_addr = ctrl_i.dequant ? next_gidx_i : w_row;
 
 redmule_w_buffer_scm #(
   .WORD_SIZE ( BITW     ),
@@ -93,7 +85,7 @@ redmule_w_buffer_scm #(
   .elms_read_addr_i ( el_addr_q       ),
   .cols_read_offs_i ( col_addr_q      ),
   .rows_read_addr_i ( buffer_r_addr_d ),
-  .rdata_o          ( w_buffer_o      )
+  .rdata_o          ( w_buffer_q      )
 );
 
 redmule_w_buffer_scm #(
@@ -112,7 +104,7 @@ redmule_w_buffer_scm #(
   .elms_read_addr_i ( el_addr_q       ),
   .cols_read_offs_i ( col_addr_q      ),
   .rows_read_addr_i ( buffer_r_addr_d ),
-  .rdata_o          ( zeros_o         )
+  .rdata_o          ( zeros_q         )
 );
 
 redmule_w_buffer_scm #(
@@ -131,117 +123,35 @@ redmule_w_buffer_scm #(
   .elms_read_addr_i ( el_addr_q            ),
   .cols_read_offs_i ( col_addr_q           ),
   .rows_read_addr_i ( wq_buffer_raddr      ),
-  .rdata_o          ( qw_o                 )
+  .rdata_o          ( qw_q                 )
 );
 
 assign flags_o.w_ready = buf_write_en;
 
-// Read side
-for (genvar h = 0; h < H; h++) begin : gen_r_id_registers
+for (genvar h = 0; h < H; h++) begin : gen_r_addr_registers
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if(~rst_ni) begin
-      cache_r_id_q[h] <= '0;
+      buffer_r_addr_q[h] <= h;
     end else begin
       if (clear_i) begin
-        cache_r_id_q[h]       <= '0;
-        cache_r_id_valid_q[h] <= '0;
-      end else if (w_row == h && ctrl_i.load && ctrl_i.dequant) begin   // This is loaded at the same time as the W row
-        cache_r_id_q[h]       <= {ctrl_i.stride_cnt, next_gidx_i}/*next_gidx_i*/;
-        cache_r_id_valid_q[h] <= '1;
+        buffer_r_addr_q[h] <= h;
+      end else begin   // This is loaded at the same time as the W row
+        buffer_r_addr_q[h] <= buffer_r_addr_d[h];
       end
     end
   end
 
-  assign cache_r_id_d[h]       = (w_row == h && ctrl_i.load && ctrl_i.dequant) ? {ctrl_i.stride_cnt, next_gidx_i} : cache_r_id_q[h];
-  assign cache_r_id_valid_d[h] = (w_row == h && ctrl_i.load && ctrl_i.dequant) ? '1 : cache_r_id_valid_q[h];
-end
+  always_comb begin
+    buffer_r_addr_d[h] = buffer_r_addr_q[h];
 
-always_comb begin : buffer_r_addr_assignment
-  buffer_r_addr_q       = '0;
-  buffer_r_addr_d       = '0;
-  buffer_r_addr_valid_q = '0;
-  buffer_r_addr_valid_d = '0;
-
-  for (int h = 0; h < H; h++) begin
-    buffer_r_addr_q[h] = h;
-  end
-
-  for (int h = 0; h < H; h++) begin
-    buffer_r_addr_d[h] = h;
+    if (w_row == h && ctrl_i.load && ctrl_i.dequant) begin
+      buffer_r_addr_d[h] = next_gidx_i;
+    end
   end
 end
 
 for (genvar h = 0; h < H; h++) begin
   assign wq_buffer_raddr[h] = h;
-end
-
-// Write side
-for (genvar h = 0; h < H; h++) begin : gen_w_id_registers
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if(~rst_ni) begin
-      cache_w_id_q[h]       <= '0;
-      cache_w_id_valid_q[h] <= '0;
-    end else begin
-      if (clear_i) begin
-        cache_w_id_q[h]       <= '0;
-        cache_w_id_valid_q[h] <= '0;
-      end else if (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) begin   // This is loaded at the same time as the W row
-        cache_w_id_q[h]       <= {ctrl_i.stride_cnt, next_gidx_i}/*next_gidx_i*/;
-        cache_w_id_valid_q[h] <= '1;
-      end
-    end
-  end
-
-  assign cache_w_id_d[h]       = (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) ? {ctrl_i.stride_cnt, next_gidx_i} : cache_w_id_q[h];
-  assign cache_w_id_valid_d[h] = (evict_pointer == h && ctrl_i.load && ctrl_i.dequant && ~gidx_present) ? '1 : cache_w_id_valid_q[h];
-end
-
-// Each row of the buffer has a counter that
-// resets to D/(PIPE_REGS+1) each time the vector is requested
-for (genvar h = 0; h < H; h++) begin : gen_usage_counters
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if(~rst_ni) begin
-      usage_counter_q[h] <= '0;
-    end else begin
-      if (clear_i)
-        usage_counter_q[h] <= '0;
-      else if (ctrl_i.dequant && (evict_pointer == h && ~gidx_present || gidx_present && cache_w_id_q[h] == {ctrl_i.stride_cnt, next_gidx_i}) && ctrl_i.load)
-        usage_counter_q[h] <= D/(PIPE_REGS+1);
-      else if (ctrl_i.dequant && el_addr_q == N_REGS && usage_counter_q[h] != 0 && ctrl_i.shift)
-        usage_counter_q[h] <= usage_counter_q[h] - 1;
-    end
-  end
-end
-
-always_comb begin : evict_pointer_assignment
-  evict_pointer = '0;
-
-  for (int h = 0; h < H; h++) begin
-    if (cache_w_id_valid_q[h] == '0) begin
-      evict_pointer = h;
-      break;
-    end
-  end
-
-  if (&cache_w_id_valid_q) begin
-    for (int h = 0; h < H; h++) begin
-      if (usage_counter_q[h] == '0) begin
-        evict_pointer = h;
-        break;
-      end
-    end
-  end
-end
-
-always_comb begin : gidx_present_assignment
-  gidx_present = '0;
-
-  for (int h = 0; h < H; h++) begin
-    if (cache_w_id_q[h] == {ctrl_i.stride_cnt, next_gidx_i} && cache_w_id_valid_q[h]) begin
-      gidx_present = '1;
-      break;
-    end
-  end
 end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : element_counter
@@ -280,6 +190,20 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
       w_row <= w_row + 1;
     else
       w_row <= w_row;
+  end
+end
+
+always_comb begin : output_assignment
+  w_buffer_o = w_buffer_q;
+  qw_o       = qw_q;
+  zeros_o    = zeros_q;
+
+  for (int unsigned i = 0; i < H; i++) begin
+    if (ctrl_i.zero_set[i]) begin
+      w_buffer_o[i] = '0;
+      qw_o[i]       = '0;
+      zeros_o[i]    = '0;
+    end
   end
 end
 
