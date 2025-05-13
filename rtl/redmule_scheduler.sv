@@ -21,42 +21,43 @@ module redmule_scheduler
   localparam int unsigned H           = Height        ,
   localparam int unsigned W           = Width
 )(
-  /********************************************************/
-  /*                        Inputs                        */
-  /********************************************************/
-  input  logic                            clk_i            ,
-  input  logic                            rst_ni           ,
-  input  logic                            test_mode_i      ,
-  input  logic                            clear_i          ,
+  /*********************************************************/
+  /*                        Inputs                         */
+  /*********************************************************/
+  input  logic                            clk_i             ,
+  input  logic                            rst_ni            ,
+  input  logic                            test_mode_i       ,
+  input  logic                            clear_i           ,
 
-  input  logic                            x_valid_i        ,
-  input  logic                            w_valid_i        ,
-  input  logic                            y_valid_i        ,
-  input  logic                            z_ready_i        ,
+  input  logic                            x_valid_i         ,
+  input  logic                            w_valid_i         ,
+  input  logic                            y_valid_i         ,
+  input  logic                            z_ready_i         ,
 
-  input  logic                            wq_valid_i       ,
-  input  logic                            zeros_valid_i    ,
+  input  logic                            wq_valid_i        ,
+  input  logic                            zeros_valid_i     ,
 
-  input  logic                            engine_flush_i   ,
+  input  logic                            engine_flush_i    ,
 
-  input  ctrl_regfile_t                   reg_file_i       ,
+  input  ctrl_regfile_t                   reg_file_i        ,
 
-  input  flgs_streamer_t                  flgs_streamer_i  ,
-  input  x_buffer_flgs_t                  flgs_x_buffer_i  ,
-  input  w_buffer_flgs_t                  flgs_w_buffer_i  ,
-  input  z_buffer_flgs_t                  flgs_z_buffer_i  ,
+  input  flgs_streamer_t                  flgs_streamer_i   ,
+  input  x_buffer_flgs_t                  flgs_x_buffer_i   ,
+  input  w_buffer_flgs_t                  flgs_w_buffer_i   ,
+  input  z_buffer_flgs_t                  flgs_z_buffer_i   ,
 
-  input  flgs_engine_t                    flgs_engine_i    ,
-  input  cntrl_scheduler_t                cntrl_scheduler_i,
+  input  flgs_engine_t                    flgs_engine_i     ,
+  input  cntrl_scheduler_t                cntrl_scheduler_i ,
 
-  /********************************************************/
-  /*                       Outputs                        */
-  /********************************************************/
-  output logic                            reg_enable_o     ,
-  output cntrl_engine_t                   cntrl_engine_o   ,
-  output x_buffer_ctrl_t                  cntrl_x_buffer_o ,
-  output w_buffer_ctrl_t                  cntrl_w_buffer_o ,
-  output z_buffer_ctrl_t                  cntrl_z_buffer_o ,
+  /*********************************************************/
+  /*                       Outputs                         */
+  /*********************************************************/
+  output logic                            reg_enable_o       ,
+  output cntrl_engine_t                   cntrl_engine_o     ,
+  output x_buffer_ctrl_t                  cntrl_x_buffer_o   ,
+  output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
+  output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
+  output gidx_buffer_ctrl_t               cntrl_gidx_buffer_o,
   output flgs_scheduler_t                 flgs_scheduler_o
 );
 
@@ -218,16 +219,16 @@ module redmule_scheduler
   /************************
    * W Iteration counters *
    ************************/
-  logic [15:0] w_cols_iter_d, w_cols_iter_q,
-               w_rows_iter_d, w_rows_iter_q,
-               w_mat_iters_q;
+  logic [15:0]        w_cols_iter_d, w_cols_iter_q,
+                      w_rows_iter_d, w_rows_iter_q,
+                      w_mat_iters_q;
 
-  logic        w_done;
+  logic               w_done;
 
-  logic        w_cols_iter_en, w_rows_iter_en,
-               w_mat_iters_en, w_done_en;
+  logic               w_cols_iter_en, w_rows_iter_en,
+                      w_mat_iters_en, w_done_en;
 
-  logic        w_stride_cnt;
+  logic [$clog2(H):0] w_zero_cnt_d, w_zero_cnt_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_rows_iteration
     if(~rst_ni) begin
@@ -285,30 +286,40 @@ module redmule_scheduler
     end
   end
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : w_stride_counter
-    if(~rst_ni) begin
-      w_stride_cnt <= '0;
+  always_ff @(posedge clk_i or negedge rst_ni) begin : w_zero_counter
+    if (~rst_ni) begin
+      w_zero_cnt_q <= '0;
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
-        w_stride_cnt <= '0;
-      end else if (w_cols_iter_en) begin
-        w_stride_cnt <= ~w_stride_cnt;
+        w_zero_cnt_q <= '0;
+      end else begin
+        w_zero_cnt_q <= w_zero_cnt_d;
       end
     end
   end
+
+  assign w_zero_cnt_d = w_done && current_state == LOAD_W && w_zero_cnt_q != H ? w_zero_cnt_q + 1 : w_zero_cnt_q;
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
 
   assign cntrl_w_buffer_o.height = w_rows_iter_q >= reg_file_i.hwpe_params[W_ITERS][31:16]-(PIPE_REGS+1) && reg_file_i.hwpe_params[LEFTOVERS][15:8] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][15:8] : H;
   assign cntrl_w_buffer_o.width  = w_cols_iter_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][7:0] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][7:0] : D;
 
-  assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine;
+  assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine && ~w_done;
   assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
 
   assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
   assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
 
-  assign cntrl_w_buffer_o.stride_cnt = w_stride_cnt;
+  always_comb begin
+    cntrl_w_buffer_o.zero_set = '0;
+
+    for (int unsigned i = 0; i < H; i++) begin
+      if (w_done && w_zero_cnt_q > i) begin
+        cntrl_w_buffer_o.zero_set[i] = 1'b1;
+      end
+    end
+  end
 
   /****************************
    * Y & Z Iteration counters *
@@ -477,6 +488,8 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.y_height      = y_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
+
+  assign cntrl_gidx_buffer_o.num_w_iters = reg_file_i.hwpe_params[X_ITERS][15:0];
 
 
   /**********************************
@@ -695,7 +708,9 @@ module redmule_scheduler
       // in this state we should check that everything is ready to be loaded and
       // if something's amiss stall the engine
       LOAD_W: begin
-        if (~stall_engine) begin
+        if (w_done && z_avail_clr) begin
+          next_state = IDLE;
+        end else if (~stall_engine) begin
           next_state = WAIT;
         end
       end

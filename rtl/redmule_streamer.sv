@@ -41,10 +41,13 @@ module redmule_streamer
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
 
-  // Bias streams - used during dequantization
+  // Bias and skip streams - used during dequantization
   hwpe_stream_intf_stream.sink   wq_bias_i,
+  hwpe_stream_intf_stream.sink   wq_skip_i,
   hwpe_stream_intf_stream.sink   scales_bias_i,
+  hwpe_stream_intf_stream.sink   scales_skip_i,
   hwpe_stream_intf_stream.sink   zeros_bias_i,
+  hwpe_stream_intf_stream.sink   zeros_skip_i,
 
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
@@ -459,6 +462,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
         .clear_i             ( clear_i               ),
         .enable_i            ( enable_i              ),
         .bias_i              ( scales_bias_i         ),
+        .skip_i              ( scales_skip_i         ),
         .tcdm                ( tcdm_cast[i]          ),
         .stream              ( out_stream[i]         ),
         .ctrl_i              ( biased_source_ctrl[i] ),
@@ -492,6 +496,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
         .clear_i             ( clear_i                ),
         .enable_i            ( enable_i               ),
         .bias_i              ( zeros_bias_i           ),
+        .skip_i              ( zeros_skip_i           ),
         .tcdm                ( load_fifo_q[i]         ),
         .stream              ( out_stream[i]          ),
         .ctrl_i              ( biased_source_ctrl[i]  ),
@@ -508,6 +513,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
         .clear_i             ( clear_i                ),
         .enable_i            ( enable_i               ),
         .bias_i              ( wq_bias_i              ),
+        .skip_i              ( wq_skip_i              ),
         .tcdm                ( load_fifo_q[i]         ),
         .stream              ( out_stream[i]          ),
         .ctrl_i              ( biased_source_ctrl[i]  ),

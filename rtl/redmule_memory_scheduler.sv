@@ -26,8 +26,11 @@ module redmule_memory_scheduler
   hwpe_stream_intf_stream.sink   next_row_i       ,
   hwpe_stream_intf_stream.sink   next_gidx_i      ,
   hwpe_stream_intf_stream.source scales_bias_o    ,
+  hwpe_stream_intf_stream.source scales_skip_o    ,
   hwpe_stream_intf_stream.source zeros_bias_o     ,
-  hwpe_stream_intf_stream.source wq_bias_o
+  hwpe_stream_intf_stream.source zeros_skip_o     ,
+  hwpe_stream_intf_stream.source wq_bias_o        ,
+  hwpe_stream_intf_stream.source wq_skip_o
 );
   localparam int unsigned JMP = NumByte*(DATA_W/MemDw - 1);
 
@@ -264,25 +267,40 @@ module redmule_memory_scheduler
 
   /* BIAS ASSIGNMENT */
 
-  assign gidx_present = next_gidx_i.data[GW];
-
   assign cntrl_streamer_o.w_stream_source_ctrl.ignore_bias      = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
   assign cntrl_streamer_o.wq_stream_source_ctrl.ignore_bias     = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
   assign cntrl_streamer_o.zeros_stream_source_ctrl.ignore_bias  = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
 
-  assign next_row_i.ready       = wq_bias_o.ready;
-  assign next_gidx_i.ready      = scales_bias_o.ready && zeros_bias_o.ready || gidx_present;
+  assign cntrl_streamer_o.w_stream_source_ctrl.ignore_skip      = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
+  assign cntrl_streamer_o.wq_stream_source_ctrl.ignore_skip     = 1'b1;
+  assign cntrl_streamer_o.zeros_stream_source_ctrl.ignore_skip  = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
 
-  assign scales_bias_o.valid    = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && ~gidx_present;
+  assign next_row_i.ready       = wq_bias_o.ready;
+  assign next_gidx_i.ready      = scales_bias_o.ready && zeros_bias_o.ready;
+
+  assign scales_bias_o.valid    = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && scales_skip_o.ready && zeros_skip_o.ready;
   assign scales_bias_o.data     = next_gidx_i.data[GW-1:0] * reg_file_i.hwpe_params[W_D0_STRIDE][15:0];
   assign scales_bias_o.strb     = '1;
 
-  assign zeros_bias_o.valid     = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && ~gidx_present;
+  assign scales_skip_o.valid    = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && scales_skip_o.ready && zeros_skip_o.ready;
+  assign scales_skip_o.data     = next_gidx_i.data[GW];
+  assign scales_skip_o.strb     = '1;
+
+  assign zeros_bias_o.valid     = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && scales_skip_o.ready && zeros_skip_o.ready;
   assign zeros_bias_o.data      = next_gidx_i.data[GW-1:0] * (reg_file_i.hwpe_params[W_D0_STRIDE][15:0] >> q_shift);
   assign zeros_bias_o.strb      = '1;
+
+  assign zeros_skip_o.valid     = next_gidx_i.valid && scales_bias_o.ready && zeros_bias_o.ready && scales_skip_o.ready && zeros_skip_o.ready;
+  assign zeros_skip_o.data      = next_gidx_i.data[GW];
+  assign zeros_skip_o.strb      = '1;
 
   assign wq_bias_o.valid        = next_row_i.valid && wq_bias_o.ready;
   assign wq_bias_o.data         = next_row_i.data * (reg_file_i.hwpe_params[W_D0_STRIDE][15:0] >> q_shift);
   assign wq_bias_o.strb         = '1;
+
+  assign wq_skip_o.valid        = '1;
+  assign wq_skip_o.data         = '0;
+  assign wq_skip_o.strb         = '1;
+
 
 endmodule : redmule_memory_scheduler
