@@ -18,6 +18,7 @@ module redmule_memory_scheduler
   input  logic                  clk_i            ,
   input  logic                  rst_ni           ,
   input  logic                  clear_i          ,
+  input  logic                  z_priority_i     ,
   input  ctrl_regfile_t         reg_file_i       ,
   input  flgs_streamer_t        flgs_streamer_i  ,
   input  cntrl_scheduler_t      cntrl_scheduler_i,
@@ -179,4 +180,5 @@ module redmule_memory_scheduler
   assign cntrl_streamer_o.output_cast_src_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
   assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
 
+  assign cntrl_streamer_o.z_priority = z_priority_i;
 endmodule : redmule_memory_scheduler
