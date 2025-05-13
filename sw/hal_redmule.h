@@ -7,7 +7,7 @@
 
 #ifndef __HAL_REDMULE_H__
 #define __HAL_REDMULE_H__
-
+#include <stdint.h>
 #include "tensor_dim.h"
 
 /* LOW-LEVEL HAL */
