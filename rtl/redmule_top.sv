@@ -120,7 +120,7 @@ end else begin: gen_xif_decoder
 end
 
 // Streamer control signals and flags
-cntrl_streamer_t cntrl_streamer;
+cntrl_streamer_t cntrl_streamer_int, cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
 errs_streamer_t  ecc_errors_streamer;
 
