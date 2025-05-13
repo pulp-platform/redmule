@@ -70,7 +70,7 @@ assign start_cfg = ((periph.req) &&
                     (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
 
 // Streamer control signals and flags
-cntrl_streamer_t cntrl_streamer;
+cntrl_streamer_t cntrl_streamer_int, cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
 
 cntrl_engine_t   cntrl_engine;
@@ -655,6 +655,7 @@ redmule_memory_scheduler #(
   .clk_i             ( clk_i               ),
   .rst_ni            ( rst_ni              ),
   .clear_i           ( clear               ),
+  .z_priority_i      ( z_buffer_flgs.z_priority ),
   .reg_file_i        ( reg_file            ),
   .flgs_streamer_i   ( flgs_streamer       ),
   .cntrl_scheduler_i ( cntrl_scheduler     ),

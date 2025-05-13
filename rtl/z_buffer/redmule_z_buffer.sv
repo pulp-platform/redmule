@@ -70,6 +70,7 @@ redmule_z_buffer_scm #(
 
 assign flags_o.y_ready = load_en && ctrl_i.y_valid;
 assign flags_o.z_valid = store_en && ctrl_i.ready;
+assign flags_o.z_priority = store_en;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin  : state_register
   if(~rst_ni) begin

@@ -182,7 +182,7 @@ hci_core_mux_ooo #(
   .clk_i              ( clk_i                ),
   .rst_ni             ( rst_ni               ),
   .clear_i            ( clear_i              ),
-  .priority_force_i   ( '1                   ),
+  .priority_force_i   ( ctrl_i.z_priority    ),
   .priority_i         ( {1'b1, 1'b0}         ), // The z channel always has priority over the y channel
   .in                 ( yz_tcdm              ),
   .out                ( yz_tcdm_pre_r_id     )
