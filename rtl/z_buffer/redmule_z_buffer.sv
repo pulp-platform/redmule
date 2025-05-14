@@ -47,6 +47,9 @@ logic [$clog2(W)-1:0] store_shift_d, store_shift_q, w_index;
 
 logic load_en, store_en;
 
+logic [$clog2(TOT_DEPTH):0] z_height_tmp;
+logic [$clog2(TOT_DEPTH)-1:0] z_height;
+
 redmule_z_buffer_scm #(
   .WORD_SIZE ( BITW ),
   .ROWS      ( D    ),
@@ -216,10 +219,12 @@ always_comb begin : reset_depth_counter
   end
 end
 
+assign z_height_tmp = ctrl_i.z_height - 'd1;
+assign z_height = z_height_tmp[$clog2(TOT_DEPTH)-1:0];
+
 always_comb begin : z_strb_assignment
   z_strb_o = '0;
-
-  for (int i = 0; i < ctrl_i.z_height; i++) begin
+  for (int i = 0; i <= z_height; i++) begin
     z_strb_o[i*BITW/8+:BITW/8] = '1;
   end
 end
