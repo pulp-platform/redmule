@@ -25,28 +25,37 @@ parser.add_argument( '--m_size', type=int, default=3 )
 parser.add_argument( '--n_size', type=int, default=3 )
 parser.add_argument( '--k_size', type=int, default=3 )
 parser.add_argument( '--n_groups', type=int, default=16 )
+parser.add_argument( '--n_bits', type=int, default=8 )
+parser.add_argument( '--height', type=int, default=4 )
+parser.add_argument( '--pipe_regs', type=int, default=1 )
 parser.add_argument( '--file_name', type=str, default='net_parameters.h')
 parser.add_argument( '--inc_dir', type=str)
 parser.add_argument( '--txt_dir', type=str)
 args = parser.parse_args()
 
 # Network parameters
-m_size = args.m_size
-n_size = args.n_size
-k_size = args.k_size
-n_groups = 1#args.n_groups
+m_size   = args.m_size
+n_size   = args.n_size
+k_size   = args.k_size
+n_groups = args.n_groups
+n_bits   = args.n_bits
+
+height    = args.height
+pipe_regs = args.pipe_regs + 1
 
 f = open(args.file_name, "w")
+
+msk = 2**n_bits - 1
 
 # We want to perform a GEMM, of the kind Z = Y + X*W
 # Test Matrices
 X = torch.rand(m_size, n_size).half()
-W = (torch.rand(n_size, k_size) * 16).to(torch.int8)
+W = (torch.rand(n_size, k_size) * 16).to(torch.int8).bitwise_and(msk)
 Y = torch.rand(m_size, k_size).half()
 
 G = (torch.rand(n_size) * (n_groups)).to(torch.int)
 S = torch.rand(n_groups, k_size).half()
-B = (torch.rand(n_groups, k_size) * 16).to(torch.int8)
+B = (torch.rand(n_groups, k_size) * 16).to(torch.int8).bitwise_and(msk)
 
 print("\nInput Data: ")
 print("\nX is: ", X, X.shape, X.dtype)
@@ -59,12 +68,6 @@ print("\nY is: ", Y, Y.shape, Y.dtype)
 f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 
 print("\nComputing matrix multiplication..")
-
-
-#zeros = B + 1
-#dqweights = S[G.long()] * (W - zeros[G.long()])
-#
-#Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = dqweights))
 
 zeros_32 = B[G.long()].to(torch.int32)
 weights_32 = W.to(torch.int32)
@@ -85,17 +88,54 @@ shift = torch.log2(mant_prod).ceil().to(torch.int32) - 13
 mant_pre_round = torch.where(shift > 0, mant_prod >> shift, mant_prod << -shift)
 mant_sticky    = mant_pre_round.bitwise_and(0x00000003)
 
-a = torch.where(mant_sticky == 2, mant_pre_round.bitwise_and(0x00000004) >> 2, torch.tensor([1], dtype = torch.int))
-
 round = torch.where(mant_sticky < 2, torch.tensor([0], dtype = torch.int32), torch.where(mant_sticky == 2, mant_pre_round.bitwise_and(0x00000004) >> 2, torch.tensor([1], dtype = torch.int32)))
 
 res_mant = mant_pre_round >> 2
 res_exp  = scales_exp + shift + 1
 res_sign = scales_sign ^ ~w_sign
 
-res = torch.where(wb_32 == 0, torch.tensor([0], dtype = torch.int32), (res_mant + (res_exp << 10) + (res_sign << 15) + round)).to(torch.int16).view(torch.float16)
+wdq = torch.where(wb_32 == 0, torch.tensor([0], dtype = torch.int32), (res_mant + (res_exp << 10) + (res_sign << 15) + round)).to(torch.int16).view(torch.float16)
 
-Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = res))
+g_split = G.view([-1,height*pipe_regs])
+
+g_ordered = torch.empty([0], dtype = torch.int32)
+g_last = torch.empty([0], dtype = torch.int32)
+g_offsets = torch.empty([0], dtype = torch.int32)
+
+
+offset = 0
+
+for r in g_split:
+    for l in g_ordered.unique_consecutive()[-height:]:
+        if (torch.isin(l,r)):
+            g_last = torch.cat((g_last, r[r == l]))
+            g_offsets = torch.cat((g_offsets, (r == l).nonzero().flatten() + offset))
+
+    for e in r:
+        if not torch.isin(e, g_last):
+            g_last = torch.cat((g_last, r[r == e]))
+            g_offsets = torch.cat((g_offsets, (r == e).nonzero().flatten() + offset))
+
+    g_ordered = torch.cat((g_ordered, g_last))
+
+    g_last = torch.empty([0], dtype = torch.int32)
+    offset = offset + height * pipe_regs
+
+Z = Y
+
+for i in range(n_size):
+    Z = ((X[:,g_offsets[i]].view([m_size,1]).double() @ wdq[g_offsets[i],:].view([1,m_size]).double()) + Z.double()).half()
+
+# Pack quantized weights and zeros if necessary
+w_packed = torch.zeros(W.flatten().shape[0]//(8//n_bits), dtype = torch.int8)
+b_packed = torch.zeros(B.flatten().shape[0]//(8//n_bits), dtype = torch.int8)
+
+for i in range(8//n_bits):
+    w_packed = w_packed.bitwise_or(W.flatten()[i::8//n_bits].bitwise_left_shift(i*n_bits))
+    b_packed = b_packed.bitwise_or(B.flatten()[i::8//n_bits].bitwise_left_shift(i*n_bits))
+
+W = w_packed.view((W.shape[0],W.shape[1]//(8//n_bits)))
+B = b_packed.view((B.shape[0],B.shape[1]//(8//n_bits)))
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
@@ -103,82 +143,6 @@ f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
 print("\n\n")
 
 f.close()
-
-# Matrices conversion to hexadecimal and txt files generation
-txt_path = args.txt_dir
-for f in os.listdir(txt_path):
-    os.remove(os.path.join(txt_path, f))
-# os.mkdir(txt_path)
-f_x = open(''+txt_path+'/x_input.txt', "w")
-for i in range(m_size):
-    for j in range (n_size):
-        x_bin = bin(np.float16(X[i][j]).view('H'))[2:].zfill(16)
-        x_hex = hex(int(x_bin, 2))[2:]
-        f_x.write(x_hex)
-        f_x.write(' ')
-    f_x.write("\n")
-f_x.close()
-
-f_w = open(''+txt_path+'/w_input.txt', "w")
-for i in range(n_size):
-    for j in range (k_size):
-        w_bin = bin(np.int8(W[i][j]).view(np.int8))[2:].zfill(8)
-        w_hex = hex(int(w_bin, 2))[2:]
-        f_w.write(w_hex)
-        f_w.write(' ')
-    f_w.write("\n")
-f_w.close()
-
-f_y = open(''+txt_path+'/y_input.txt', "w")
-for i in range(m_size):
-    for j in range (k_size):
-        y_bin = bin(np.float16(Y[i][j]).view('H'))[2:].zfill(16)
-        y_hex = hex(int(y_bin, 2))[2:]
-        f_y.write(y_hex)
-        f_y.write(' ')
-    f_y.write("\n")
-f_y.close()
-
-
-f_w = open(''+txt_path+'/g_input.txt', "w")
-for i in range(n_size):
-    w_bin = bin(np.int16(G[i]).view(np.int16))[2:].zfill(16)
-    w_hex = hex(int(w_bin, 2))[2:]
-    f_w.write(w_hex)
-    f_w.write(' ')
-    f_w.write("\n")
-f_w.close()
-
-f_w = open(''+txt_path+'/b_input.txt', "w")
-for i in range(n_groups):
-    for j in range (k_size):
-        w_bin = bin(np.int8(B[i][j]).view(np.int8))[2:].zfill(8)
-        w_hex = hex(int(w_bin, 2))[2:]
-        f_w.write(w_hex)
-        f_w.write(' ')
-    f_w.write("\n")
-f_w.close()
-
-f_y = open(''+txt_path+'/s_input.txt', "w")
-for i in range(n_groups):
-    for j in range (k_size):
-        y_bin = bin(np.float16(S[i][j]).view('H'))[2:].zfill(16)
-        y_hex = hex(int(y_bin, 2))[2:]
-        f_y.write(y_hex)
-        f_y.write(' ')
-    f_y.write("\n")
-f_y.close()
-
-
-f_z = open(''+txt_path+'/z_output.txt', "w")
-for i in range(m_size):
-    for j in range (k_size):
-        z_bin = bin(np.float16(Z[i][j]).view('H'))[2:].zfill(16)
-        z_hex = hex(int(z_bin, 2))[2:]
-        f_z.write(z_hex)
-        f_z.write(' ')
-    f_z.write("\n")
-f_z.close()
 
 in_rows  = str(m_size)
 in_cols  = str(n_size)
@@ -222,13 +186,13 @@ f_w = open(''+inc_path+'/w_input.h', "w")
 f_w.write(''+header+'')
 f_w.write('uint8_t w_inp ['+w_dim+'] = {\n')
 for i in range(n_size):
-    for j in range (k_size):
-        w_bin = bin(np.int8(W[i][j]).view(np.int8))[2:].zfill(8)
-        w_hex = hex(int(w_bin, 2))[2:]
+    for j in range (k_size//(8//n_bits)):
+        w_hex = hex(W[i][j].to(torch.uint8))
+
         if (i == n_size - 1 and j == k_size - 1):
-          f_w.write('0x'+w_hex+' ')
+          f_w.write(''+w_hex+' ')
         else:
-          f_w.write('0x'+w_hex+', ')
+          f_w.write(''+w_hex+', ')
     f_w.write("\n")
 f_w.write("};")
 f_w.close()
@@ -267,13 +231,12 @@ f_w = open(''+inc_path+'/b_input.h', "w")
 f_w.write(''+header+'')
 f_w.write('uint8_t b_inp ['+b_dim+'] = {\n')
 for i in range(n_groups):
-    for j in range (k_size):
-        w_bin = bin(np.int8(B[i][j]).view(np.int8))[2:].zfill(8)
-        w_hex = hex(int(w_bin, 2))[2:]
+    for j in range (k_size//(8//n_bits)):
+        w_hex = hex(B[i][j].to(torch.uint8))
         if (i == n_groups - 1 and j == k_size - 1):
-          f_w.write('0x'+w_hex+' ')
+          f_w.write(''+w_hex+' ')
         else:
-          f_w.write('0x'+w_hex+', ')
+          f_w.write(''+w_hex+', ')
     f_w.write("\n")
 f_w.write("};")
 f_w.close()
@@ -314,10 +277,10 @@ f_z.close()
 
 f_w = open(''+inc_path+'/dqw_input.h', "w")
 f_w.write(''+header+'')
-f_w.write('uint16_t dwq_inp ['+w_dim+'] = {\n')
+f_w.write('uint16_t dqw_inp ['+w_dim+'] = {\n')
 for i in range(n_size):
     for j in range (k_size):
-        w_bin = bin(np.float16(res[i][j]).view('H'))[2:].zfill(16)
+        w_bin = bin(np.float16(wdq[i][j]).view('H'))[2:].zfill(16)
         w_hex = hex(int(w_bin, 2))[2:]
         if (i == n_size - 1 and j == k_size - 1):
           f_w.write('0x'+w_hex+' ')
