@@ -134,6 +134,8 @@ package redmule_pkg;
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
 
+  typedef enum logic [1:0] { QINT_2=2'h0, QINT_4=2'h1, QINT_8=2'h2, QINT_3=2'h3 } qint_fmt_e;
+
   typedef struct packed {
     hci_package::hci_streamer_ctrl_t        x_stream_source_ctrl;
     hci_package::hci_streamer_biased_ctrl_t w_stream_source_ctrl;
@@ -146,6 +148,7 @@ package redmule_pkg;
     fpnew_pkg::fp_format_e                  input_cast_dst_fmt;
     fpnew_pkg::fp_format_e                  output_cast_src_fmt;
     fpnew_pkg::fp_format_e                  output_cast_dst_fmt;
+    qint_fmt_e                              q_int_fmt;
   } cntrl_streamer_t;
 
   typedef struct packed {
@@ -157,8 +160,6 @@ package redmule_pkg;
     hci_package::hci_streamer_flags_t wq_stream_source_flags;
     hci_package::hci_streamer_flags_t zeros_stream_source_flags;
   } flgs_streamer_t;
-
-  typedef enum logic [1:0] { QINT_2=2'h0, QINT_4=2'h1, QINT_8=2'h2, QINT_3=2'h3 } qint_fmt_e;
 
   typedef struct packed {
     logic                         h_shift;

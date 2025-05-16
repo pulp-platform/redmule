@@ -368,6 +368,9 @@ hci_core_intf #(
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) wq_stream_pre_cast    ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) zeros_stream_pre_cast ( .clk( clk_i ) );
+
 hci_package::hci_streamer_ctrl_t        [NumStreamSources-1:0] source_ctrl;
 hci_package::hci_streamer_biased_ctrl_t [NumStreamSources-1:0] biased_source_ctrl;
 hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
@@ -498,9 +501,20 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
         .bias_i              ( zeros_bias_i           ),
         .skip_i              ( zeros_skip_i           ),
         .tcdm                ( load_fifo_q[i]         ),
-        .stream              ( out_stream[i]          ),
+        .stream              ( zeros_stream_pre_cast  ),
         .ctrl_i              ( biased_source_ctrl[i]  ),
         .flags_o             ( source_flags[i]        )
+      );
+
+      redmule_qint_cast #(
+        .DW ( DATAW )
+      )(
+        .clk_i    ( clk_i                 ),
+        .rst_ni   ( rst_ni                ),
+        .clear_i  ( clear_i               ),
+        .fmt_i    ( ctrl_i.q_int_fmt      ),
+        .stream_i ( zeros_stream_pre_cast ),
+        .stream_o ( out_stream[i]         )
       );
     end else if (i == WQsourceStreamId) begin
       hci_core_source_biased       #(
@@ -515,9 +529,20 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
         .bias_i              ( wq_bias_i              ),
         .skip_i              ( wq_skip_i              ),
         .tcdm                ( load_fifo_q[i]         ),
-        .stream              ( out_stream[i]          ),
+        .stream              ( wq_stream_pre_cast     ),
         .ctrl_i              ( biased_source_ctrl[i]  ),
         .flags_o             ( source_flags[i]        )
+      );
+
+      redmule_qint_cast #(
+        .DW ( DATAW )
+      )(
+        .clk_i    ( clk_i              ),
+        .rst_ni   ( rst_ni             ),
+        .clear_i  ( clear_i            ),
+        .fmt_i    ( ctrl_i.q_int_fmt   ),
+        .stream_i ( wq_stream_pre_cast ),
+        .stream_o ( out_stream[i]      )
       );
     end else begin
       hci_core_source       #(
