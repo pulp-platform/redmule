@@ -19,6 +19,11 @@ M ?= 3
 N ?= 3
 K ?= 3
 
+G          ?= 16
+QUANT_BITS ?= 8
+H          ?= 4
+P          ?= 1
+
 # FP format
 fp_fmt ?= FP16
 
@@ -85,6 +90,8 @@ gptq_gemm: check_penv
 	cd $(CUR_DIR)/$(fp_fmt);                  \
 	python3 ./scripts/$@.py                   \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
+	--n_groups $(G) --n_bits $(QUANT_BITS)    \
+  --height $(H) --pipe_regs $(P)					  \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
 	cd $(PENV);                               \
