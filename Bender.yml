@@ -52,6 +52,7 @@ sources:
     - rtl/redmule_complex.sv
     - rtl/redmule_gidx_buffer.sv
     - rtl/redmule_dequantizer.sv
+    - rtl/redmule_qint_cast.sv
 
     - target: redmule_deprecated
       files:
