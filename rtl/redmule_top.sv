@@ -383,7 +383,7 @@ hwpe_stream_fifo #(
   .pop_o          ( w_buffer_next_gidx_q )
 );
 
-assign w_buffer_next_gidx_d.valid = next_gidx_q.valid && (scales_bias.ready && zeros_bias.ready /*|| next_gidx_q.data[GidxWidth]*/);
+assign w_buffer_next_gidx_d.valid = next_gidx_q.valid && (scales_bias.ready && zeros_bias.ready);
 assign w_buffer_next_gidx_d.data  = next_gidx_q.data[GidxWidth+$clog2(Height):GidxWidth];
 assign w_buffer_next_gidx_d.strb  = '1;
 // ready is not assigned as the FIFO is dimensioned so that it is never full

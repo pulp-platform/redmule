@@ -265,6 +265,8 @@ module redmule_memory_scheduler
   assign cntrl_streamer_o.output_cast_src_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
   assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
 
+  assign cntrl_streamer_o.q_int_fmt           = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
+
   /* BIAS ASSIGNMENT */
 
   assign cntrl_streamer_o.w_stream_source_ctrl.ignore_bias      = reg_file_i.hwpe_params[DEQUANT_MODE][0] ? 1'b0 : 1'b1;
