@@ -6,7 +6,7 @@
 #
 
 import numpy as np
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -261,6 +261,7 @@ f_d.write('#define SRC_FMT FP16\n'         )
 f_d.write('#define DST_FMT FP16\n'         )
 f_d.write('#define FPFORMAT 16\n'          )
 f_d.write('uint8_t gemm_ops = MULMAX; \n'  )
+f_d.write('uint8_t quant_fmt = 0; \n'      )
 f_d.write('\n#endif\n'                     )
 f_d.close()
 

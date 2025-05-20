@@ -290,19 +290,33 @@ for i in range(n_size):
 f_w.write("};")
 f_w.close()
 
+quant_fmt = ""
+
+if n_bits == 8:
+  quant_fmt = "Q_INT8"
+elif n_bits == 4:
+  quant_fmt = "Q_INT4"
+elif n_bits == 2:
+  quant_fmt = "Q_INT2"
+else:
+  print(f'\033[95m ERROR: Unsupported number of bits for quantized weights ({n_bits})')
+  exit()
+
 # Writing tensors' dimensions
 f_d = open(''+inc_path+'/tensor_dim.h', "w")
-f_d.write(''+header+'')
-f_d.write('#ifndef __TENSOR_DIM__\n'       )
-f_d.write('#define __TENSOR_DIM__\n\n'     )
-f_d.write('#define M_SIZE  '+in_rows+' \n' )
-f_d.write('#define N_SIZE  '+in_cols+' \n' )
-f_d.write('#define K_SIZE  '+out_cols+'\n' )
-f_d.write('#define SRC_FMT FP16\n'         )
-f_d.write('#define DST_FMT FP16\n'         )
-f_d.write('#define FPFORMAT 16\n'          )
-f_d.write('uint8_t gemm_ops = GEMM; \n'    )
-f_d.write('\n#endif\n'                     )
+f_d.write( ''+header+'')
+f_d.write( '#ifndef __TENSOR_DIM__\n'            )
+f_d.write( '#define __TENSOR_DIM__\n\n'          )
+f_d.write( '#define M_SIZE  '+in_rows+' \n'      )
+f_d.write( '#define N_SIZE  '+in_cols+' \n'      )
+f_d.write( '#define K_SIZE  '+out_cols+'\n'      )
+f_d.write( '#define SRC_FMT FP16\n'              )
+f_d.write( '#define DST_FMT FP16\n'              )
+f_d.write( '#define FPFORMAT 16\n'               )
+f_d.write( '#define DEQUANT \n'                  )
+f_d.write( 'uint8_t gemm_ops = GEMM; \n'         )
+f_d.write(f'uint8_t quant_fmt = {quant_fmt}; \n' )
+f_d.write( '\n#endif\n'                          )
 f_d.close()
 
 #------------------------------------------------------------------------------------------#

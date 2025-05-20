@@ -103,4 +103,9 @@
 #define FP16ALT 0x4
 #define FP8ALT 0x5
 
+// Quantized formats
+#define Q_INT2 0x0
+#define Q_INT4 0x1
+#define Q_INT8 0x2
+
 #endif
