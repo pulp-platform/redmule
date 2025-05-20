@@ -209,4 +209,6 @@ always_comb begin : output_assignment
   end
 end
 
+assign flags_o.gid_repeated = new_gidx_i;
+
 endmodule : redmule_w_buffer
