@@ -536,7 +536,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
       redmule_qint_cast #(
         .DW ( DATAW )
-      )(
+      ) i_qint_cast (
         .clk_i    ( clk_i              ),
         .rst_ni   ( rst_ni             ),
         .clear_i  ( clear_i            ),
