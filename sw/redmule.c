@@ -14,9 +14,13 @@
 #include "w_input.h"
 #include "x_input.h"
 #include "y_input.h"
+
+#ifdef DEQUANT
 #include "g_input.h"
 #include "s_input.h"
 #include "b_input.h"
+#endif
+
 #include "z_output.h"
 #define ERR 0x0011
 
@@ -29,9 +33,21 @@ int main() {
   uint8_t *x = x_inp;
   uint8_t *w = w_inp;
   uint8_t *y = y_inp;
+
+  #ifdef DEQUANT
   uint8_t *g = g_inp;
   uint8_t *s = s_inp;
   uint8_t *b = b_inp;
+
+  uint8_t d_en = 1;
+  #else
+  uint8_t *g = 0;
+  uint8_t *s = 0;
+  uint8_t *b = 0;
+
+  uint8_t d_en = 0;
+  #endif
+
   uint8_t *z = z_oup; // golden_out //1c010000
 
   volatile int errors = 0;
@@ -113,7 +129,7 @@ int main() {
 
 
   redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, (unsigned int)g, (unsigned int)s, (unsigned int)b, m_size, n_size, k_size,
-              (uint8_t)gemm_ops, float_fmt);
+              (uint8_t)gemm_ops, float_fmt, d_en, quant_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
   printf("Triggering accelerator and going to sleep...\n");
