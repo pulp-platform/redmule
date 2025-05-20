@@ -240,7 +240,7 @@ module redmule_scheduler
     end
   end
 
-  assign w_rows_iter_en = current_state == LOAD_W && w_valid_i && ~stall_engine;
+  assign w_rows_iter_en = current_state == LOAD_W && (w_valid_i || reg_file_i.hwpe_params[DEQUANT_MODE][0] && flgs_w_buffer_i.gid_repeated) && ~stall_engine;
   assign w_rows_iter_d  = w_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 ? '0 : w_rows_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_columns_iteration
@@ -587,7 +587,7 @@ module redmule_scheduler
   logic check_quant_valid, check_quant_valid_en;
 
   // Check if the next w row is valid
-  assign check_w_valid     = w_valid_i;
+  assign check_w_valid     = w_valid_i || (flgs_w_buffer_i.gid_repeated && reg_file_i.hwpe_params[DEQUANT_MODE][0]);
   assign check_w_valid_en  = ~w_done;
 
   // Check if the x buffer is full
@@ -600,8 +600,8 @@ module redmule_scheduler
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
-  assign check_quant_valid = zeros_valid_i && wq_valid_i;
-  assign check_quant_valid_en = ~w_done && reg_file_i.hwpe_params[DEQUANT_MODE][0];  // Is w_done enough?
+  assign check_quant_valid = (zeros_valid_i || flgs_w_buffer_i.gid_repeated) && wq_valid_i;
+  assign check_quant_valid_en = ~w_done && reg_file_i.hwpe_params[DEQUANT_MODE][0];
 
   /******************************
    *           FLAGS            *

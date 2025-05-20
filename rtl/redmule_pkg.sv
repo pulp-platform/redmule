@@ -174,6 +174,7 @@ package redmule_pkg;
 
   typedef struct packed {
     logic                    w_ready;
+    logic                    gid_repeated;
   } w_buffer_flgs_t;
 
   typedef struct packed {
