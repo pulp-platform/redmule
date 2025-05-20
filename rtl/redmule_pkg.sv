@@ -194,6 +194,7 @@ package redmule_pkg;
   typedef struct packed {
     logic [ARRAY_HEIGHT-1:0] empty;
     logic                    w_ready;
+    logic                    gid_repeated;
   } w_buffer_flgs_t;
 
   typedef struct packed {
