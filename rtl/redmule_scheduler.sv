@@ -551,8 +551,6 @@ module redmule_scheduler
 
   logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
-  logic [W-1:0] row_clk_en_d, row_clk_en_q;
-
   always_comb begin
     row_clk_en_d = '0;
 

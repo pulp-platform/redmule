@@ -79,7 +79,7 @@ module redmule_x_pad_scm
   end else begin : gen_flip_flops
     for (genvar r = 0; r < ROWS; r++) begin : gen_rows
       for (genvar c = 0; c < COLS; c++) begin : gen_cols
-        always_ff @(posedge clk_i or rst_ni) begin : wdata
+        always_ff @(posedge clk_i or negedge rst_ni) begin : wdata
           if (~rst_ni) begin
             buffer_q[r][c] <= '0;
           end else begin
