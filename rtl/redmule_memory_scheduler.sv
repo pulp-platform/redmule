@@ -149,9 +149,9 @@ module redmule_memory_scheduler
   `ifdef PACE_ENABLED
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
                                                                       + x_rows_offs_q + x_cols_offs_q;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = cntrl_streamer_o.pace_mode ? W : num_x_reads;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = cntrl_streamer_o.pace_mode ? W : 'd1;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = cntrl_streamer_o.pace_mode ? 16 : 'd0;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : num_x_reads;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : 'd1;
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = cntrl_streamer_o.pace_mode ? (PACE_PART_BST_STAGES+PACE_NPOLY+1)*2 : 'd0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
