@@ -17,7 +17,7 @@ package redmule_pkg;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W;
-  parameter int unsigned            REDMULE_REGS = 22;
+  parameter int unsigned            REDMULE_REGS = 26;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
@@ -87,13 +87,6 @@ package redmule_pkg;
   parameter int unsigned X_SLOTS     = 15; // 0x3C
   parameter int unsigned IN_TOT_LEN  = 16; // 0x40
 
- `ifdef PACE_ENABLED
-    parameter int unsigned PACE_IN_ADDR   = 18; // 0x48
-    parameter int unsigned PACE_OUT_ADDR  = 19; // 0x52
-    parameter int unsigned PACE_D0_STRIDE = 20; // 0x56
-    parameter int unsigned PACE_D0_LENGTH = 21; // 0x60
-  `endif
-
   // One register is used for the round modes and operations of the Computing Elements.
   // [31:29] -> roundmode of the stage 1
   // [28:26] -> roundmode of the stage 2
@@ -106,6 +99,13 @@ package redmule_pkg;
   parameter int unsigned OP_SELECTION = 17; // 0x44
 
   parameter int unsigned HCI_ECC_MASK = 4'b1001; // 0x90-0x9C
+
+  `ifdef PACE_ENABLED
+    parameter int unsigned PACE_IN_ADDR   = 22; // 0x58
+    parameter int unsigned PACE_OUT_ADDR  = 23; // 0x5C
+    parameter int unsigned PACE_D0_STRIDE = 24; // 0x60
+    parameter int unsigned PACE_D0_LENGTH = 25; // 0x64
+  `endif
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
   parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
