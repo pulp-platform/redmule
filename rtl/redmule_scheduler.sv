@@ -627,12 +627,13 @@ module redmule_scheduler
    *           FLAGS            *
    ******************************/
 `ifdef PACE_ENABLED
-  assign stall_engine =  cntrl_engine_o.pace_mode ? LOAD_PACE && (
-                          ~check_x_full   && check_x_full_en
-                        ) : LOAD_W && (
-                          ~check_w_valid  && check_w_valid_en  ||
-                          ~check_x_full   && check_x_full_en   ||
-                          ~check_y_loaded && check_y_loaded_en
+  assign stall_engine =  cntrl_engine_o.pace_mode ? current_state == LOAD_PACE && (
+                          ~check_x_full && check_x_full_en
+                        ) : current_state == LOAD_W && (
+                          ~check_w_valid     && check_w_valid_en     ||
+                          ~check_x_full      && check_x_full_en      ||
+                          ~check_y_loaded    && check_y_loaded_en    ||
+                          ~check_quant_valid && check_quant_valid_en
                         );
 `else
   assign stall_engine = current_state == LOAD_W && (
