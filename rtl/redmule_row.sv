@@ -144,10 +144,14 @@ generate
       assign pace_input_operands[index][0] =  pace_mode_i ? tag_out[index-1][PIDW+BITW-1:PIDW] : input_operands[index][0]; //a
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0]   : input_operands[index][2]; //b
       assign pace_input_operands[index][1] =  pace_mode_i ? partial_result[index-1] : input_operands[index][1]; // x
-    end else begin
+    end else if (index <= PACE_PART_BST_STAGES + PACE_NPOLY) begin
       // pres * x + b
       assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; //pres
       assign pace_input_operands[index][1] =  pace_mode_i ? tag_out[index-1][BITW+PIDW-1:PIDW] : input_operands[index][1]; //x
+      assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0] : input_operands[index][2]; // b
+    end else begin
+      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; //pres
+      assign pace_input_operands[index][1] =  pace_mode_i ? 16'h3c00 : input_operands[index][1]; //x
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0] : input_operands[index][2]; // b
     end
 
