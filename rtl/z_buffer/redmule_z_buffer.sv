@@ -123,7 +123,7 @@ end
 
 // With very small leftovers on K it may happen that the z submatrix is completely stored before the current matrix of biases is fully pushed.
 // Therefore, we have to check that we are not in the process of pushing biases into the array before storing
-assign load_en  = current_state == EMPTY && ~ctrl_i.fill && d_index == '0;
+assign load_en  = current_state == EMPTY && ~ctrl_i.fill && d_index == '0 && fill_shift == '0;
 assign store_en = current_state == PUSHED;
 
 // Counter to track when the output buffer is full
