@@ -65,7 +65,8 @@ localparam int unsigned          D           = DW/(H*BITW)
   logic [H-1:0]       last_matched_d, last_matched_q;
 
   logic [1:0][$clog2(H)-1:0] last_gidx_wptr_d, last_gidx_wptr_q;
-  logic [$clog2(H)-1:0]      last_gidx_wptr_pre_fill_q;
+  logic [$clog2(H)-1:0]      last_gidx_wptr_pre_fill_q,
+                             last_gidx_wptr_pre_full_q;
 
   logic [$clog2(H)-1:0]      evict_ptr_d, evict_ptr_q;
   logic [1:0][H-1:0][$clog2(H)-1:0] evict_ptr_trnsl_d, evict_ptr_trnsl_q;
@@ -152,6 +153,18 @@ localparam int unsigned          D           = DW/(H*BITW)
     end
   end
 
+  always_ff @(posedge clk_i or negedge rst_ni) begin : last_gidx_wptr_pre_full_register
+    if (~rst_ni) begin
+      last_gidx_wptr_pre_full_q <= '0;
+    end else begin
+      if (clear_i) begin
+        last_gidx_wptr_pre_full_q <= '0;
+      end else if (gidx_valid_i && ~lookahead_fifo_full && iter_counter_rst) begin
+        last_gidx_wptr_pre_full_q <= last_gidx_wptr_d[~last_gidx_ptr];
+      end
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : last_gidx_wprt_register
     if (~rst_ni) begin
       last_gidx_wptr_q <= '0;
@@ -186,7 +199,9 @@ localparam int unsigned          D           = DW/(H*BITW)
     end else if (current_state == FULL) begin
       last_gidx_wptr_d[last_gidx_ptr] = '0;
 
-      if (|lookahead_matches_d) begin
+      if (next_state == CHECK_LAST && num_gidx_valid_d != H)
+        last_gidx_wptr_d[~last_gidx_ptr] = last_gidx_wptr_pre_full_q; // was '0
+      else if (|lookahead_matches_d) begin
         last_gidx_wptr_d[~last_gidx_ptr] = last_gidx_wptr_q[~last_gidx_ptr] + 1;
       end
     end
@@ -301,7 +316,7 @@ localparam int unsigned          D           = DW/(H*BITW)
 
     if (current_state == FULL || current_state == CHECK_LAST) begin
       for (int h = 0; h < H; h++) begin
-        if (current_gidx_d == last_gidx_q[last_gidx_ptr][h] && num_gidx_valid_q > h && iter_counter_q != 0) begin
+        if (current_gidx_d == last_gidx_q[last_gidx_ptr][h] && num_gidx_valid_q > (h + (H - last_gidx_wptr_pre_full_q)) && iter_counter_q != 0) begin
           gidx_present_d = 1'b1;
           break;
         end
@@ -313,7 +328,7 @@ localparam int unsigned          D           = DW/(H*BITW)
     lookahead_matches_d = '0;
 
     for (int unsigned i = 0; i < D*H; i++) begin
-      lookahead_matches_d[i] = current_gidx_d == gidx_buffer_i[i] & match_msk_q[i];
+      lookahead_matches_d[i] = current_gidx_d == gidx_buffer_i[i] & match_msk_q[i] && (current_state != CHECK_LAST || (lookahead_offset_q) < num_gidx_valid_q);
     end
   end
 
