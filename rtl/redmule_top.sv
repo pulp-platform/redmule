@@ -701,23 +701,23 @@ redmule_memory_scheduler #(
   .H  ( Height      ),
   .GW ( GidxWidth   )
 ) i_memory_scheduler (
-  .clk_i             ( clk_i               ),
-  .rst_ni            ( rst_ni              ),
-  .clear_i           ( clear               ),
-  .z_priority_i      ( z_priority          ),
-  .reg_file_i        ( reg_file            ),
-  .flgs_streamer_i   ( flgs_streamer       ),
-  .cntrl_scheduler_i ( cntrl_scheduler     ),
-  .cntrl_flags_i     ( cntrl_flags         ),
-  .cntrl_streamer_o  ( cntrl_streamer      ),
-  .next_gidx_i       ( next_gidx_q         ),
-  .next_row_i        ( wq_next_row_q       ),
-  .scales_bias_o     ( scales_bias         ),
-  .scales_skip_o     ( scales_skip         ),
-  .zeros_bias_o      ( zeros_bias          ),
-  .zeros_skip_o      ( zeros_skip          ),
-  .wq_bias_o         ( wq_bias             ),
-  .wq_skip_o         ( wq_skip             )
+  .clk_i             ( clk_i           ),
+  .rst_ni            ( rst_ni          ),
+  .clear_i           ( clear           ),
+  .z_priority_i      ( z_priority      ),
+  .reg_file_i        ( reg_file        ),
+  .flgs_streamer_i   ( flgs_streamer   ),
+  .cntrl_scheduler_i ( cntrl_scheduler ),
+  .cntrl_flags_i     ( cntrl_flags     ),
+  .cntrl_streamer_o  ( cntrl_streamer  ),
+  .next_gidx_i       ( next_gidx_q     ),
+  .next_row_i        ( wq_next_row_q   ),
+  .scales_bias_o     ( scales_bias     ),
+  .scales_skip_o     ( scales_skip     ),
+  .zeros_bias_o      ( zeros_bias      ),
+  .zeros_skip_o      ( zeros_skip      ),
+  .wq_bias_o         ( wq_bias         ),
+  .wq_skip_o         ( wq_skip         )
 );
 
 
