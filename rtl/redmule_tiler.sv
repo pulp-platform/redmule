@@ -115,14 +115,17 @@ hwpe_ctrl_seq_mult #(
   .prod_o   ( x_rows_by_w_cols_iter         )
 );
 always_ff @(posedge clk_int or negedge rst_ni) begin
-  if(~rst_ni)
+  if(~rst_ni) begin
     x_rows_by_w_cols_iter_valid_q <= '0;
-  else if(clear_i | setback_i)
+    x_rows_by_w_cols_iter_valid <= '0;
+  end else if(clear_i | setback_i) begin
     x_rows_by_w_cols_iter_valid_q <= '0;
-  else
+    x_rows_by_w_cols_iter_valid <= '0;
+  end else begin
     x_rows_by_w_cols_iter_valid_q <= x_rows_by_w_cols_iter_valid_d;
+    x_rows_by_w_cols_iter_valid <= ~x_rows_by_w_cols_iter_valid_q & x_rows_by_w_cols_iter_valid_d;
+  end
 end
-assign x_rows_by_w_cols_iter_valid = ~x_rows_by_w_cols_iter_valid_q & x_rows_by_w_cols_iter_valid_d;
 
 // Sequential multiplier x_rows x w_cols x x_cols
 logic [47:0] x_rows_by_w_cols_by_x_cols_iter;
