@@ -140,7 +140,7 @@ flgs_scheduler_t  flgs_scheduler;
 
 // Register file binded from controller to FSM
 ctrl_regfile_t reg_file;
-flags_fifo_t   w_fifo_flgs;
+flags_fifo_t   w_fifo_flgs, z_fifo_flgs;
 cntrl_flags_t  cntrl_flags;
 
 /*--------------------------------------------------------------*/
@@ -231,7 +231,7 @@ hwpe_stream_fifo #(
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        (               ),
+  .flags_o        ( z_fifo_flgs   ),
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
 );
@@ -402,20 +402,22 @@ redmule_engine     #(
 /* |                    Memory Controller                      | */
 /*---------------------------------------------------------------*/
 
+logic z_priority;
+assign z_priority = z_buffer_flgs.z_priority | !z_fifo_flgs.empty;
 redmule_memory_scheduler #(
   .DW (DATAW_ALIGN),
   .W  (Width),
   .H  (Height)
 ) i_memory_scheduler (
-  .clk_i             ( clk_i                    ),
-  .rst_ni            ( rst_ni                   ),
-  .clear_i           ( clear                    ),
-  .z_priority_i      ( z_buffer_flgs.z_priority ),
-  .reg_file_i        ( reg_file                 ),
-  .flgs_streamer_i   ( flgs_streamer            ),
-  .cntrl_scheduler_i ( cntrl_scheduler          ),
-  .cntrl_flags_i     ( cntrl_flags              ),
-  .cntrl_streamer_o  ( cntrl_streamer           )
+  .clk_i             ( clk_i           ),
+  .rst_ni            ( rst_ni          ),
+  .clear_i           ( clear           ),
+  .z_priority_i      ( z_priority      ),
+  .reg_file_i        ( reg_file        ),
+  .flgs_streamer_i   ( flgs_streamer   ),
+  .cntrl_scheduler_i ( cntrl_scheduler ),
+  .cntrl_flags_i     ( cntrl_flags     ),
+  .cntrl_streamer_o  ( cntrl_streamer  )
 );
 
 
