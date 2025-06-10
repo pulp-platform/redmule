@@ -13,13 +13,15 @@ import redmule_pkg::*;
   localparam TCP = 1.0ns; // clock period, 1 GHz clock
   localparam TA  = 0.2ns; // application time
   localparam TT  = 0.8ns; // test time
+  parameter real PROB_STALL = `PROB_STALL;
 
   logic clk, rst_n, fetch_enable;
 
   redmule_tb #(
-    .TCP ( TCP ),
-    .TA  ( TA  ),
-    .TT  ( TT  ) 
+    .TCP       ( TCP        ),
+    .TA        ( TA         ),
+    .TT        ( TT         ) ,
+    .PROB_STALL( PROB_STALL )
   ) i_redmule_tb (
     .clk_i          ( clk          ),
     .rst_ni         ( rst_n        ),

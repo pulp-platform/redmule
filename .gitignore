@@ -1,0 +1,10 @@
+.bender**
+golden-model/venv/**
+**/build/**
+target/sim/vsim/**
+!target/sim/vsim/vsim.mk
+!target/sim/vsim/wave.tcl
+vendor/**
+**.pyc
+golden-model/*/txt/*.txt
+sw/inc/**

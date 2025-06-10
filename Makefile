@@ -50,6 +50,8 @@ gui      ?= 0
 ipstools ?= 0
 P_STALL  ?= 0.0
 
+common_defs += -D PROB_STALL=${P_STALL}
+
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE
 endif
@@ -121,9 +123,9 @@ dis:
 
 OP     ?= gemm
 fp_fmt ?= FP16
-M      ?= 24
-N      ?= 16
-K      ?= 16
+M      ?= 32
+N      ?= 32
+K      ?= 32
 
 golden: golden-clean
 	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
