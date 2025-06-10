@@ -121,6 +121,7 @@ package redmule_pkg;
     fpnew_pkg::fp_format_e           input_cast_dst_fmt;
     fpnew_pkg::fp_format_e           output_cast_src_fmt;
     fpnew_pkg::fp_format_e           output_cast_dst_fmt;
+    logic                            z_priority;
   } cntrl_streamer_t;
 
   typedef struct packed {
@@ -176,6 +177,7 @@ package redmule_pkg;
     logic loaded;
     logic y_ready;
     logic z_valid;
+    logic z_priority;
   } z_buffer_flgs_t;
 
   typedef struct packed {

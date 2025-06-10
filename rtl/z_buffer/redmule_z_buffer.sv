@@ -47,6 +47,9 @@ logic [$clog2(W)-1:0] store_shift_d, store_shift_q, w_index;
 
 logic load_en, store_en;
 
+logic [$clog2(TOT_DEPTH):0] z_height_tmp;
+logic [$clog2(TOT_DEPTH)-1:0] z_height;
+
 redmule_z_buffer_scm #(
   .WORD_SIZE ( BITW ),
   .ROWS      ( D    ),
@@ -71,6 +74,7 @@ redmule_z_buffer_scm #(
 
 assign flags_o.y_ready = load_en && ctrl_i.y_valid;
 assign flags_o.z_valid = store_en && ctrl_i.ready;
+assign flags_o.z_priority = store_en;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin  : state_register
   if(~rst_ni) begin
@@ -119,7 +123,7 @@ end
 
 // With very small leftovers on K it may happen that the z submatrix is completely stored before the current matrix of biases is fully pushed.
 // Therefore, we have to check that we are not in the process of pushing biases into the array before storing
-assign load_en  = current_state == EMPTY && ~ctrl_i.fill && d_index == '0;
+assign load_en  = current_state == EMPTY && ~ctrl_i.fill && d_index == '0 && fill_shift == '0;
 assign store_en = current_state == PUSHED;
 
 // Counter to track when the output buffer is full
@@ -215,10 +219,12 @@ always_comb begin : reset_depth_counter
   end
 end
 
+assign z_height_tmp = ctrl_i.z_height - 'd1;
+assign z_height = z_height_tmp[$clog2(TOT_DEPTH)-1:0];
+
 always_comb begin : z_strb_assignment
   z_strb_o = '0;
-
-  for (int i = 0; i < ctrl_i.z_height; i++) begin
+  for (int i = 0; i <= z_height; i++) begin
     z_strb_o[i*BITW/8+:BITW/8] = '1;
   end
 end
