@@ -7,8 +7,8 @@ packages:
     dependencies:
     - common_cells
   axi:
-    revision: 2f395b176bee1c769c80f060a4345fda965bb04b
-    version: 0.38.0
+    revision: f07498d53ecd5518b277c7d213ec3b71ca4df93c
+    version: 0.39.7
     source:
       Git: https://github.com/pulp-platform/axi.git
     dependencies:
@@ -80,7 +80,7 @@ packages:
     - register_interface
   hwpe-ctrl:
     revision: 3690a3c648f120546d8de2bc583d5170c36d2f20
-    version: null
+    version: 2.0.0
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
@@ -124,14 +124,15 @@ packages:
     - register_interface
     - tech_cells_generic
   register_interface:
-    revision: 146501d80052b61475cdc333d3aab4cd769fd5dc
-    version: 0.3.9
+    revision: 5daa85d164cf6b54ad061ea1e4c6f3624556e467
+    version: 0.4.5
     source:
       Git: https://github.com/pulp-platform/register_interface.git
     dependencies:
     - apb
     - axi
     - common_cells
+    - common_verification
   tech_cells_generic:
     revision: 7968dd6e6180df2c644636bc6d2908a49f2190cf
     version: 0.2.13
