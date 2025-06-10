@@ -78,6 +78,13 @@
 #define REDMULE_MCFG1_PTR 0x10
 #define REDMULE_ARITH_PTR 0x14
 
+// ECC Registers
+#define REDMULE_ECC_REG_OFFS 0x90
+#define DATA_CORR_ERR 0x00
+#define DATA_UNCORR_ERR 0x04
+#define METADATA_CORR_ERR 0x08
+#define METADATA_UNCORR_ERR 0x0c
+
 // OPs definition
 #define MATMUL 0x0
 #define GEMM 0x1

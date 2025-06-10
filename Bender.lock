@@ -1,4 +1,20 @@
 packages:
+  apb:
+    revision: 77ddf073f194d44b9119949d2421be59789e69ae
+    version: 0.2.4
+    source:
+      Git: https://github.com/pulp-platform/apb.git
+    dependencies:
+    - common_cells
+  axi:
+    revision: f07498d53ecd5518b277c7d213ec3b71ca4df93c
+    version: 0.39.7
+    source:
+      Git: https://github.com/pulp-platform/axi.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - tech_cells_generic
   cluster_interconnect:
     revision: 1284def6c0b7f7e9355eb093d00883ad9dead1b7
     version: null
@@ -51,17 +67,20 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 06fcba671e060f2e1b03b7ebe2d3e719f1557099
+    revision: 8408a6d7a7a4d814dcb3468934e49b407b1c783e
     version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
     dependencies:
     - cluster_interconnect
+    - common_cells
     - hwpe-stream
     - l2_tcdm_hybrid_interco
+    - redundancy_cells
+    - register_interface
   hwpe-ctrl:
     revision: 3690a3c648f120546d8de2bc583d5170c36d2f20
-    version: null
+    version: 2.0.0
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
@@ -92,6 +111,26 @@ packages:
     source:
       Git: https://github.com/pulp-platform/obi.git
     dependencies:
+    - common_cells
+    - common_verification
+  redundancy_cells:
+    revision: c37bdb47339bf70e8323de8df14ea8bbeafb6583
+    version: null
+    source:
+      Git: https://github.com/pulp-platform/redundancy_cells.git
+    dependencies:
+    - common_cells
+    - common_verification
+    - register_interface
+    - tech_cells_generic
+  register_interface:
+    revision: 5daa85d164cf6b54ad061ea1e4c6f3624556e467
+    version: 0.4.5
+    source:
+      Git: https://github.com/pulp-platform/register_interface.git
+    dependencies:
+    - apb
+    - axi
     - common_cells
     - common_verification
   tech_cells_generic:
