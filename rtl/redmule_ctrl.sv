@@ -139,7 +139,6 @@ module redmule_ctrl
 
   always_comb begin : controller_fsm
     cntrl_flags_o.idle = 1'b0;
-    cntrl_slave = '0;
     next = current;
 
     case (current)
