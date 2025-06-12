@@ -5,22 +5,28 @@
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 #
 
+import os
+import sys
 import numpy as np
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import argparse
+
+include_path = os.getenv('IncludeDir')
+if include_path:
+    sys.path.insert(0, os.path.abspath(include_path))
+
 import dump_utils as dump
-import os
 
 # COMPUTE:
-# Z[m_size, k_size] = ( X[m_size, n_size] max W[n_size, k_size] ) + Y[m_size, k_size]
+# Z[m_size, k_size] = max (( X[m_size, n_size] + W[n_size, k_size] ), Y[m_size, k_size])
 
 #Visualize data with more precision
 torch.set_printoptions(precision=10, sci_mode=False)
 
-parser = argparse.ArgumentParser("mm Operation Test")
+parser = argparse.ArgumentParser("AddMax Operation Test")
 parser.add_argument( '--m_size', type=int, default=3 )
 parser.add_argument( '--n_size', type=int, default=3 )
 parser.add_argument( '--k_size', type=int, default=3 )
@@ -36,12 +42,11 @@ k_size = args.k_size
 
 f = open(args.file_name, "w")
 
-# We want to perform a GEMM, of the kind Z = Y + X*W
 # Test Matrices
-X = torch.rand(m_size, n_size).half()
-W = torch.rand(n_size, k_size).half()
-Y = torch.rand(m_size, k_size).half()
-Z = torch.rand(m_size, k_size).half()
+X = torch.rand (m_size, n_size).half()
+W = torch.rand (n_size, k_size).half()
+Y = torch.rand (m_size, k_size).half()
+Z = torch.zeros(m_size, k_size).half()
 
 print("\nInput Data: ")
 print("\nX is: ", X, X.shape, X.dtype)
@@ -53,8 +58,12 @@ f.write('fp16 W[MID_CH*OUT_CH] = {'+dump.tensor_to_string(W)+'};\n')
 print("\nY is: ", Y, Y.shape, Y.dtype)
 f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 
-print("\nComputing matrix multiplication..")
-Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = W))
+print("\nComputing add-max..")
+for m in range(m_size):
+  for k in range(k_size):
+    Z[m][k] = Y[m][k]
+    for n in range(n_size):
+      Z[m][k] = torch.max(Z[m][k], torch.add(input = X[m][n], other = W[n][k]))
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
@@ -67,7 +76,6 @@ f.close()
 txt_path = args.txt_dir
 for f in os.listdir(txt_path):
     os.remove(os.path.join(txt_path, f))
-# os.mkdir(txt_path)
 f_x = open(''+txt_path+'/x_input.txt', "w")
 for i in range(m_size):
     for j in range (n_size):
@@ -258,7 +266,7 @@ f_d.write('#define K_SIZE  '+out_cols+'\n' )
 f_d.write('#define SRC_FMT FP16\n'         )
 f_d.write('#define DST_FMT FP16\n'         )
 f_d.write('#define FPFORMAT 16\n'          )
-f_d.write('uint8_t gemm_ops = GEMM; \n'    )
+f_d.write('uint8_t gemm_ops = ADDMAX; \n'  )
 f_d.write('\n#endif\n'                     )
 f_d.close()
 
@@ -269,20 +277,15 @@ f_d.close()
 f_c = open(''+inc_path+'/golden.h', "w")
 f_c.write(''+header+'')
 f_c.write('uint32_t golden ['+out_int+'] = {\n')
-
-ZFlattened = torch.flatten(Z)
-i = 0
-while i < ZFlattened.size(dim = -1) - 1:
-  c_bin_0 = bin(np.float16(ZFlattened[i]).view('H'))[2:].zfill(16)
-  c_bin_1 = bin(np.float16(ZFlattened[i+1]).view('H'))[2:].zfill(16)
-  c_hex_0 = hex(int(c_bin_0, 2))[2:]
-  c_hex_1 = hex(int(c_bin_1, 2))[2:]
-  c_hex   = c_hex_1+c_hex_0
-  f_c.write('0x'+c_hex+',\n')
-  i += 2
-if ZFlattened.size(dim = -1) % 2 != 0:
-  c_bin_0 = bin(np.float16(ZFlattened[i]).view('H'))[2:].zfill(16)
-  c_hex_0 = hex(int(c_bin_0, 2))[2:]
-  f_c.write('0x0000'+c_hex_0+',\n')
+for i in range(m_size):
+    j = 0
+    while j < k_size - 1:
+        c_bin_0 = bin(np.float16(Z[i][j]).view('H'))[2:].zfill(16)
+        c_bin_1 = bin(np.float16(Z[i][j+1]).view('H'))[2:].zfill(16)
+        c_hex_0 = hex(int(c_bin_0, 2))[2:]
+        c_hex_1 = hex(int(c_bin_1, 2))[2:]
+        c_hex   = c_hex_1+c_hex_0
+        f_c.write('0x'+c_hex+',\n')
+        j += 2
 f_c.write("};")
 f_c.close()

@@ -14,6 +14,8 @@ SW      ?=
 ## Perform Matrix-Matrix Operations of the kins _Z = Y (op2) (X (op1) W)_
 ## We assume X is _MxN_, W is _NxK_, while Y and Z are _MxK_
 
+IncludeDir := $(CUR_DIR)/common
+
 # Tensors Dimensions
 M ?= 3
 N ?= 3
@@ -46,7 +48,8 @@ addmax: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+    IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -58,7 +61,8 @@ addmin: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -70,7 +74,8 @@ gemm: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -82,9 +87,10 @@ maxmin: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
-	--inc_dir $(SW)/inc                       \
+	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
 	cd $(PENV);                               \
 	deactivate
@@ -94,7 +100,8 @@ minmax: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -106,7 +113,8 @@ mulmax: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -118,7 +126,8 @@ mulmin: check_penv
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
+	IncludeDir=$(IncludeDir)                  \
+	python3 ./$@.py                           \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
 	--txt_dir $(CUR_DIR)/$@/txt;              \
@@ -128,6 +137,6 @@ mulmin: check_penv
 golden-clean:
 	rm -rf FP16/net_parameters.h
 	rm -rf FP8/net_parameters.h
-	rm -rf FP16/scripts/__pycache__
-	rm -rf FP8/scripts/__pycache__
+	rm -rf FP16/__pycache__
+	rm -rf FP8/__pycache__
 	rm -rf addmax addmin gemm maxmin minmax mulmax mulmin
