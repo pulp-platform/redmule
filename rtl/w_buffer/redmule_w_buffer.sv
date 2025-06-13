@@ -150,9 +150,8 @@ for (genvar h = 0; h < H; h++) begin : gen_r_addr_registers
   end
 end
 
-for (genvar h = 0; h < H; h++) begin
+for (genvar h = 0; h < H; h++)
   assign wq_buffer_raddr[h] = h;
-end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin : element_counter
   if(~rst_ni) begin

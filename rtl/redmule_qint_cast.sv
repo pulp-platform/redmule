@@ -18,7 +18,7 @@ module redmule_qint_cast
   input  qint_fmt_e              fmt_i   ,
   hwpe_stream_intf_stream.sink   stream_i,
   hwpe_stream_intf_stream.source stream_o
-); 
+);
 
   logic [DW-1:0] data_cast;
 

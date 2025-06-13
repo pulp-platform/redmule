@@ -51,7 +51,7 @@ module redmule_dequantizer
 
   logic [H-1:0] round;
 
-  for (genvar i = 0; i < H; i++) begin
+  for (genvar i = 0; i < H; i++) begin: gen_rounding
     assign int_zeros[i]  = zeros_i[i] + 1;
     assign int_weighs[i] = qw_i[i] - int_zeros[i];
 
