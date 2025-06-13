@@ -14,7 +14,7 @@ import redmule_pkg::*;
   localparam TA  = 0.2ns; // application time
   localparam TT  = 0.8ns; // test time
   parameter  logic UseXif = 1'b0; // Wether to use CV32E40P/X (passed through the Makefile)
-  parameter int unsigned PROB_STALL = 0; // Dummy memories stall probability (passed through the Makefile)
+  parameter  real  PROB_STALL = 0; // Dummy memories stall probability (passed through the Makefile)
 
   logic clk, rst_n, fetch_enable;
 
