@@ -10,7 +10,7 @@
 #ifndef REDMULE_UTILS_H
 #define REDMULE_UTILS_H
 
-#define ERR 0x0011
+#define ERR 0x0000
 
 int redmule16_compare_int(uint32_t *actual_z, uint32_t *golden_z, int len) {
   uint32_t actual_word = 0;

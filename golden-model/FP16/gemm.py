@@ -19,6 +19,7 @@ if include_path:
     sys.path.insert(0, os.path.abspath(include_path))
 
 import dump_utils as dump
+import redmule_fma as fma
 
 # COMPUTE:
 # Z[m_size, k_size] = ( X[m_size, n_size] max W[n_size, k_size] ) + Y[m_size, k_size]
@@ -44,10 +45,10 @@ f = open(args.file_name, "w")
 
 # We want to perform a GEMM, of the kind Z = Y + X*W
 # Test Matrices
-X = torch.rand(m_size, n_size).half()
-W = torch.rand(n_size, k_size).half()
-Y = torch.rand(m_size, k_size).half()
-Z = torch.rand(m_size, k_size).half()
+X = torch.rand(m_size, n_size)
+W = torch.rand(n_size, k_size)
+Y = torch.rand(m_size, k_size)
+Z = torch.rand(m_size, k_size)
 
 print("\nInput Data: ")
 print("\nX is: ", X, X.shape, X.dtype)
@@ -60,7 +61,12 @@ print("\nY is: ", Y, Y.shape, Y.dtype)
 f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 
 print("\nComputing matrix multiplication..")
-Z = torch.add(input = Y, other = torch.mm(input = X, mat2 = W))
+
+X_np = X.cpu().numpy()
+W_np = W.cpu().numpy()
+Y_np = Y.cpu().numpy()
+Z = fma.matrix_multiply_with_bittrue_fma(X_np, W_np, Y_np)
+Z = torch.from_numpy(Z).to(dtype=torch.float16)
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
