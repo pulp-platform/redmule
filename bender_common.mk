@@ -6,7 +6,7 @@
 #
 
 common_targs += -t cv32e40p_exclude_tracer
-
+common_targs += -t cv32e40p_use_ff_regfile
 ifeq ($(REDMULE_COMPLEX),1)
 	common_targs += -t redmule_complex
 	common_targs += -e cv32e40p

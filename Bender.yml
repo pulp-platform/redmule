@@ -12,7 +12,7 @@ package:
     - "Yvan Tortorella (yvan.tortorella@unibo.it)"
 
 dependencies:
-  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "pulpissimo-v4.1.0"                      }
+  cv32e40p          : { git: "https://github.com/pulp-platform/cv32e40p.git"          , rev: "astral-v1.0"                            }
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , rev: 6d715406d5518446d4d7449f68068b963a827c81 } #branch: ab/strb_fix
