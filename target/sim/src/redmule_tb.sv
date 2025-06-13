@@ -16,7 +16,7 @@ module redmule_tb
   parameter TA  = 0.2ns, // application time
   parameter TT  = 0.8ns,  // test time
   parameter logic UseXif = 1'b0,
-  parameter int unsigned PROB_STALL = 0
+  parameter real  PROB_STALL = 0
 )(
   input logic clk_i,
   input logic rst_ni,
