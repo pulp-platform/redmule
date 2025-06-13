@@ -14,7 +14,8 @@ module redmule_tb
 #(
   parameter TCP = 1.0ns, // clock period, 1 GHz clock
   parameter TA  = 0.2ns, // application time
-  parameter TT  = 0.8ns  // test time
+  parameter TT  = 0.8ns,  // test time
+  parameter real  PROB_STALL = 0
 )(
   input logic clk_i,
   input logic rst_ni,
