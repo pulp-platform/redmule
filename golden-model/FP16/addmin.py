@@ -5,22 +5,28 @@
 # Yvan Tortorella <yvan.tortorella@unibo.it>
 #
 
+import os
+import sys
 import numpy as np
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import argparse
+
+include_path = os.getenv('IncludeDir')
+if include_path:
+    sys.path.insert(0, os.path.abspath(include_path))
+
 import dump_utils as dump
-import os
 
 # COMPUTE:
-# Z[m_size, k_size] = min(max ( X[m_size, n_size], W[n_size, k_size] ), Y[m_size, k_size])
+# Z[m_size, k_size] = min (( X[m_size, n_size] + W[n_size, k_size] ), Y[m_size, k_size])
 
 #Visualize data with more precision
 torch.set_printoptions(precision=10, sci_mode=False)
 
-parser = argparse.ArgumentParser("AddMax Operation Test")
+parser = argparse.ArgumentParser("GEMM-Ops Operation Test")
 parser.add_argument( '--m_size', type=int, default=3 )
 parser.add_argument( '--n_size', type=int, default=3 )
 parser.add_argument( '--k_size', type=int, default=3 )
@@ -52,12 +58,12 @@ f.write('fp16 W[MID_CH*OUT_CH] = {'+dump.tensor_to_string(W)+'};\n')
 print("\nY is: ", Y, Y.shape, Y.dtype)
 f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 
-print("\nComputing max-min..")
+print("\nComputing add-min..")
 for m in range(m_size):
   for k in range(k_size):
     Z[m][k] = Y[m][k]
     for n in range(n_size):
-      Z[m][k] = torch.min(Z[m][k], torch.max(X[m][n], W[n][k]))
+      Z[m][k] = torch.min(Z[m][k], torch.add(input = X[m][n], other = W[n][k]))
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')
@@ -260,7 +266,7 @@ f_d.write('#define K_SIZE  '+out_cols+'\n' )
 f_d.write('#define SRC_FMT FP16\n'         )
 f_d.write('#define DST_FMT FP16\n'         )
 f_d.write('#define FPFORMAT 16\n'          )
-f_d.write('uint8_t gemm_ops = MAXMIN; \n'  )
+f_d.write('uint8_t gemm_ops = ADDMIN; \n'  )
 f_d.write('\n#endif\n'                     )
 f_d.close()
 
