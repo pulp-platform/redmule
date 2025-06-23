@@ -428,6 +428,7 @@ localparam int unsigned          D           = DW/(H*BITW)
     .testmode_i ( '0                                                                 ),
     .full_o     ( lookahead_fifo_full                                                ),
     .empty_o    ( lookahead_fifo_empty                                               ),
+    .usage_o    (                                                                    ),
     .data_i     ( {evict_ptr_d, gidx_present_d, current_gidx_d, lookahead_matches_d} ),
     .push_i     ( lookahead_fifo_push                                                ),
     .data_o     ( {evict_ptr_q, gidx_present_q, current_gidx_q, lookahead_matches_q} ),
