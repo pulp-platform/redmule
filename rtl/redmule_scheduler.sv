@@ -175,7 +175,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       x_shift_cnt_q <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst)
+      if (clear_i || cntrl_scheduler_i.rst || (flgs_x_buffer_i.full && flgs_x_buffer_i.empty))
         x_shift_cnt_q <= '0;
       else if (x_shift_cnt_en)
         x_shift_cnt_q <= x_shift_cnt_d;
@@ -230,7 +230,7 @@ module redmule_scheduler
   assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
 `endif
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
-  assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && x_shift_cnt_q == H-1) && flgs_x_buffer_i.full && ~stall_engine;
+  assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && (x_shift_cnt_q == H-1 || flgs_x_buffer_i.empty)) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en;
 
   /************************

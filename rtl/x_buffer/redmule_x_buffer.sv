@@ -274,13 +274,13 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buf_write_counter
   if(~rst_ni) begin
     buf_write_cnt <= '0;
   end else begin
-    if (clear_i || pad_read_cnt_rst)
+    if (clear_i || pad_read_cnt_rst /*pad_r_addr_q == buf_write_cnt-1*/ )
       buf_write_cnt <= '0;
     else begin
       if ((current_state == PAD_EMPTY || current_state == FAST_FILL && ~first_block) && ctrl_i.h_shift)
         buf_write_cnt <= buf_write_cnt + 1;
       else if (ctrl_i.pad_setup)
-        buf_write_cnt <= 2*H;
+        buf_write_cnt <= ctrl_i.slots/*2*H*/;
     end
   end
 end
