@@ -647,7 +647,7 @@ redmule_engine     #(
 /*---------------------------------------------------------------*/
 
 logic z_priority;
-assign z_priority = z_buffer_flgs.z_priority | !z_fifo_flgs.empty;
+assign z_priority = z_buffer_flgs.z_priority & !z_fifo_flgs.empty;
 redmule_memory_scheduler #(
   .DW ( DATAW_ALIGN ),
   .W  ( Width       ),

@@ -85,7 +85,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : refill_flag_register
       refilling <= '1;
     else if (flags_o.full)
       refilling <= '0;
-    else if (flags_o.empty)
+    else if (pad_read_cnt >= ctrl_i.slots)
       refilling <= '1;
   end
 end
@@ -111,9 +111,8 @@ redmule_x_pad_scm #(
 
 // Normally, we only write a row in the buffer when another one is read
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
-assign buf_write_en = ( current_state == FAST_FILL ||
-                        current_state == FILL && ctrl_i.h_shift)
-                      && ~refilling && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x);
+assign buf_write_en = (current_state == FAST_FILL && ~refilling ||
+                      current_state == FILL && ctrl_i.h_shift) && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x);
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),
@@ -160,7 +159,7 @@ always_comb begin : fsm
 
     FAST_FILL: begin
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
-      if (pad_r_addr_q == buf_write_cnt-1 && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
+      if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
         if (pad_read_cnt == ctrl_i.slots) begin
           if (~flags_o.full) begin
             next_state = PAD_EMPTY;
@@ -261,7 +260,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : pad_read_counter
       if (pad_read_cnt_rst)
         pad_read_cnt <= 1;
       else if (pad_read_en)
-        pad_read_cnt <= pad_read_cnt + 1;
+        pad_read_cnt <= pad_read_cnt == ctrl_i.slots ? pad_read_cnt : pad_read_cnt + 1;
     end
   end
 end
@@ -274,13 +273,13 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buf_write_counter
   if(~rst_ni) begin
     buf_write_cnt <= '0;
   end else begin
-    if (clear_i || pad_read_cnt_rst /*pad_r_addr_q == buf_write_cnt-1*/ )
+    if (clear_i || pad_read_cnt_rst)
       buf_write_cnt <= '0;
     else begin
       if ((current_state == PAD_EMPTY || current_state == FAST_FILL && ~first_block) && ctrl_i.h_shift)
         buf_write_cnt <= buf_write_cnt + 1;
       else if (ctrl_i.pad_setup)
-        buf_write_cnt <= ctrl_i.slots/*2*H*/;
+        buf_write_cnt <= ctrl_i.slots;
     end
   end
 end
