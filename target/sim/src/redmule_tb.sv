@@ -23,7 +23,6 @@ module redmule_tb
 );
 
   // parameters
-  localparam int unsigned PROB_STALL = 0;
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 10;
   localparam int unsigned DW = redmule_pkg::DATA_W;
