@@ -161,7 +161,7 @@ always_comb begin : fsm
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
       if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
         if (pad_read_cnt == ctrl_i.slots) begin
-          if (~flags_o.full) begin
+          if (~flags_o.full || ctrl_i.rst_w_index) begin
             next_state = PAD_EMPTY;
           end else begin
             next_state = WAIT_FIRST_READ;
@@ -197,7 +197,7 @@ always_comb begin : fsm
     FILL: begin
       if (flags_o.empty) begin
         // If the width of the buffer is 1, the full flag is asserted at the same time as the empty flag so we skip the PAD_EMPTY state
-        if (flags_o.full) begin
+        if (ctrl_i.width == 1 && flags_o.full) begin
           next_state = FILL;
         end else begin
           next_state = PAD_EMPTY;

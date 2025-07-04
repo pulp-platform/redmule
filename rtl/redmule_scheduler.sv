@@ -317,7 +317,7 @@ module redmule_scheduler
     end
   end
 
-  assign w_zero_cnt_d = w_done && current_state == LOAD_W && w_zero_cnt_q != H ? w_zero_cnt_q + 1 : w_zero_cnt_q;
+  assign w_zero_cnt_d = w_done && current_state == LOAD_W && ~stall_engine && w_zero_cnt_q != H ? w_zero_cnt_q + 1 : w_zero_cnt_q;
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
 
@@ -638,14 +638,14 @@ module redmule_scheduler
                           ~check_x_full      && check_x_full_en      ||
                           ~check_y_loaded    && check_y_loaded_en    ||
                           ~check_quant_valid && check_quant_valid_en
-                        );
+                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority;
 `else
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid     && check_w_valid_en     ||
                           ~check_x_full      && check_x_full_en      ||
                           ~check_y_loaded    && check_y_loaded_en    ||
                           ~check_quant_valid && check_quant_valid_en
-                        );
+                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority;
 `endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register
