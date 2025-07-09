@@ -37,6 +37,7 @@ module redmule_scheduler
 
   input  logic                            wq_valid_i        ,
   input  logic                            zeros_valid_i     ,
+  input  logic                            next_wrow_valid_i ,
 
   input  logic                            engine_flush_i    ,
 
@@ -159,7 +160,7 @@ module redmule_scheduler
     end
   end
 
-  assign x_done_en = x_rows_iter_en && x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1;
+  assign x_done_en = flgs_streamer_i.x_stream_source_flags.ready_start && x_rows_iter_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 && x_w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 && x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1;
 
   assign cntrl_x_buffer_o.height = x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][23:16] : D;
   assign cntrl_x_buffer_o.slots  = x_cols_iter_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && reg_file_i.hwpe_params[LEFTOVERS][23:16] != '0 ? reg_file_i.hwpe_params[X_SLOTS] : D;
@@ -170,6 +171,7 @@ module redmule_scheduler
    ******************************/
   logic [$clog2(H-1)-1:0] x_shift_cnt_d, x_shift_cnt_q;
   logic                   x_shift_cnt_en;
+  logic [$clog2(H-1)-1:0] x_shift_offs_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_shift_counter
     if(~rst_ni) begin
@@ -179,6 +181,14 @@ module redmule_scheduler
         x_shift_cnt_q <= '0;
       else if (x_shift_cnt_en)
         x_shift_cnt_q <= x_shift_cnt_d;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : x_shift_offset
+    if(~rst_ni) begin
+      x_shift_offs_q <= '0;
+    end else if (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) begin
+      x_shift_offs_q <= x_shift_cnt_q + x_shift_offs_q;
     end
   end
 
@@ -616,15 +626,16 @@ module redmule_scheduler
 
   // Check if the x buffer is full
   // Only enable this check when a new set of x columns is to be loaded
+  // This check is performed one cycle in earlier (i.e. during the WAIT state) as the X buffer takes one cycle after the full signal is asserted to actually update the outputs
   assign check_x_full      = flgs_x_buffer_i.full;
-  assign check_x_full_en   = x_refill && x_shift_cnt_q == H-1 && ~x_done;
+  assign check_x_full_en   = x_refill && x_shift_cnt_q == (H-1 - x_shift_offs_q) && ~x_done;
 
   // Check if the new Y rows are loaded and ready to be pushed
   // Only enable this check when the results of an iteration are available
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
-  assign check_quant_valid = (zeros_valid_i || flgs_w_buffer_i.gid_repeated) && wq_valid_i;
+  assign check_quant_valid = (zeros_valid_i || flgs_w_buffer_i.gid_repeated) && wq_valid_i && (next_wrow_valid_i || current_state != LOAD_W || x_done_en);
   assign check_quant_valid_en = ~w_done && reg_file_i.hwpe_params[DEQUANT_MODE][0];
 
   /******************************
@@ -635,17 +646,17 @@ module redmule_scheduler
                           ~check_x_full && check_x_full_en
                         ) : current_state == LOAD_W && (
                           ~check_w_valid     && check_w_valid_en     ||
-                          ~check_x_full      && check_x_full_en      ||
                           ~check_y_loaded    && check_y_loaded_en    ||
                           ~check_quant_valid && check_quant_valid_en
-                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority;
+                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
+                          || current_state == WAIT && ~check_x_full && check_x_full_en;
 `else
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid     && check_w_valid_en     ||
-                          ~check_x_full      && check_x_full_en      ||
                           ~check_y_loaded    && check_y_loaded_en    ||
                           ~check_quant_valid && check_quant_valid_en
-                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority;
+                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
+                          || current_state == WAIT && ~check_x_full && check_x_full_en;
 `endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register
@@ -684,10 +695,12 @@ module redmule_scheduler
     if(~rst_ni) begin
       x_refill <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || cntrl_x_buffer_o.rst_w_index) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_refill <= '0;
       end else if (flgs_x_buffer_i.empty) begin
         x_refill <= '1;
+      end else if (cntrl_x_buffer_o.rst_w_index) begin
+        x_refill <= '0;
       end
     end
   end

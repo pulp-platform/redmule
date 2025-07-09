@@ -28,7 +28,7 @@ localparam int unsigned          TOT_DEPTH = H*D
   output x_buffer_flgs_t                                     flags_o          ,
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o       ,
   input  logic                                      [DW-1:0] x_buffer_i       ,
-  input  logic                             [$clog2(D*H)-1:0] next_wrow_i      ,   //Tentative name
+  input  logic                             [$clog2(D*H)-1:0] next_wrow_i      ,
   input  logic                                               next_wrow_valid_i,
   output logic                                               next_wrow_ready_o
 );
@@ -159,9 +159,9 @@ always_comb begin : fsm
 
     FAST_FILL: begin
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
-      if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
+      if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots)) && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x)) begin
         if (pad_read_cnt == ctrl_i.slots) begin
-          if (~flags_o.full || ctrl_i.rst_w_index) begin
+          if (~flags_o.full/* || ctrl_i.rst_w_index*/) begin
             next_state = PAD_EMPTY;
           end else begin
             next_state = WAIT_FIRST_READ;
@@ -180,11 +180,7 @@ always_comb begin : fsm
 
     WAIT_FIRST_READ: begin
       if (h_index_r == H-1 && ctrl_i.h_shift) begin
-        if (ctrl_i.rst_w_index) begin
-          next_state = PAD_EMPTY;
-        end  else begin
           next_state = FILL;
-        end
       end
     end
 
