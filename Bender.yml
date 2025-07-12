@@ -18,9 +18,9 @@ dependencies:
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: =1.9.0          }
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: "3690a3c"           } # master
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: "8408a6d"           } # master
-  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"       }
+  fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.2.3"       }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: =1.38.0         }
-  obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: =0.1.6          }
+  obi               : { git: "https://github.com/pulp-platform/obi.git"               , version: =0.1.7          }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: =0.2.13         }
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: =0.4.5          }
 
