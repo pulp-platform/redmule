@@ -43,7 +43,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
         x_cols_iters_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_cols_iters_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done) begin
         x_cols_iters_q <= x_cols_iters_d;
@@ -57,7 +57,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       w_iters_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         w_iters_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1) begin
         w_iters_q <= w_iters_d;
@@ -71,7 +71,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       x_rows_iters_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_rows_iters_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1) begin
         x_rows_iters_q <= x_rows_iters_d;
@@ -85,7 +85,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       tot_x_read_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         tot_x_read_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done) begin
         tot_x_read_q <= tot_x_read_q + 1;
@@ -99,7 +99,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       x_cols_offs_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_cols_offs_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done) begin
         x_cols_offs_q <= x_cols_offs_d;
@@ -113,7 +113,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       x_rows_offs_q <= '0;
     end else begin
-      if (clear_i) begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
         x_rows_offs_q <= '0;
       end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1) begin
         x_rows_offs_q <= x_rows_offs_d;
