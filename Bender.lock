@@ -67,7 +67,7 @@ packages:
     dependencies:
     - common_cells
   hci:
-    revision: 5421524afca701e45a83d0f1ec47568c019e021a
+    revision: 8408a6d7a7a4d814dcb3468934e49b407b1c783e
     version: null
     source:
       Git: https://github.com/pulp-platform/hci.git
@@ -106,8 +106,8 @@ packages:
       Git: https://github.com/pulp-platform/L2_tcdm_hybrid_interco.git
     dependencies: []
   obi:
-    revision: 0155fc34e900c7c884e081c0a1114a247937ff69
-    version: 0.1.7
+    revision: 6c7ee864172936dd6728c7352c4c65a905a2a133
+    version: null
     source:
       Git: https://github.com/pulp-platform/obi.git
     dependencies:
