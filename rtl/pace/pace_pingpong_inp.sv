@@ -6,15 +6,16 @@
 //
 // This module takes a 256b data and splits it to 128b to feed it to the engine for 2 cycles.
 module pace_pingpong_inp #(
-  parameter int unsigned InpDataWidth  = 256,
-  parameter int unsigned NumRows       = 8,
-  parameter int unsigned OupDataWidth  = 16
+  parameter int unsigned InpDataWidth    = 256,
+  parameter int unsigned NumRows         = 8,
+  parameter int unsigned CEOupDataWidth  = 16,
+  localparam int unsigned OupDataWidth   = NumRows * CEOupDataWidth
 ) (
   input  logic                                    clk_i,
   input  logic                                    rst_ni,
   input  logic                                    clear_i,
   input  logic                                    enable_i,
-  output logic [NumRows-1:0][OupDataWidth-1:0]    output_o,
+  output logic [NumRows-1:0][CEOupDataWidth-1:0]  output_o,
   output logic                                    valid_o,
   input  logic                                    ready_i,
   hwpe_stream_intf_stream.sink                    input_i
@@ -22,13 +23,23 @@ module pace_pingpong_inp #(
 
   // Local signals
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( InpDataWidth*NumRows )
+    .DATA_WIDTH (InpDataWidth/2 )
   ) ping_pong_buffer [1:0] (
     .clk ( clk_i )
   );
-  logic                            output_handshake;
-  logic [NumRows*OupDataWidth-1:0] output_buffer;
-  logic                            ping_pong_status_d, ping_pong_status_q;
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( InpDataWidth/2 )
+  ) output_buffer (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( InpDataWidth/2 )
+  ) output_buffer_fifo (
+    .clk ( clk_i )
+  );
+
 
   // Stream splitter
   hwpe_stream_split #(
@@ -42,33 +53,49 @@ module pace_pingpong_inp #(
     .pop_o   ( ping_pong_buffer )
   );
 
-  // Ready/valid handshake
-  assign ping_pong_buffer[0].ready = output_handshake & ping_pong_status_q & enable_i;
-  assign ping_pong_buffer[1].ready = output_handshake & ping_pong_status_q & enable_i;
+  hwpe_stream_package::ctrl_serdes_t ctrl_serdes;
 
-  assign output_buffer = ping_pong_status_q ? ping_pong_buffer[1].data  : ping_pong_buffer[0].data;
-  assign valid_o       = ping_pong_status_q ? ping_pong_buffer[1].valid : ping_pong_buffer[0].valid;
+  assign ctrl_serdes.clear_serdes_state = clear_i;
+  assign ctrl_serdes.nb_contig_m1       = 0;
+  assign ctrl_serdes.first_stream       = 1'b0;
+
+  hwpe_stream_serialize #(
+    .NB_IN_STREAMS ( 2            ),
+    .CONTIG_LIMIT  ( 1024         ),
+    .DATA_WIDTH    ( OupDataWidth ),
+    .SYNC_READY    ( 1'b1         )
+  ) i_hwpe_stream_serialize (
+    .clk_i   ( clk_i            ),
+    .rst_ni  ( rst_ni           ),
+    .clear_i ( clear_i          ),
+    .ctrl_i  ( ctrl_serdes      ),
+    .push_i  ( ping_pong_buffer ),
+    .pop_o   ( output_buffer    )
+  );
+
+  hwpe_stream_fifo #(
+    .DATA_WIDTH ( OupDataWidth ),
+    .FIFO_DEPTH ( 2            ),
+    .LATCH_FIFO ( 0            ),
+    .LATCH_FIFO_TEST_WRAP ( 0  )
+  ) i_hwpe_stream_fifo (
+    .clk_i   ( clk_i              ),
+    .rst_ni  ( rst_ni             ),
+    .clear_i ( clear_i            ),
+    .flags_o (                    ),
+    .push_i  ( output_buffer      ),
+    .pop_o   ( output_buffer_fifo )
+  );
 
   // Output slicing
   generate
     for (genvar r = 0; r < NumRows; r++) begin : gen_output_unpack
-      assign output_o[r] = output_buffer[(OupDataWidth*(r+1))-1 -: OupDataWidth];
+      assign output_o[r] = output_buffer_fifo.data[(CEOupDataWidth*(r+1))-1 -: CEOupDataWidth];
     end
   endgenerate
+  assign valid_o = output_buffer_fifo.valid;
+  assign output_buffer_fifo.ready = ready_i & enable_i;
 
-  // Handshake logic
-  assign output_handshake = valid_o & ready_i;
 
-  // Ping-pong control
-  assign ping_pong_status_d = clear_i             ? 1'b0 :
-                              output_handshake    ? ~ping_pong_status_q :
-                                                    ping_pong_status_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : gen_ping_pong_status_ff
-    if (~rst_ni) begin
-      ping_pong_status_q <= 1'b0;
-    end else begin
-      ping_pong_status_q <= ping_pong_status_d;
-    end
-  end
 
 endmodule

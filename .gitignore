@@ -1,0 +1,9 @@
+**venv
+**.bender
+target/sim/vsim/work/
+sw/build/
+golden-model/**/txt/
+target/sim/vsim/vsim.wlf
+sw/inc/*
+.bender/** */
+target/sim/vsim/transcript**
