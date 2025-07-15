@@ -15,6 +15,9 @@ def float16_to_hex(f16_val):
 def silu(x):
     return x / (1 + np.exp(-x))
 
+def exp(x):
+    return np.exp(x)
+
 # === BST Partitioning ===
 
 def build_bst_indices(n_partitions):
@@ -61,7 +64,7 @@ def piecewise_poly_approx_bst_fp16(
 
     coeffs = []
     for i in range(partitions):
-        x = np.linspace(raw_bps[i], raw_bps[i + 1], 50).astype(np.float16)
+        x = np.linspace(raw_bps[i], raw_bps[i + 1], 500).astype(np.float16)
         y = func(x.astype(np.float32)).astype(np.float16)
         p = np.polynomial.Polynomial.fit(x.astype(np.float32), y.astype(np.float32), deg=degree,
                                          domain=[float(raw_bps[i]), float(raw_bps[i + 1])])
@@ -73,6 +76,7 @@ def piecewise_poly_approx_bst_fp16(
     y_approx = np.zeros_like(x_vals)
 
     debug_lines = []
+    custom_debug_lines = []
 
     # breakpoint layout
     debug_lines.append("=== Raw Breakpoints (sorted) ===")
@@ -115,6 +119,8 @@ def piecewise_poly_approx_bst_fp16(
         dbg.append(f"  y_approx  = {y_approx[idx]:.5f} ({float16_to_hex(y_approx[idx])})")
         dbg.append(f"  error     = {float(y_true[idx] - y_approx[idx]):.5f}")
         debug_lines.append("\n".join(dbg) + "\n")
+        if idx % 16 == 0:
+            custom_debug_lines.append("\n".join(dbg))
 
     return {
         "x_vals": x_vals,
@@ -122,15 +128,17 @@ def piecewise_poly_approx_bst_fp16(
         "y_approx": y_approx,
         "breakpoints_bst": breakpoints_bst,
         "coeffs": coeffs,
-        "debug_lines": debug_lines
+        "debug_lines": debug_lines,
+        "custom_debug_lines": custom_debug_lines
     }
 
 
 def write_debug_output(results, debug_file="execution.txt"):
     with open(debug_file, "w") as f:
-        for line in results["debug_lines"]:
+        for line in results:
             f.write(line + "\n")
     print(f"✅ Debug written to: {debug_file}")
+
 
 def write_coefficients_output(results, coeff_file="coefficients.txt"):
     with open(coeff_file, "w") as f:
@@ -245,8 +253,8 @@ def write_tensor_dim_inc_file(stimuli_file = "tensor_dim.h", n_tests=1000):
     f_d.write('#ifndef __TENSOR_DIM__\n'       )
     f_d.write('#define __TENSOR_DIM__\n\n'     )
     f_d.write('#define M_SIZE  8 \n'           )
-    f_d.write('#define N_SIZE  32\n'            )
-    f_d.write(f'#define K_SIZE  {n_tests/8} \n')
+    f_d.write('#define N_SIZE  64\n'            )
+    f_d.write(f'#define K_SIZE  {n_tests/32} \n')
     f_d.write('#define SRC_FMT FP16\n'         )
     f_d.write('#define DST_FMT FP16\n'         )
     f_d.write('#define FPFORMAT 16\n'          )
@@ -258,27 +266,28 @@ def write_tensor_dim_inc_file(stimuli_file = "tensor_dim.h", n_tests=1000):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser("PACE Operation Test")
-    parser.add_argument( '--x_min',     type=int, default=-6 )
-    parser.add_argument( '--x_max',     type=int, default=6 )
+    parser.add_argument( '--x_min',     type=int, default=-11 )
+    parser.add_argument( '--x_max',     type=int, default=0 )
     parser.add_argument( '--f_name',    type=str, default="silu" )
     parser.add_argument( '--n_parts',   type=int, default=8 )
     parser.add_argument( '--n_deg',     type=int, default=4 )
-    parser.add_argument( '--n_tests',   type=int, default=1024 )
+    parser.add_argument( '--n_tests',   type=int, default=4096 )
     parser.add_argument( '--file_name', type=str, default='net_parameters.h')
     parser.add_argument( '--inc_dir',   type=str)
     parser.add_argument( '--txt_dir',   type=str)
     args = parser.parse_args()
     results = piecewise_poly_approx_bst_fp16(
-        silu, xmin=-6, xmax=6, degree=4, partitions=8, n_stimuli=args.n_tests
+        exp, xmin=args.x_min, xmax=args.x_max, degree=4, partitions=8, n_stimuli=args.n_tests
     )
-    write_debug_output(debug_file=os.path.join(args.txt_dir,"execution.txt"),results=results)
+    write_debug_output(debug_file=os.path.join(args.txt_dir,"execution.txt"),results=results["debug_lines"])
+    write_debug_output(debug_file=os.path.join(args.txt_dir,"execution_custom.txt"),results=results["custom_debug_lines"])
     write_coefficients_output(coeff_file=os.path.join(args.txt_dir,"coefficients.txt"), results=results)
     write_inp_inc_file(results, stimuli_file=os.path.join(args.inc_dir, "w_input.h"))
     write_golden_oup_inc_file(results, stimuli_file=os.path.join(args.inc_dir, "golden.h"))
     write_actual_oup_inc_file(results, stimuli_file=os.path.join(args.inc_dir, "z_output.h"))
     write_golden_inc_debug_file(results, stimuli_file=os.path.join(args.txt_dir, "golden_debug.h"))
     write_y_inp_inc_file(stimuli_file=os.path.join(args.inc_dir, "y_input.h"))
-    write_x_file(coeffs=results["coeffs"], xmin=-6, xmax=6, partitions=8, stimuli_file=os.path.join(args.inc_dir, "x_input.h")) 
+    write_x_file(coeffs=results["coeffs"], xmin=args.x_min, xmax=args.x_max, partitions=8, stimuli_file=os.path.join(args.inc_dir, "x_input.h")) 
     write_tensor_dim_inc_file(stimuli_file=os.path.join(args.inc_dir, "tensor_dim.h"), n_tests=args.n_tests)
 
 

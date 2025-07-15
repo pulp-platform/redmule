@@ -10,7 +10,10 @@
 
 module pace_pingpong_oup #(
   parameter int unsigned NumRows        = 8,
-  parameter int unsigned InpDataWidth   = 16
+  parameter int unsigned InpDataWidth   = 16,
+  localparam int unsigned InputStreamWidth = NumRows*InpDataWidth,
+  localparam int unsigned NumStreams = 2,
+  localparam int unsigned OutputStreamWidth = NumStreams*InputStreamWidth
 ) (
   input  logic                                 clk_i,
   input  logic                                 rst_ni,
@@ -22,51 +25,111 @@ module pace_pingpong_oup #(
   hwpe_stream_intf_stream.source               output_o
 );
 
-  // Internal signals
-  logic [NumRows*InpDataWidth-1:0]    input_buffer_d, input_buffer_q;
-  logic [2*NumRows*InpDataWidth-1:0]  flattened_oup_buffer;
-  logic                               ping_pong_status_d, ping_pong_status_q;
-  logic                               input_handshake;
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH (InputStreamWidth)
+  ) input_stream (
+    .clk ( clk_i )
+  );
 
-  // Handshake
-  assign input_handshake = valid_i & ready_o;
+  assign input_stream.data   = input_i;
+  assign input_stream.valid  = valid_i;
+  assign input_stream.strb   = '1;
+  assign ready_o             = input_stream.ready; 
 
-  // Input buffering logic
-  assign input_buffer_d = clear_i ? '0 :
-                          (input_handshake && ~ping_pong_status_q) ? input_i : input_buffer_q;
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH (InputStreamWidth)
+  ) input_stream_demux[1:0] (
+    .clk ( clk_i )
+  );
 
-  // Flatten the buffered output
-  generate
-    for (genvar r = 0; r < 2*NumRows; r++) begin : gen_flattened_output
-      if (r < NumRows) begin : gen_even_entry
-        assign flattened_oup_buffer[(r+1)*InpDataWidth-1 -: InpDataWidth] = input_buffer_q[(r+1)*InpDataWidth-1 -: InpDataWidth];
-      end else begin : gen_odd_entry
-        assign flattened_oup_buffer[(r+1)*InpDataWidth-1 -: InpDataWidth] = input_i[r-NumRows];
-      end
-    end
-  endgenerate
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH (InputStreamWidth)
+  ) input_stream_demux_fifo[1:0] (
+    .clk ( clk_i )
+  );
 
-  // Output assignments
-  assign output_o.data  = flattened_oup_buffer;
-  assign output_o.valid = valid_i & ping_pong_status_q;
-  assign output_o.strb  = '1;
-  assign ready_o        = enable_i && (((output_o.ready & output_o.valid) && ping_pong_status_q) || ~ping_pong_status_q);
-  // When the input data is not latched that is ping_pong_status_q == 0
-  // Else when one input data is latched(ping_pong_status_q == 1) and there is a handhake then one data could be taken
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH (InputStreamWidth)
+  ) input_stream_fenced[1:0] (
+    .clk ( clk_i )
+  );
 
-  // Ping-pong status control
-  assign ping_pong_status_d = clear_i         ? 1'b0 :
-                              input_handshake ? ~ping_pong_status_q :
-                                                ping_pong_status_q;
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : ping_pong_status_ff
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH (OutputStreamWidth)
+  ) input_stream_merged (
+    .clk ( clk_i )
+  );
+
+  logic sel, sel_d, sel_q; 
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
-      ping_pong_status_q <= 1'b0;
-      input_buffer_q     <= '0;
+      sel_q <= 1'b0;
     end else begin
-      ping_pong_status_q <= ping_pong_status_d;
-      input_buffer_q     <= input_buffer_d;
+      sel_q <= sel_d;
     end
   end
 
+  assign sel = sel_q;
+
+  always_comb begin 
+    sel_d = sel_q; 
+    if(clear_i) begin
+      sel_d = 1'b0; 
+    end else begin 
+      sel_d = input_stream.valid & input_stream.ready ? ~sel_q : sel_q;
+    end 
+  end
+
+  hwpe_stream_demux_static #(
+    .NB_OUT_STREAMS(NumStreams)
+  ) i_demux (
+    .clk_i   ( clk_i               ),
+    .rst_ni  ( rst_ni              ),
+    .clear_i ( clear_i             ),
+    .sel_i   ( sel                 ),
+    .push_i  ( input_stream        ),
+    .pop_o   ( input_stream_demux  )
+  );
+
+  genvar ii; 
+  generate 
+    for(ii=0; ii<NumStreams; ii++) begin : gen_fifo
+      hwpe_stream_fifo #(
+        .DATA_WIDTH(InputStreamWidth),
+        .FIFO_DEPTH(4)
+      ) i_fifo (
+        .clk_i   ( clk_i                       ),
+        .rst_ni  ( rst_ni                      ),
+        .clear_i ( clear_i                     ),
+        .flags_o (                             ),
+        .push_i  ( input_stream_demux[ii]      ),
+        .pop_o   ( input_stream_demux_fifo[ii] )
+      );
+    end : gen_fifo
+  endgenerate
+
+  hwpe_stream_fence #(
+    .NB_STREAMS(NumStreams),
+    .DATA_WIDTH(InputStreamWidth)
+  ) i_fence (
+    .clk_i       ( clk_i                    ),
+    .rst_ni      ( rst_ni                   ),
+    .clear_i     ( clear_i                  ),
+    .test_mode_i ( 1'b0                     ),
+    .push_i      ( input_stream_demux_fifo  ),
+    .pop_o       ( input_stream_fenced      )
+  );
+
+  hwpe_stream_merge #(
+    .NB_IN_STREAMS(NumStreams), 
+    .DATA_WIDTH_IN(InputStreamWidth)
+  ) i_merge (
+    .clk_i   ( clk_i               ),
+    .rst_ni  ( rst_ni              ),
+    .clear_i ( clear_i             ),
+    .push_i  ( input_stream_fenced ),
+    .pop_o   ( output_o            )
+  );
 endmodule
