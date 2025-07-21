@@ -6,7 +6,7 @@
 #
 
 import numpy as np
-import os 
+import os
 
 def float16_to_hex(f16_val):
     arr = np.array(f16_val, dtype=np.float16).reshape(())
@@ -184,18 +184,18 @@ def write_x_file(coeffs, xmin=-6, xmax=6, partitions=8, stimuli_file="x_input.h"
         f_x.write('};\n')
     print(f"✅ x_input header written to: {stimuli_file}")
 
-        
+
 
 def write_inp_inc_file(results, stimuli_file="w_input.h"):
-    size = len(results["x_vals"]) 
+    size = len(results["x_vals"])
     with open(stimuli_file, "w") as f:
         f.write(f' uint16_t w_inp [{size}] =' +'{')
         for i, x in enumerate(results["x_vals"]):
             if i%8==0:
                 f.write('\n')
-            if i == size  - 1: 
+            if i == size  - 1:
                 f.write(f"  {float16_to_hex(x)}\n")
-            else: 
+            else:
                 f.write(f"  {float16_to_hex(x)},")
         f.write('};\n')
     print(f"✅ Stimuli header written to: {stimuli_file}")
@@ -207,8 +207,8 @@ def write_golden_oup_inc_file(results, stimuli_file="golden.h"):
     with open(stimuli_file, "w") as f:
         f.write(f'uint32_t golden[{size}] = {{\n')
         for i in range(0, len(y_approx), 2):
-            low_16 = float16_to_hex(y_approx[i]).removeprefix("0x")
-            high_16 = float16_to_hex(y_approx[i + 1]).removeprefix("0x")
+            low_16 = float16_to_hex(y_approx[i]).replace("0x", "")
+            high_16 = float16_to_hex(y_approx[i + 1]).replace("0x", "")
             combined = f"0x{high_16}{low_16}"
             end_char = ',\n' if i < len(y_approx) - 2 else '\n'
             f.write(f"{combined}{end_char}")
@@ -217,7 +217,7 @@ def write_golden_oup_inc_file(results, stimuli_file="golden.h"):
 
 def write_golden_inc_debug_file(results, stimuli_file="golden_debug.h"):
     y_approx = results["y_approx"]
-    size = len(y_approx) 
+    size = len(y_approx)
 
     with open(stimuli_file, "w") as f:
         f.write(f'uint32_t golden[{size}] = {{')
@@ -259,6 +259,7 @@ def write_tensor_dim_inc_file(stimuli_file = "tensor_dim.h", n_tests=1000):
     f_d.write('#define DST_FMT FP16\n'         )
     f_d.write('#define FPFORMAT 16\n'          )
     f_d.write('uint8_t gemm_ops = PACE; \n'    )
+    f_d.write('uint8_t quant_fmt = 0; \n'      )
     f_d.write('\n#endif\n'                     )
     f_d.close()
 
@@ -287,7 +288,7 @@ if __name__ == "__main__":
     write_actual_oup_inc_file(results, stimuli_file=os.path.join(args.inc_dir, "z_output.h"))
     write_golden_inc_debug_file(results, stimuli_file=os.path.join(args.txt_dir, "golden_debug.h"))
     write_y_inp_inc_file(stimuli_file=os.path.join(args.inc_dir, "y_input.h"))
-    write_x_file(coeffs=results["coeffs"], xmin=args.x_min, xmax=args.x_max, partitions=8, stimuli_file=os.path.join(args.inc_dir, "x_input.h")) 
+    write_x_file(coeffs=results["coeffs"], xmin=args.x_min, xmax=args.x_max, partitions=8, stimuli_file=os.path.join(args.inc_dir, "x_input.h"))
     write_tensor_dim_inc_file(stimuli_file=os.path.join(args.inc_dir, "tensor_dim.h"), n_tests=args.n_tests)
 
 

@@ -74,7 +74,7 @@ int main() {
 
 
   redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, (unsigned int)g, (unsigned int)s, (unsigned int)b, m_size, n_size, k_size,
-              (uint8_t)gemm_ops, float_fmt, d_en, float_fmt);
+              (uint8_t)gemm_ops, float_fmt, d_en, quant_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
   printf("Triggering accelerator and going to sleep...\n");
