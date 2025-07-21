@@ -86,7 +86,7 @@ packages:
     dependencies:
     - tech_cells_generic
   hwpe-stream:
-    revision: db62a6411a7f3dc2b2a74e202377da118a4a6673
+    revision: 7eb50a7cb37dc2a970e0cfee10aff5d961e41340
     version: null
     source:
       Git: https://github.com/pulp-platform/hwpe-stream.git
