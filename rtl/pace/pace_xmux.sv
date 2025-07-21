@@ -28,8 +28,9 @@ module pace_xmux
       localparam int GroupSize = 1 << w;
       if (w < PACE_PART_BST_STAGES) begin : gen_along_col_BST_part_stages
         for (genvar h = 0; h < H; h++) begin : gen_along_col
+            localparam rhs_h = h % PACE_NPARTS;
           if (GroupSize == 1) begin : gen_single_group
-            assign pace_mux_output[h][w] = x_input_i[h][w];
+            assign pace_mux_output[h][w] = x_input_i[rhs_h][w];
           end else begin : gen_grouped
             localparam int GroupIndex = (h % (PACE_PART_BST_STAGES+PACE_NPOLY+1)) / GroupSize;
             logic [BITW-1:0] x_flat_array [GroupSize];

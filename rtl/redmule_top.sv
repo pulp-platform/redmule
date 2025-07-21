@@ -487,9 +487,9 @@ redmule_gidx_buffer #(
   logic [Width-1:0]           pace_oup_valid_array;
 
   pace_pingpong_inp #(
-    .InpDataWidth  ( DATAW_ALIGN ),
-    .NumRows       ( Width       ),
-    .OupDataWidth  ( BITW        )
+    .InpDataWidth   ( DATAW_ALIGN ),
+    .NumRows        ( Width       ),
+    .CEOupDataWidth ( BITW        )
   ) i_pace_pingpong_inp (
     .clk_i    ( clk_i                  ),
     .rst_ni   ( rst_ni                 ),

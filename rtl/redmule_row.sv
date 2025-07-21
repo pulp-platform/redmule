@@ -94,6 +94,7 @@ endgenerate
   fpnew_pkg::roundmode_e   [H-1:0]  stage1_rnd_mode, stage2_rnd_mode;
   logic [H-1:0]                     is_greater;
   logic [H-1:0]                     pace_inp_valid, pace_oup_valid;
+  logic [H-1:0]                     pace_inp_ready, pace_oup_ready;
 
 `endif
 
@@ -115,6 +116,14 @@ generate
     assign pace_inp_valid[index] = pace_mode_i ? pace_oup_valid[index-1] : in_valid_i;
     assign out_valid_o[index]    = pace_oup_valid[index];
   end
+
+  assign  in_ready_o[index] = pace_inp_ready[index];
+
+  if(index == (H-1)) begin
+    assign pace_oup_ready[index] = out_ready_i; 
+  end else begin 
+    assign pace_oup_ready[index] = pace_mode_i ? pace_inp_ready[index+1] : out_ready_i; 
+  end 
 
   localparam int unsigned TBITW = (index == 0) ? 0 :
                                   (index < PACE_PART_BST_STAGES) ? index - 1 :
@@ -224,6 +233,7 @@ generate
       .op2_i              ( op2_row     [index]       ),
       .tag_i              ( tag_in  [index][TBITW:0]  ),
       .in_valid_i         ( pace_inp_valid[index]     ),
+      .in_ready_o         ( pace_inp_ready[index]     ),
 `else
       .stage1_rnd_i       ( stage1_rnd_i              ),
       .stage2_rnd_i       ( stage2_rnd_i              ),
@@ -231,10 +241,10 @@ generate
       .op2_i              ( op2_i                     ),
       .tag_i              ( tag_i                     ),
       .in_valid_i         ( in_valid_i                ),
+      .in_ready_o         ( in_ready_o      [index]   ),
 `endif
       .op_mod_i           ( op_mod_i                  ),
       .aux_i              ( aux_i                     ),
-      .in_ready_o         ( in_ready_o      [index]   ),
       .reg_enable_i       ( reg_enable_i              ),
       .flush_i            ( flush_i                   ),
       .z_output_o         ( partial_result  [index]   ),
@@ -245,12 +255,13 @@ generate
 `ifdef PACE_ENABLED
       .tag_o              ( tag_out  [index][TBITW:0] ),
       .out_valid_o        ( pace_oup_valid  [index]   ),
+      .out_ready_i        ( pace_oup_ready  [index]   ),
 `else
       .tag_o              ( tag_o           [index]   ),
       .out_valid_o        ( out_valid_o     [index]   ),
+      .out_ready_i        ( out_ready_i               ),
 `endif
       .aux_o              ( aux_o           [index]   ),
-      .out_ready_i        ( out_ready_i               ),
       .busy_o             ( busy_o          [index]   )
     );
   end
