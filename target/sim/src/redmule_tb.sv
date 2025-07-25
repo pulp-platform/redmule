@@ -27,6 +27,7 @@ module redmule_tb
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 10;
   localparam int unsigned DW = redmule_pkg::DATA_W;
+  localparam int unsigned UW = redmule_pkg::USER_W;
   localparam int unsigned MP = DW/32;
   localparam int unsigned MEMORY_SIZE = 192*1024;
   localparam int unsigned STACK_MEMORY_SIZE = 192*1024;
@@ -44,7 +45,7 @@ module redmule_tb
     DW:  DW,
     AW:  hci_package::DEFAULT_AW,
     BW:  hci_package::DEFAULT_BW,
-    UW:  hci_package::DEFAULT_UW,
+    UW:  UW,
     IW:  hci_package::DEFAULT_IW,
     EW:  EW,
     EHW: hci_package::DEFAULT_EHW,
@@ -66,6 +67,8 @@ module redmule_tb
   logic [MP-1:0]       tcdm_gnt;
   logic [MP-1:0][31:0] tcdm_r_data;
   logic [MP-1:0]       tcdm_r_valid;
+  logic [3-1:0]       tcdm_r_id;
+  logic [UW-1:0]       tcdm_r_user;
 
   typedef struct packed {
     logic        req;
@@ -92,7 +95,9 @@ module redmule_tb
     logic [31:0] data;
   } core_data_rsp_t;
 
-  hci_core_intf #(.DW(DW)) redmule_tcdm (.clk(clk_i));
+  hci_outstanding_intf #(
+  	.DW(DW),
+  	.UW(3) ) redmule_tcdm (.clk(clk_i));
 
   core_inst_req_t core_inst_req;
   core_inst_rsp_t core_inst_rsp;
@@ -122,27 +127,32 @@ module redmule_tb
 
   logic other_r_valid;
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (~rst_ni)
+    if (~rst_ni) begin
       other_r_valid <= '0;
-    else
+      tcdm_r_user <= '0;
+      tcdm_r_id   <= '0;
+    end else begin
       other_r_valid <= core_data_req.req & (core_data_req.addr[31:24] == 8'h80);
+  	  tcdm_r_user <= redmule_tcdm.req_user;
+  	  tcdm_r_id   <= redmule_tcdm.req_id;
+  	end 
   end
 
   for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
-    assign tcdm[ii].req  = redmule_tcdm.req;
-    assign tcdm[ii].add  = redmule_tcdm.add + ii*4;
-    assign tcdm[ii].wen  = redmule_tcdm.wen;
-    assign tcdm[ii].be   = redmule_tcdm.be[(ii+1)*4-1:ii*4];
+    assign tcdm[ii].req  = redmule_tcdm.req_valid;
+    assign tcdm[ii].add  = redmule_tcdm.req_add + ii*4;
+    assign tcdm[ii].wen  = redmule_tcdm.req_wen;
+    assign tcdm[ii].be   = redmule_tcdm.req_be[(ii+1)*4-1:ii*4];
     assign tcdm_gnt[ii]     = tcdm[ii].gnt;
     assign tcdm_r_valid[ii] = tcdm[ii].r_valid;
     assign tcdm_r_data[ii]  = tcdm[ii].r_data;
   end
-  assign redmule_tcdm.gnt     = &tcdm_gnt;
-  assign redmule_tcdm.r_data  = { >> {tcdm_r_data} };
-  assign redmule_tcdm.r_valid = &tcdm_r_valid;
-  assign redmule_tcdm.r_id    = '0;
-  assign redmule_tcdm.r_opc   = '0;
-  assign redmule_tcdm.r_user  = '0;
+  assign redmule_tcdm.req_ready  = &tcdm_gnt;
+  assign redmule_tcdm.resp_data  = { >> {tcdm_r_data} };
+  assign redmule_tcdm.resp_valid = &tcdm_r_valid;
+  assign redmule_tcdm.resp_id    = tcdm_r_id;
+  assign redmule_tcdm.resp_opc   = '0;
+  assign redmule_tcdm.resp_user  = tcdm_r_user;
 
   if (USE_ECC) begin : gen_ecc
     logic [EW-1:0] tcdm_r_ecc;
@@ -178,11 +188,8 @@ module redmule_tb
 
   end else begin: gen_no_ecc
     for(genvar ii=0; ii<MP; ii++)
-      assign tcdm[ii].data = redmule_tcdm.data[(ii+1)*32-1:ii*32];
+      assign tcdm[ii].data = redmule_tcdm.req_data[(ii+1)*32-1:ii*32];
 
-    assign redmule_tcdm.r_ecc = '0;
-    assign redmule_tcdm.egnt = '1;
-    assign redmule_tcdm.r_evalid = '0;
   end
 
   assign tcdm[MP].req  = core_data_req.req &

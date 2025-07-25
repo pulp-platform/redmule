@@ -43,7 +43,7 @@ module redmule_top
   // Periph slave port for the controller side
   hwpe_ctrl_intf_periph.slave periph,
   // TCDM master ports for the memory side
-  hci_core_intf.initiator tcdm
+  hci_outstanding_intf.initiator tcdm
 );
 
 localparam int unsigned DATAW = `HCI_SIZE_GET_DW(tcdm);
