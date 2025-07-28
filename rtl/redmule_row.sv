@@ -90,7 +90,7 @@ endgenerate
 `endif
 `ifdef PACE_ENABLED
 
-  logic [H-1:0][2*BITW+PIDW-1:0]    tag_in, tag_out;
+  logic [H-1:0][2*BITW+PIDW:0]      tag_in, tag_out;
   fpnew_pkg::roundmode_e   [H-1:0]  stage1_rnd_mode, stage2_rnd_mode;
   logic [H-1:0]                     is_greater;
   logic [H-1:0]                     pace_inp_valid, pace_oup_valid;
