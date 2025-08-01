@@ -90,11 +90,13 @@ endgenerate
 `endif
 `ifdef PACE_ENABLED
 
-  logic [H-1:0][2*BITW+PIDW:0]      tag_in, tag_out;
+  logic [H-1:0][2*BITW+PIDW:0]      tag_in, tag_out, tag_out_reg;
   fpnew_pkg::roundmode_e   [H-1:0]  stage1_rnd_mode, stage2_rnd_mode;
-  logic [H-1:0]                     is_greater;
-  logic [H-1:0]                     pace_inp_valid, pace_oup_valid;
-  logic [H-1:0]                     pace_inp_ready, pace_oup_ready;
+  logic [H-1:0]                     is_greater, is_greater_reg;
+  logic [H-1:0]                     pace_inp_valid, pace_oup_valid,
+                                    pace_inp_valid_reg, pace_oup_valid_reg;
+  logic [H-1:0]                     pace_inp_ready, pace_oup_ready,
+                                    pace_inp_ready_reg, pace_oup_ready_reg;
 
 `endif
 
@@ -111,19 +113,19 @@ generate
 
   if (index == 0) begin
     assign pace_inp_valid[index] = in_valid_i;
-    assign out_valid_o[index]    = pace_oup_valid[index];
+    assign out_valid_o[index]    = pace_oup_valid_reg[index];
   end else begin
-    assign pace_inp_valid[index] = pace_mode_i ? pace_oup_valid[index-1] : in_valid_i;
-    assign out_valid_o[index]    = pace_oup_valid[index];
+    assign pace_inp_valid[index] = pace_mode_i ? pace_oup_valid_reg[index-1] : in_valid_i;
+    assign out_valid_o[index]    = pace_oup_valid_reg[index];
   end
 
   assign  in_ready_o[index] = pace_inp_ready[index];
 
   if(index == (H-1)) begin
-    assign pace_oup_ready[index] = out_ready_i; 
-  end else begin 
-    assign pace_oup_ready[index] = pace_mode_i ? pace_inp_ready[index+1] : out_ready_i; 
-  end 
+    assign pace_oup_ready[index] = pace_mode_i ? pace_inp_ready_reg[index] : out_ready_i;
+  end else begin
+    assign pace_oup_ready[index] = pace_mode_i ? pace_inp_ready_reg[index] : out_ready_i;
+  end
 
   localparam int unsigned TBITW = (index == 0) ? 0 :
                                   (index < PACE_PART_BST_STAGES) ? index - 1 :
@@ -141,25 +143,25 @@ generate
       assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1];
       assign pace_input_operands[index][2] =  input_operands[index][2];
     end else if (index < PACE_PART_BST_STAGES) begin
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0];
+      assign pace_input_operands[index][0] =  pace_mode_i ? output_q[index-1] : input_operands[index][0];
       assign pace_input_operands[index][1] =  pace_mode_i ? input_operands[index][0] : input_operands[index][1];
       assign pace_input_operands[index][2] =  input_operands[index][2];
     end else if (index == PACE_PART_BST_STAGES) begin
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0];
+      assign pace_input_operands[index][0] =  pace_mode_i ? output_q[index-1] : input_operands[index][0];
       assign pace_input_operands[index][2] =  input_operands[index][2];
       assign pace_input_operands[index][1] =  input_operands[index][1];
     end else if (index == PACE_PART_BST_STAGES + 1) begin
       // ax + b
-      assign pace_input_operands[index][0] =  pace_mode_i ? tag_out[index-1][PIDW+BITW-1:PIDW] : input_operands[index][0]; //a
+      assign pace_input_operands[index][0] =  pace_mode_i ? tag_out_reg[index-1][PIDW+BITW-1:PIDW] : input_operands[index][0]; //a
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0]   : input_operands[index][2]; //b
-      assign pace_input_operands[index][1] =  pace_mode_i ? partial_result[index-1] : input_operands[index][1]; // x
+      assign pace_input_operands[index][1] =  pace_mode_i ? output_q[index-1] : input_operands[index][1]; // x
     end else if (index <= PACE_PART_BST_STAGES + PACE_NPOLY) begin
       // pres * x + b
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; //pres
-      assign pace_input_operands[index][1] =  pace_mode_i ? tag_out[index-1][BITW+PIDW-1:PIDW] : input_operands[index][1]; //x
+      assign pace_input_operands[index][0] =  pace_mode_i ? output_q[index-1] : input_operands[index][0]; //pres
+      assign pace_input_operands[index][1] =  pace_mode_i ? tag_out_reg[index-1][BITW+PIDW-1:PIDW] : input_operands[index][1]; //x
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0] : input_operands[index][2]; // b
     end else begin
-      assign pace_input_operands[index][0] =  pace_mode_i ? partial_result[index-1] : input_operands[index][0]; //pres
+      assign pace_input_operands[index][0] =  pace_mode_i ? output_q[index-1] : input_operands[index][0]; //pres
       assign pace_input_operands[index][1] =  pace_mode_i ? 16'h3c00 : input_operands[index][1]; //x
       assign pace_input_operands[index][2] =  pace_mode_i ? input_operands[index][0] : input_operands[index][2]; // b
     end
@@ -171,9 +173,9 @@ generate
 
   end else if (index > 0 && index < PACE_PART_BST_STAGES) begin
     if (index == 1) begin
-      assign tag_in[index][0] = ~pace_mode_i ? '0 : is_greater[index-1];
+      assign tag_in[index][0] = ~pace_mode_i ? '0 : is_greater_reg[index-1];
     end else begin
-      assign tag_in[index]    = ~pace_mode_i ? '0 : {tag_out[index-1][TBITW-1:0], is_greater[index-1]};
+      assign tag_in[index]    = ~pace_mode_i ? '0 : {tag_out_reg[index-1][TBITW-1:0], is_greater_reg[index-1]};
     end
 
     assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {
@@ -183,15 +185,15 @@ generate
 
   end else begin
     if (index == PACE_PART_BST_STAGES) begin
-      assign tag_in[index]         = ~pace_mode_i ? '0 : {input_operands [index][0], {tag_out[index-1][PIDW-2:0], is_greater[index-1]}};
-      assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out[index-1][PIDW-2:0], is_greater[index-1]};
+      assign tag_in[index]         = ~pace_mode_i ? '0 : {input_operands [index][0], {tag_out_reg[index-1][PIDW-2:0], is_greater_reg[index-1]}};
+      assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out_reg[index-1][PIDW-2:0], is_greater_reg[index-1]};
     end else begin
       if(index == PACE_PART_BST_STAGES + 1) begin
-          assign tag_in[index]     = ~pace_mode_i ? '0 : {partial_result[index-1], tag_out[index-1][PIDW-1:0]};
+          assign tag_in[index]     = ~pace_mode_i ? '0 : {output_q[index-1], tag_out_reg[index-1][PIDW-1:0]};
       end else begin
-        assign tag_in[index]       = ~pace_mode_i ? '0 : tag_out[index-1][TBITW-1:0];
+        assign tag_in[index]       = ~pace_mode_i ? '0 : tag_out_reg[index-1][TBITW-1:0];
       end
-      assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out[index-1][PIDW-1:0]};
+      assign pace_part_id_o[index] = ~pace_mode_i ? '0 : {tag_out_reg[index-1][PIDW-1:0]};
 
     end
 
@@ -264,27 +266,37 @@ generate
       .aux_o              ( aux_o           [index]   ),
       .busy_o             ( busy_o          [index]   )
     );
+
+  `ifdef PACE_ENABLED
+    spill_register_flushable #(
+      .T      ( logic [TBITW+BITW+1:0] ),
+      .Bypass ( 1'b0                   )
+    ) i_spill_reg (
+      .clk_i,
+      .rst_ni,
+      .valid_i ( pace_mode_i ? pace_oup_valid[index] : reg_enable_i                        ),
+      .flush_i ( flush_i                                                                   ),
+      .ready_o ( pace_inp_ready_reg[index]                                                 ),
+      .data_i  ( {is_greater[index], tag_out[index][TBITW:0], partial_result[index]}       ),
+      .valid_o ( pace_oup_valid_reg[index]                                                 ),
+      .ready_i ( pace_mode_i ? (index == H-1 ? out_ready_i : pace_inp_ready[index+1]) : '1 ),
+      .data_o  ( {is_greater_reg[index], tag_out_reg[index][TBITW:0], output_q[index]}     )
+    );
+  `else
+    always_ff @(posedge clk_i or negedge rst_ni) begin : intermediate_output_register
+      if(~rst_ni) begin
+        output_q[index] <= '0;
+      end else begin
+        if (flush_i)
+          output_q [index] <= '0;
+        else if (reg_enable_i)
+          output_q [index] <= partial_result [index];
+      end
+    end
+  `endif
   end
 endgenerate
 
-always_ff @(posedge clk_i or negedge rst_ni) begin : intermediate_output_register
-  if(~rst_ni) begin
-    output_q         <= '0;
-  end else begin
-    for (int i = 0; i < H; i++) begin
-      if (flush_i)
-        output_q [i] <= '0;
-      else if (reg_enable_i)
-        output_q [i] <= partial_result [i];
-      else
-        output_q [i] <= output_q [i];
-    end
-  end
-end
+assign z_output_o = output_q [H-1];
 
-`ifdef PACE_ENABLED
-  assign z_output_o = pace_mode_i ? partial_result[H-1] : output_q [H-1];
-`else
-  assign z_output_o = output_q [H-1];
-`endif
 endmodule : redmule_row
