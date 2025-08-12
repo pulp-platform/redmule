@@ -12,7 +12,7 @@ module pace_pingpong_oup #(
   parameter int unsigned NumRows        = 8,
   parameter int unsigned InpDataWidth   = 16,
   localparam int unsigned InputStreamWidth = NumRows*InpDataWidth,
-  localparam int unsigned NumStreams = 2,
+  localparam int unsigned NumStreams = 4,
   localparam int unsigned OutputStreamWidth = NumStreams*InputStreamWidth
 ) (
   input  logic                                 clk_i,
@@ -38,19 +38,19 @@ module pace_pingpong_oup #(
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH (InputStreamWidth)
-  ) input_stream_demux[1:0] (
+  ) input_stream_demux[NumStreams-1:0] (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH (InputStreamWidth)
-  ) input_stream_demux_fifo[1:0] (
+  ) input_stream_demux_fifo[NumStreams-1:0] (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH (InputStreamWidth)
-  ) input_stream_fenced[1:0] (
+  ) input_stream_fenced[NumStreams-1:0] (
     .clk ( clk_i )
   );
 
@@ -61,7 +61,7 @@ module pace_pingpong_oup #(
     .clk ( clk_i )
   );
 
-  logic sel, sel_d, sel_q; 
+  logic [$clog2(NumStreams)-1:0] sel, sel_d, sel_q; 
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
@@ -78,7 +78,7 @@ module pace_pingpong_oup #(
     if(clear_i) begin
       sel_d = 1'b0; 
     end else begin 
-      sel_d = input_stream.valid & input_stream.ready ? ~sel_q : sel_q;
+      sel_d = input_stream.valid & input_stream.ready ? sel_q + 1 : sel_q;
     end 
   end
 

@@ -9,6 +9,7 @@ module pace_pingpong_inp #(
   parameter int unsigned InpDataWidth    = 256,
   parameter int unsigned NumRows         = 8,
   parameter int unsigned CEOupDataWidth  = 16,
+  localparam int NumStreams = InpDataWidth/(CEOupDataWidth*NumRows),
   localparam int unsigned OupDataWidth   = NumRows * CEOupDataWidth
 ) (
   input  logic                                    clk_i,
@@ -23,19 +24,19 @@ module pace_pingpong_inp #(
 
   // Local signals
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH (InpDataWidth/2 )
-  ) ping_pong_buffer [1:0] (
+    .DATA_WIDTH (InpDataWidth/NumStreams )
+  ) ping_pong_buffer [NumStreams-1:0] (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( InpDataWidth/2 )
+    .DATA_WIDTH (InpDataWidth/NumStreams )
   ) output_buffer (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( InpDataWidth/2 )
+    .DATA_WIDTH (InpDataWidth/NumStreams )
   ) output_buffer_fifo (
     .clk ( clk_i )
   );
@@ -43,7 +44,7 @@ module pace_pingpong_inp #(
 
   // Stream splitter
   hwpe_stream_split #(
-    .NB_OUT_STREAMS ( 2            ),
+    .NB_OUT_STREAMS ( NumStreams   ),
     .DATA_WIDTH_IN  ( InpDataWidth )
   ) i_hwpe_stream_split (
     .clk_i   ( clk_i            ),
@@ -60,7 +61,7 @@ module pace_pingpong_inp #(
   assign ctrl_serdes.first_stream       = 1'b0;
 
   hwpe_stream_serialize #(
-    .NB_IN_STREAMS ( 2            ),
+    .NB_IN_STREAMS ( NumStreams   ),
     .CONTIG_LIMIT  ( 1024         ),
     .DATA_WIDTH    ( OupDataWidth ),
     .SYNC_READY    ( 1'b1         )
