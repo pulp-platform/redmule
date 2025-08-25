@@ -28,6 +28,7 @@ module redmule_tb
   localparam int unsigned ID = 10;
   localparam int unsigned DW = redmule_pkg::DATA_W;
   localparam int unsigned UW = redmule_pkg::USER_W;
+  localparam int unsigned IW = redmule_pkg::ID_W;
   localparam int unsigned MP = DW/32;
   localparam int unsigned MEMORY_SIZE = 192*1024;
   localparam int unsigned STACK_MEMORY_SIZE = 192*1024;
@@ -46,7 +47,7 @@ module redmule_tb
     AW:  hci_package::DEFAULT_AW,
     BW:  hci_package::DEFAULT_BW,
     UW:  UW,
-    IW:  hci_package::DEFAULT_IW,
+    IW:  IW,
     EW:  EW,
     EHW: hci_package::DEFAULT_EHW,
     default: '0
@@ -67,7 +68,7 @@ module redmule_tb
   logic [MP-1:0]       tcdm_gnt;
   logic [MP-1:0][31:0] tcdm_r_data;
   logic [MP-1:0]       tcdm_r_valid;
-  logic [3-1:0]       tcdm_r_id;
+  logic [IW-1:0]       tcdm_r_id;
   logic [UW-1:0]       tcdm_r_user;
 
   typedef struct packed {

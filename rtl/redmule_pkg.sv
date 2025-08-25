@@ -20,6 +20,7 @@ package redmule_pkg;
   parameter int unsigned            DATAW        = DATA_W;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            USER_W       = 3;
+  parameter int unsigned            ID_W         = 2;
   parameter int unsigned            REDMULE_REGS = 22;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;

@@ -42,6 +42,7 @@ module redmule_streamer
 
 localparam int unsigned DW  = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
+localparam int unsigned IW  = `HCI_SIZE_GET_IW(tcdm);
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
 // this localparam is reused for all internal, non-ecc HCI interfaces
@@ -50,13 +51,8 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   AW:  DEFAULT_AW,
   BW:  DEFAULT_BW,
   UW:  UW,
-  IW:  DEFAULT_IW
+  IW:  IW
 };
-
-//// this localparam is reused for all internal, non-ecc HCI interfaces
-//hci_outstanding_intf #(
-//  .DW( DW ),
-//  .UW( UW ) ) ldst_tcdm ( .clk ( clk_i ) );
 
 // Virtual internal TCDM interface splitting the upstream TCDM
 // X   -> virt_tcdm[0]
@@ -65,13 +61,17 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
 // Z   -> virt_tcdm[3]
 hci_outstanding_intf #(
   .DW ( DW ),
-  .UW ( UW ) ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 hci_outstanding_intf #(
   .DW ( DW ),
-  .UW ( UW ) ) virt_tcdm_rob [0:NumStreamSources] ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) virt_tcdm_rob [0:NumStreamSources] ( .clk ( clk_i ) );
+
+localparam int unsigned ROB_NW = 1 << UW;
 
 hci_outstanding_rob #(
-	.ROB_NW ( 8 ),
+	.ROB_NW ( ROB_NW ),
 	.`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_streamer_rob_x (
 	.clk_i 	( clk_i 	),
@@ -80,7 +80,7 @@ hci_outstanding_rob #(
 	.out 	( virt_tcdm_rob[0] )
 );
 hci_outstanding_rob #(
-	.ROB_NW ( 8 ),
+	.ROB_NW ( ROB_NW ),
 	.`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_streamer_rob_w (
 	.clk_i 	( clk_i 	),
@@ -89,7 +89,7 @@ hci_outstanding_rob #(
 	.out 	( virt_tcdm_rob[1] )
 );
 hci_outstanding_rob #(
-	.ROB_NW ( 8 ),
+	.ROB_NW ( ROB_NW ),
 	.`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_streamer_rob_y (
 	.clk_i 	( clk_i 	),
@@ -98,7 +98,7 @@ hci_outstanding_rob #(
 	.out 	( virt_tcdm_rob[2] )
 );
 hci_outstanding_rob #(
-	.ROB_NW ( 8 ),
+	.ROB_NW ( ROB_NW ),
 	.`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_streamer_rob_z (
 	.clk_i 	( clk_i 	),
@@ -130,7 +130,8 @@ hci_outstanding_mux #(
 
 hci_outstanding_intf #( 
 	.DW ( DW ),
-   .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) zstream2cast ( .clk ( clk_i ) );
 
 // Sink module that turns the incoming Z stream into TCDM.
 hci_outstanding_sink #(
@@ -151,7 +152,8 @@ hci_outstanding_sink #(
 // Store interface.
 hci_outstanding_intf #(
   .DW ( DW ),
-  .UW ( UW ) ) z_store ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) z_store ( .clk ( clk_i ) );
 
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
@@ -202,10 +204,12 @@ hci_outstanding_assign i_store_assign ( .tcdm_target (z_store), .tcdm_initiator 
 
 hci_outstanding_intf #(
   .DW ( DW ),
-  .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 hci_outstanding_intf #(
   .DW ( DW ),
-  .UW ( UW ) ) tcdm_load [0:NumStreamSources-1] ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .IW ( IW ) ) tcdm_load [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 hci_package::hci_streamer_ctrl_t  [NumStreamSources-1:0] source_ctrl;
