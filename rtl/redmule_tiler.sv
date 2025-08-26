@@ -61,7 +61,7 @@ assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
   assign config_d.pace_in_addr  = reg_file_i.hwpe_params[W_ADDR];
   assign config_d.pace_out_addr = reg_file_i.hwpe_params[Z_ADDR];
 `endif
-assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
+assign config_d.gemm_ops        = 3'b1;//gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.dequant_enable  = reg_file_i.hwpe_params[MACFG][16];
