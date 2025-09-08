@@ -46,7 +46,7 @@ module redmule_top
   hci_core_intf.initiator tcdm
 );
 
-localparam int unsigned DATAW_ALIGN = `HCI_SIZE_GET_DW(tcdm) - SysDataWidth;
+localparam int unsigned DATAW = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned HCI_ECC = (`HCI_SIZE_GET_EW(tcdm)>1);
 
 logic                       enable, clear;
@@ -150,20 +150,20 @@ cntrl_flags_t  cntrl_flags;
 // Implementation of the incoming and outgoing streaming interfaces (one for each kind of data)
 
 // X streaming interface + X FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d         ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo      ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) x_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) x_buffer_fifo      ( .clk( clk_i ) );
 
 // W streaming interface + W FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d         ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) w_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) w_buffer_fifo      ( .clk( clk_i ) );
 
 // Y streaming interface + Y FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) y_buffer_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) y_buffer_fifo      ( .clk( clk_i ) );
 
 // Z streaming interface + Z FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) z_buffer_q         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) z_buffer_fifo      ( .clk( clk_i ) );
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -189,7 +189,7 @@ redmule_streamer #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DATAW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_x_buffer_fifo (
   .clk_i          ( clk_i         ),
@@ -201,7 +201,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DATAW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_w_buffer_fifo (
   .clk_i          ( clk_i         ),
@@ -213,7 +213,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DATAW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_y_buffer_fifo (
   .clk_i          ( clk_i         ),
@@ -225,7 +225,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DATAW         ),
   .FIFO_DEPTH     ( 2             )
 ) i_z_buffer_fifo (
   .clk_i          ( clk_i         ),
@@ -250,7 +250,7 @@ assign z_buffer_q.valid    = z_buffer_flgs.z_valid;
 
 logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
 redmule_x_buffer #(
-  .DW         ( DATAW_ALIGN         ),
+  .DW         ( DATAW               ),
   .FpFormat   ( FpFormat            ),
   .Height     ( Height              ),
   .Width      ( Width               )
@@ -266,7 +266,7 @@ redmule_x_buffer #(
 
 logic [Height-1:0][BITW-1:0] w_buffer_q;
 redmule_w_buffer #(
-  .DW         ( DATAW_ALIGN         ),
+  .DW         ( DATAW               ),
   .FpFormat   ( FpFormat            ),
   .Height     ( Height              )
 ) i_w_buffer  (
@@ -281,7 +281,7 @@ redmule_w_buffer #(
 
 logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
 redmule_z_buffer #(
-  .DW            ( DATAW_ALIGN        ),
+  .DW            ( DATAW              ),
   .FpFormat      ( FpFormat           ),
   .Width         ( Width              )
 ) i_z_buffer     (
@@ -405,7 +405,7 @@ redmule_engine     #(
 logic z_priority;
 assign z_priority = z_buffer_flgs.z_priority | !z_fifo_flgs.empty;
 redmule_memory_scheduler #(
-  .DW (DATAW_ALIGN),
+  .DW (DATAW),
   .W  (Width),
   .H  (Height)
 ) i_memory_scheduler (

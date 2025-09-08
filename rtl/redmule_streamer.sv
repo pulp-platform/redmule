@@ -14,8 +14,8 @@ module redmule_streamer
   import hci_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0,
-  localparam int unsigned REALIGN = 1
+  localparam int unsigned REALIGN = 0     ,
+  parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input logic                    clk_i,
   input logic                    rst_ni,
