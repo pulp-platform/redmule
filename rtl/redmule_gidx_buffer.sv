@@ -34,6 +34,9 @@ localparam int unsigned          D           = DW/(H*BITW)
 
   // FIXME I DON'T WORK WITH LEFTOVERS!!!
 
+  // This only works if H is a power of 2, which should always be the case anyway
+  localparam int unsigned H_MSK = H-1;
+
   logic [1:0][H-1:0][G-1:0] last_gidx_d, last_gidx_q;
 
   logic gidx_present_d, gidx_present_q;
@@ -315,8 +318,8 @@ localparam int unsigned          D           = DW/(H*BITW)
     gidx_present_d = 1'b0;
 
     if (current_state == FULL || current_state == CHECK_LAST) begin
-      for (int h = 0; h < H; h++) begin
-        if (current_gidx_d == last_gidx_q[last_gidx_ptr][h] && num_gidx_valid_q > (h + (H - last_gidx_wptr_pre_full_q)) && iter_counter_q != 0) begin
+      for (int h = 0; h < H; h++) begin                                                                                // We add this term to get a modulo H addition
+        if (current_gidx_d == last_gidx_q[last_gidx_ptr][h] && num_gidx_valid_q > ((h + (H - last_gidx_wptr_pre_full_q)) & H_MSK) && iter_counter_q != 0) begin
           gidx_present_d = 1'b1;
           break;
         end
