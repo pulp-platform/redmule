@@ -50,6 +50,7 @@ sources:
     - rtl/redmule_top.sv
     - rtl/redmule_memory_scheduler.sv
     - rtl/redmule_complex.sv
+    - rtl/redmule_mux.sv
 
     - target: redmule_deprecated
       files:
