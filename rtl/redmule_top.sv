@@ -505,6 +505,7 @@ redmule_gidx_buffer #(
 
   pace_pingpong_oup #(
     .NumRows        ( Width       ),
+    .NumCols        ( Height      ),
     .InpDataWidth   ( BITW        )
   ) i_pace_pingpong_oup (
     .clk_i    ( clk_i                   ),

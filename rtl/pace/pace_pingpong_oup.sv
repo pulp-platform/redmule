@@ -10,9 +10,11 @@
 
 module pace_pingpong_oup #(
   parameter int unsigned NumRows        = 8,
+  parameter int unsigned NumCols        = 8,
+  parameter int unsigned NumPipe        = 1,
   parameter int unsigned InpDataWidth   = 16,
   localparam int unsigned InputStreamWidth = NumRows*InpDataWidth,
-  localparam int unsigned NumStreams = 4,
+  localparam int unsigned NumStreams = NumCols/NumRows * 2,
   localparam int unsigned OutputStreamWidth = NumStreams*InputStreamWidth
 ) (
   input  logic                                 clk_i,
@@ -34,7 +36,7 @@ module pace_pingpong_oup #(
   assign input_stream.data   = input_i;
   assign input_stream.valid  = valid_i;
   assign input_stream.strb   = '1;
-  assign ready_o             = input_stream.ready; 
+  assign ready_o             = input_stream.ready;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH (InputStreamWidth)
@@ -61,7 +63,7 @@ module pace_pingpong_oup #(
     .clk ( clk_i )
   );
 
-  logic [$clog2(NumStreams)-1:0] sel, sel_d, sel_q; 
+  logic [$clog2(NumStreams)-1:0] sel, sel_d, sel_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
@@ -73,13 +75,13 @@ module pace_pingpong_oup #(
 
   assign sel = sel_q;
 
-  always_comb begin 
-    sel_d = sel_q; 
+  always_comb begin
+    sel_d = sel_q;
     if(clear_i) begin
-      sel_d = 1'b0; 
-    end else begin 
+      sel_d = 1'b0;
+    end else begin
       sel_d = input_stream.valid & input_stream.ready ? sel_q + 1 : sel_q;
-    end 
+    end
   end
 
   hwpe_stream_demux_static #(
@@ -93,8 +95,8 @@ module pace_pingpong_oup #(
     .pop_o   ( input_stream_demux  )
   );
 
-  genvar ii; 
-  generate 
+  genvar ii;
+  generate
     for(ii=0; ii<NumStreams; ii++) begin : gen_fifo
       hwpe_stream_fifo #(
         .DATA_WIDTH(InputStreamWidth),
@@ -123,7 +125,7 @@ module pace_pingpong_oup #(
   );
 
   hwpe_stream_merge #(
-    .NB_IN_STREAMS(NumStreams), 
+    .NB_IN_STREAMS(NumStreams),
     .DATA_WIDTH_IN(InputStreamWidth)
   ) i_merge (
     .clk_i   ( clk_i               ),
