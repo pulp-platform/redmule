@@ -259,6 +259,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign tcdm_load[i].resp_ready = tcdm_cast[i].resp_ready;
 
   hci_outstanding_source #(
+    .ADDR_MIS_DEPTH        ( ROB_NW                     ),
     .MISALIGNED_ACCESSES   ( REALIGN                    ),
     .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
   ) i_stream_source      (
