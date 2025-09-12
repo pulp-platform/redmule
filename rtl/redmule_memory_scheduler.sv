@@ -148,18 +148,6 @@ module redmule_memory_scheduler
   always_comb begin : address_gen_signals
     // Here we initialize the streamer source signals
     // for the X stream source
-  `ifdef PACE_ENABLED
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
-                                                                      + x_rows_offs_q + x_cols_offs_q;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : num_x_reads;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : 'd1;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = cntrl_streamer_o.pace_mode ? (PACE_PART_BST_STAGES+PACE_NPOLY+1)*2 : 'd0;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-`else
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
                                                                       + x_rows_offs_q + x_cols_offs_q;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;
@@ -171,7 +159,7 @@ module redmule_memory_scheduler
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-`endif
+
     // Here we initialize the streamer source signals
     // for the W stream source
     // In quantization mode this is used to load the scales instead
@@ -263,56 +251,13 @@ module redmule_memory_scheduler
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d2_len = 'd0;
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.d3_stride = 'd0;
     cntrl_streamer_o.zeros_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-
-`ifdef PACE_ENABLED
-   // for the PACE stream source
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[PACE_D0_STRIDE];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-
-    // for the PACE stream sink
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[PACE_D0_STRIDE];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-`endif
-  end
-`ifdef PACE_ENABLED
-    logic x_first_load_d, x_first_load_q;
-    assign x_first_load_d = (clear_i || cntrl_scheduler_i.rst) ? 1'b0 : (x_first_load_q ? x_first_load_q : cntrl_streamer_o.pace_stream_source_ctrl.req_start);
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-      if (~rst_ni) begin
-        x_first_load_q <= '0;
-      end else begin
-        x_first_load_q <= x_first_load_d;
-      end
   end
 
-`endif
   always_comb begin : req_start_assignment
-`ifdef PACE_ENABLED
-    cntrl_streamer_o.pace_mode = reg_file_i.hwpe_params[OP_SELECTION][1];
-    cntrl_streamer_o.pace_stream_source_ctrl.req_start  = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
-    cntrl_streamer_o.pace_stream_sink_ctrl.req_start    = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
-    cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
-    cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-`else
     cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-`endif
     cntrl_streamer_o.gid_stream_source_ctrl.req_start   = reg_file_i.hwpe_params[DEQUANT_MODE][0] && cntrl_scheduler_i.first_load && flgs_streamer_i.gid_stream_source_flags.ready_start;
     cntrl_streamer_o.wq_stream_source_ctrl.req_start    = reg_file_i.hwpe_params[DEQUANT_MODE][0] && cntrl_scheduler_i.first_load && flgs_streamer_i.wq_stream_source_flags.ready_start;
     cntrl_streamer_o.zeros_stream_source_ctrl.req_start = reg_file_i.hwpe_params[DEQUANT_MODE][0] && cntrl_scheduler_i.first_load && flgs_streamer_i.zeros_stream_source_flags.ready_start;

@@ -54,13 +54,6 @@ assign config_d.zeros_addr      = reg_file_i.hwpe_params[ZEROS_ADDR_R];
 assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
-`ifdef PACE_ENABLED
-  assign config_d.pace_tot_len  = reg_file_i.hwpe_params[MCFIG0][31:16];
-  assign config_d.pace_d0_stride= reg_file_i.hwpe_params[MCFIG1][15: 0];
-  assign config_d.pace_mode     = reg_file_i.hwpe_params[MACFG][13];
-  assign config_d.pace_in_addr  = reg_file_i.hwpe_params[W_ADDR];
-  assign config_d.pace_out_addr = reg_file_i.hwpe_params[Z_ADDR];
-`endif
 assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
@@ -284,15 +277,7 @@ assign reg_file_o.hwpe_params[DEQUANT_MODE][0]     = config_d.dequant_enable;
 assign reg_file_o.hwpe_params[GIDX_ADDR]           = config_d.gidx_addr;
 assign reg_file_o.hwpe_params[SCALES_ADDR]         = config_d.scales_addr;
 assign reg_file_o.hwpe_params[ZEROS_ADDR]          = config_d.zeros_addr;
-`ifdef PACE_ENABLED
-  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 2] = '0;
-  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
-  assign reg_file_o.hwpe_params[OP_SELECTION][1]     = config_q.pace_mode;
-  assign reg_file_o.hwpe_params[PACE_D0_STRIDE]      = config_q.pace_d0_stride;
-  assign reg_file_o.hwpe_params[PACE_D0_LENGTH]      = config_q.pace_tot_len;
-`else
-  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
-  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
-`endif
+assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
+assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
 
 endmodule: redmule_tiler

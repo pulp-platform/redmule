@@ -145,17 +145,6 @@ mulmin: check_penv
 	cd $(PENV);                               \
 	deactivate
 
-pace: check_penv
-	mkdir -p $@/txt;                          \
-	cd $(PENV);                               \
-	source ./bin/activate;                    \
-	cd $(CUR_DIR)/$(fp_fmt);                  \
-	python3 ./scripts/$@.py                   \
-	--inc_dir $(SW)                           \
-	--txt_dir $(CUR_DIR)/$@/txt;              \
-	cd $(PENV);                               \
-	deactivate
-
 
 golden-clean:
 	rm -rf FP16/net_parameters.h
