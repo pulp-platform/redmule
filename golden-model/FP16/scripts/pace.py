@@ -259,7 +259,6 @@ def write_tensor_dim_inc_file(stimuli_file = "tensor_dim.h", n_tests=1000):
     f_d.write('#define DST_FMT FP16\n'         )
     f_d.write('#define FPFORMAT 16\n'          )
     f_d.write('uint8_t gemm_ops = PACE; \n'    )
-    f_d.write('uint8_t quant_fmt = 0; \n'      )
     f_d.write('\n#endif\n'                     )
     f_d.close()
 

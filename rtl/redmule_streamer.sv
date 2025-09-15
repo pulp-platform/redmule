@@ -32,23 +32,9 @@ module redmule_streamer
   // Engine Y input + HS signals (output for the streamer)
   hwpe_stream_intf_stream.source y_stream_o,
 
-  // Engine Y input + HS signals (output for the streamer)
-  hwpe_stream_intf_stream.source gidx_stream_o,
-  // Engine Y input + HS signals (output for the streamer)
-  hwpe_stream_intf_stream.source wq_stream_o,
-  // Engine Y input + HS signals (output for the streamer)
-  hwpe_stream_intf_stream.source zeros_stream_o,
-
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
 
-  // Bias and skip streams - used during dequantization
-  hwpe_stream_intf_stream.sink   wq_bias_i,
-  hwpe_stream_intf_stream.sink   wq_skip_i,
-  hwpe_stream_intf_stream.sink   scales_bias_i,
-  hwpe_stream_intf_stream.sink   scales_skip_i,
-  hwpe_stream_intf_stream.sink   zeros_bias_i,
-  hwpe_stream_intf_stream.sink   zeros_skip_i,
 `ifdef PACE_ENABLED
   // Engine PACE input + HS signals  (output from the streamer)
   hwpe_stream_intf_stream.source pace_stream_o,
@@ -417,32 +403,16 @@ hci_core_intf #(
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) wq_stream_pre_cast    ( .clk( clk_i ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) zeros_stream_pre_cast ( .clk( clk_i ) );
-
 hci_package::hci_streamer_ctrl_t        [NumStreamSources-1:0] source_ctrl;
-hci_package::hci_streamer_biased_ctrl_t [NumStreamSources-1:0] biased_source_ctrl;
 hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
 
 // Assign input control buses to the relative ID in the vector.
 assign source_ctrl[XsourceStreamId]      = ctrl_i.x_stream_source_ctrl;
-assign source_ctrl[WsourceStreamId]      = '0;
+assign source_ctrl[WsourceStreamId]      = ctrl_i.w_stream_source_ctrl;
 assign source_ctrl[YsourceStreamId]      = ctrl_i.y_stream_source_ctrl;
 `ifdef PACE_ENABLED
   assign source_ctrl[PACEsourceStreamId]   = ctrl_i.pace_stream_source_ctrl;
 `endif
-
-assign source_ctrl[GIdxsourceStreamId]   = ctrl_i.gid_stream_source_ctrl;
-assign source_ctrl[WQsourceStreamId]     = '0;
-assign source_ctrl[ZerossourceStreamId]  = '0;
-
-assign biased_source_ctrl[XsourceStreamId]      = '0;
-assign biased_source_ctrl[WsourceStreamId]      = ctrl_i.w_stream_source_ctrl;
-assign biased_source_ctrl[YsourceStreamId]      = '0;
-
-assign biased_source_ctrl[GIdxsourceStreamId]   = '0;
-assign biased_source_ctrl[WQsourceStreamId]     = ctrl_i.wq_stream_source_ctrl;
-assign biased_source_ctrl[ZerossourceStreamId]  = ctrl_i.zeros_stream_source_ctrl;
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
@@ -465,154 +435,60 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .tcdm_initiator ( load_fifo_d[i] )
   );
 
-  if (i < GIdxsourceStreamId) begin : gen_cast_unit
-    // Load cast unit
-    // This unit uses only the data bus of the TCDM interface. The other buses
-    // are assigned manually.
-    redmule_castin #(
-      .FpFmtConfig  ( FpFmtConfig  ),
-      .IntFmtConfig ( IntFmtConfig ),
-      .DstFormat    ( FPFORMAT     )
-    ) i_load_cast   (
-      .clk_i                                     ,
-      .rst_ni                                    ,
-      .clear_i                                   ,
-      .cast_i       ( cast                      ),
-      .src_i        ( load_fifo_q[i].r_data     ),
-      .src_fmt_i    ( ctrl_i.input_cast_src_fmt ),
-      .dst_o        ( tcdm_cast[i].r_data       )
-    );
+  // Load cast unit
+  // This unit uses only the data bus of the TCDM interface. The other buses
+  // are assigned manually.
+  redmule_castin #(
+    .FpFmtConfig  ( FpFmtConfig  ),
+    .IntFmtConfig ( IntFmtConfig ),
+    .DstFormat    ( FPFORMAT     )
+  ) i_load_cast   (
+    .clk_i                                     ,
+    .rst_ni                                    ,
+    .clear_i                                   ,
+    .cast_i       ( cast                      ),
+    .src_i        ( load_fifo_q[i].r_data     ),
+    .src_fmt_i    ( ctrl_i.input_cast_src_fmt ),
+    .dst_o        ( tcdm_cast[i].r_data       )
+  );
 
-    // Left TCDM buses assignment.
-    assign load_fifo_q[i].req      = tcdm_cast[i].req;
-    assign tcdm_cast[i].gnt        = load_fifo_q[i].gnt;
-    assign load_fifo_q[i].add      = tcdm_cast[i].add;
-    assign load_fifo_q[i].wen      = tcdm_cast[i].wen;
-    assign load_fifo_q[i].data     = tcdm_cast[i].data;
-    assign load_fifo_q[i].be       = tcdm_cast[i].be;
-    assign load_fifo_q[i].r_ready  = tcdm_cast[i].r_ready;
-    assign load_fifo_q[i].user     = tcdm_cast[i].user;
-    assign load_fifo_q[i].id       = tcdm_cast[i].id;
-    assign tcdm_cast[i].r_valid    = load_fifo_q[i].r_valid;
-    // do not assign tcdm_cast[i].r_data = load_fifo_q[i].r_data
-    assign tcdm_cast[i].r_opc      = load_fifo_q[i].r_opc;
-    assign tcdm_cast[i].r_user     = load_fifo_q[i].r_user;
-    assign tcdm_cast[i].r_id       = load_fifo_q[i].r_id;
-    assign load_fifo_q[i].ereq     = tcdm_cast[i].ereq;
-    assign tcdm_cast[i].egnt       = load_fifo_q[i].egnt;
-    assign tcdm_cast[i].r_evalid   = load_fifo_q[i].r_evalid;
-    assign load_fifo_q[i].r_eready = tcdm_cast[i].r_eready;
-    assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
-    assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
+  // Left TCDM buses assignment.
+  assign load_fifo_q[i].req      = tcdm_cast[i].req;
+  assign tcdm_cast[i].gnt        = load_fifo_q[i].gnt;
+  assign load_fifo_q[i].add      = tcdm_cast[i].add;
+  assign load_fifo_q[i].wen      = tcdm_cast[i].wen;
+  assign load_fifo_q[i].data     = tcdm_cast[i].data;
+  assign load_fifo_q[i].be       = tcdm_cast[i].be;
+  assign load_fifo_q[i].r_ready  = tcdm_cast[i].r_ready;
+  assign load_fifo_q[i].user     = tcdm_cast[i].user;
+  assign load_fifo_q[i].id       = tcdm_cast[i].id;
+  assign tcdm_cast[i].r_valid    = load_fifo_q[i].r_valid;
+  // do not assign tcdm_cast[i].r_data = load_fifo_q[i].r_data
+  assign tcdm_cast[i].r_opc      = load_fifo_q[i].r_opc;
+  assign tcdm_cast[i].r_user     = load_fifo_q[i].r_user;
+  assign tcdm_cast[i].r_id       = load_fifo_q[i].r_id;
+  assign load_fifo_q[i].ereq     = tcdm_cast[i].ereq;
+  assign tcdm_cast[i].egnt       = load_fifo_q[i].egnt;
+  assign tcdm_cast[i].r_evalid   = load_fifo_q[i].r_evalid;
+  assign load_fifo_q[i].r_eready = tcdm_cast[i].r_eready;
+  assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
+  assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
 
 
-    if (i == WsourceStreamId) begin
-      hci_core_source_biased       #(
-        .MISALIGNED_ACCESSES   ( REALIGN                    ),
-        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-      ) i_stream_source      (
-        .clk_i               ( clk_i                 ),
-        .rst_ni              ( rst_ni                ),
-        .test_mode_i         ( test_mode_i           ),
-        .clear_i             ( clear_i               ),
-        .enable_i            ( enable_i              ),
-        .bias_i              ( scales_bias_i         ),
-        .skip_i              ( scales_skip_i         ),
-        .tcdm                ( tcdm_cast[i]          ),
-        .stream              ( out_stream[i]         ),
-        .ctrl_i              ( biased_source_ctrl[i] ),
-        .flags_o             ( source_flags[i]       )
-      );
-    end else begin
-      hci_core_source       #(
-        .MISALIGNED_ACCESSES   ( REALIGN                    ),
-        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-      ) i_stream_source      (
-        .clk_i               ( clk_i           ),
-        .rst_ni              ( rst_ni          ),
-        .test_mode_i         ( test_mode_i     ),
-        .clear_i             ( clear_i         ),
-        .enable_i            ( enable_i        ),
-        .tcdm                ( tcdm_cast[i]    ),
-        .stream              ( out_stream[i]   ),
-        .ctrl_i              ( source_ctrl[i]  ),
-        .flags_o             ( source_flags[i] )
-      );
-    end
-  end else begin : gen_no_cast_unit
-    if (i == ZerossourceStreamId) begin
-      hci_core_source_biased       #(
-        .MISALIGNED_ACCESSES   ( REALIGN                    ),
-        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-      ) i_stream_source      (
-        .clk_i               ( clk_i                  ),
-        .rst_ni              ( rst_ni                 ),
-        .test_mode_i         ( test_mode_i            ),
-        .clear_i             ( clear_i                ),
-        .enable_i            ( enable_i               ),
-        .bias_i              ( zeros_bias_i           ),
-        .skip_i              ( zeros_skip_i           ),
-        .tcdm                ( load_fifo_q[i]         ),
-        .stream              ( zeros_stream_pre_cast  ),
-        .ctrl_i              ( biased_source_ctrl[i]  ),
-        .flags_o             ( source_flags[i]        )
-      );
-
-      redmule_qint_cast #(
-        .DW ( DATAW )
-      ) i_zeros_qint_cast (
-        .clk_i    ( clk_i                 ),
-        .rst_ni   ( rst_ni                ),
-        .clear_i  ( clear_i               ),
-        .fmt_i    ( ctrl_i.q_int_fmt      ),
-        .stream_i ( zeros_stream_pre_cast ),
-        .stream_o ( out_stream[i]         )
-      );
-    end else if (i == WQsourceStreamId) begin
-      hci_core_source_biased       #(
-        .MISALIGNED_ACCESSES   ( REALIGN                    ),
-        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-      ) i_stream_source      (
-        .clk_i               ( clk_i                  ),
-        .rst_ni              ( rst_ni                 ),
-        .test_mode_i         ( test_mode_i            ),
-        .clear_i             ( clear_i                ),
-        .enable_i            ( enable_i               ),
-        .bias_i              ( wq_bias_i              ),
-        .skip_i              ( wq_skip_i              ),
-        .tcdm                ( load_fifo_q[i]         ),
-        .stream              ( wq_stream_pre_cast     ),
-        .ctrl_i              ( biased_source_ctrl[i]  ),
-        .flags_o             ( source_flags[i]        )
-      );
-
-      redmule_qint_cast #(
-        .DW ( DATAW )
-      ) i_wq_qint_cast (
-        .clk_i    ( clk_i              ),
-        .rst_ni   ( rst_ni             ),
-        .clear_i  ( clear_i            ),
-        .fmt_i    ( ctrl_i.q_int_fmt   ),
-        .stream_i ( wq_stream_pre_cast ),
-        .stream_o ( out_stream[i]      )
-      );
-    end else begin
-      hci_core_source       #(
-        .MISALIGNED_ACCESSES   ( REALIGN                    ),
-        .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-      ) i_stream_source      (
-        .clk_i               ( clk_i           ),
-        .rst_ni              ( rst_ni          ),
-        .test_mode_i         ( test_mode_i     ),
-        .clear_i             ( clear_i         ),
-        .enable_i            ( enable_i        ),
-        .tcdm                ( load_fifo_q[i]  ),
-        .stream              ( out_stream[i]   ),
-        .ctrl_i              ( source_ctrl[i]  ),
-        .flags_o             ( source_flags[i] )
-      );
-    end
-  end
+  hci_core_source       #(
+    .MISALIGNED_ACCESSES   ( REALIGN                    ),
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+  ) i_stream_source      (
+    .clk_i               ( clk_i           ),
+    .rst_ni              ( rst_ni          ),
+    .test_mode_i         ( test_mode_i     ),
+    .clear_i             ( clear_i         ),
+    .enable_i            ( enable_i        ),
+    .tcdm                ( tcdm_cast[i]    ),
+    .stream              ( out_stream[i]   ),
+    .ctrl_i              ( source_ctrl[i]  ),
+    .flags_o             ( source_flags[i] )
+  );
 end
 
 // Assign flags in the vector to the relative output buses.
@@ -620,9 +496,6 @@ assign flags_o.x_stream_source_flags = source_flags[XsourceStreamId];
 assign flags_o.w_stream_source_flags = source_flags[WsourceStreamId];
 assign flags_o.y_stream_source_flags = source_flags[YsourceStreamId];
 
-assign flags_o.gid_stream_source_flags    = source_flags[GIdxsourceStreamId];
-assign flags_o.wq_stream_source_flags     = source_flags[WQsourceStreamId];
-assign flags_o.zeros_stream_source_flags  = source_flags[ZerossourceStreamId];
 `ifdef PACE_ENABLED
   assign flags_o.pace_stream_source_flags = source_flags[PACEsourceStreamId];
 `endif
@@ -640,15 +513,5 @@ hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
   hwpe_stream_assign i_pace_in_stream_assign ( .push_i( out_stream[PACEsourceStreamId] ) ,
                                                .pop_o ( pace_stream_o               ) );
 `endif
-
-
-hwpe_stream_assign i_gidxstream_assign ( .push_i( out_stream[GIdxsourceStreamId] ) ,
-                                      .pop_o ( gidx_stream_o                  ) );
-
-hwpe_stream_assign i_wqstream_assign ( .push_i( out_stream[WQsourceStreamId] ) ,
-                                      .pop_o ( wq_stream_o                  ) );
-
-hwpe_stream_assign i_zerosstream_assign ( .push_i( out_stream[ZerossourceStreamId] ) ,
-                                      .pop_o ( zeros_stream_o                  ) );
 
 endmodule : redmule_streamer

@@ -27,10 +27,7 @@ localparam int unsigned          TOT_DEPTH = H*D
   input  x_buffer_ctrl_t                                     ctrl_i           ,
   output x_buffer_flgs_t                                     flags_o          ,
   output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o       ,
-  input  logic                                      [DW-1:0] x_buffer_i       ,
-  input  logic                             [$clog2(D*H)-1:0] next_wrow_i      ,
-  input  logic                                               next_wrow_valid_i,
-  output logic                                               next_wrow_ready_o
+  input  logic                                      [DW-1:0] x_buffer_i
 );
 
 typedef enum logic [2:0] {
@@ -91,7 +88,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : refill_flag_register
 end
 
 assign pad_read_en   = buf_write_en || ctrl_i.pad_setup;
-assign pad_read_addr = ctrl_i.dequant ? next_wrow_i : ctrl_i.pad_setup ? '0 : pad_r_addr_d;
+assign pad_read_addr = ctrl_i.pad_setup ? '0 : pad_r_addr_d;
 
 redmule_x_pad_scm #(
   .WORD_SIZE ( BITW      ),
@@ -112,7 +109,7 @@ redmule_x_pad_scm #(
 // Normally, we only write a row in the buffer when another one is read
 // In the FAST_FILL state we write a new row in the buffer every cycle until it is full
 assign buf_write_en = (current_state == FAST_FILL && ~refilling ||
-                      current_state == FILL && ctrl_i.h_shift) && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x);
+                      current_state == FILL && ctrl_i.h_shift);
 
 redmule_x_buffer_scm #(
   .WORD_SIZE ( BITW ),
@@ -159,9 +156,9 @@ always_comb begin : fsm
 
     FAST_FILL: begin
       // As buf_write_cnt increments one cycle late, we have to check if its value is set to increase in the next cycle
-      if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots)) && (~ctrl_i.dequant || next_wrow_valid_i || ctrl_i.last_x)) begin
+      if ((pad_r_addr_q == buf_write_cnt-1 || flags_o.empty) && (~ctrl_i.h_shift || first_block || (pad_read_cnt == ctrl_i.slots))) begin
         if (pad_read_cnt == ctrl_i.slots) begin
-          if (~flags_o.full/* || ctrl_i.rst_w_index*/) begin
+          if (~flags_o.full) begin
             next_state = PAD_EMPTY;
           end else begin
             next_state = WAIT_FIRST_READ;
@@ -323,8 +320,6 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buffer_write_address
       buf_w_addr <= buf_w_addr + 1;
   end
 end
-
-assign next_wrow_ready_o = pad_read_en;
 
 // Output assignment
 // verilog_lint: waive-start generate-label

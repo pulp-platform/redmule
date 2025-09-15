@@ -28,8 +28,6 @@ module redmule_engine
   input  logic                    [W-1:0][H-1:0][BITW-1:0] x_input_i          , // Inputs to be loaded inside the buffer
   input  logic                           [H-1:0][BITW-1:0] w_input_i          , // Weights to be streamed inside the datapath
   input  logic                    [W-1:0]       [BITW-1:0] y_bias_i           ,
-  input  logic                         [H-1:0][BITW/2-1:0] zeros_i            ,
-  input  logic                         [H-1:0][BITW/2-1:0] qweights_i         ,
   // Output Result
   output logic                    [W-1:0]       [BITW-1:0] z_output_o         , // Outputs computations
   // fpnew_fma Input Signals
@@ -71,21 +69,6 @@ module redmule_engine
 logic [W-1:0] row_clk;
 logic [W-1:0]       [BITW-1:0] result, feedback;
 
-logic [H-1:0][BITW-1:0] dq_weights;
-
-redmule_dequantizer #(
-  .DW       ( H*BITW   ),
-  .FpFormat ( FpFormat ),
-  .Height   ( H        )
-) i_deq (
-  .clk_i     ( clk_i      ),
-  .rst_ni    ( rst_ni     ),
-  .clear_i   ( flush_i    ),
-  .scales_i  ( w_input_i  ),
-  .zeros_i   ( zeros_i    ),
-  .qw_i      ( qweights_i ),
-  .weights_o ( dq_weights )
-);
 `ifdef PACE_ENABLED
   logic [W-1:0][H-1:0][BITW-1:0] x_input_mux, x_input_pace;
   logic [W-1:0][H-1:0][PIDW-1:0] pace_pid;// Partition Index for selecting right x
@@ -118,40 +101,40 @@ generate
       .NumPipeRegs     ( NumPipeRegs ),
       .PipeConfig      ( PipeConfig  )
     ) i_row            (
-      .clk_i              ( row_clk[index]                                        ),
-      .rst_ni             ( rst_ni                                                ),
+      .clk_i              ( row_clk[index]          ),
+      .rst_ni             ( rst_ni                  ),
 `ifdef PACE_ENABLED
-      .x_input_i          ( x_input_mux     [index]                               ),
-      .pace_part_id_o     ( pace_pid        [index]                               ),
-      .pace_mode_i        ( ctrl_engine_i.pace_mode                               ),
+      .x_input_i          ( x_input_mux     [index] ),
+      .pace_part_id_o     ( pace_pid        [index] ),
+      .pace_mode_i        ( ctrl_engine_i.pace_mode ),
 `else
-      .x_input_i          ( x_input_i       [index]                               ),
+      .x_input_i          ( x_input_i       [index] ),
 `endif
-      .w_input_i          ( ctrl_engine_i.dequant_enable ? dq_weights : w_input_i ),
-      .y_bias_i           ( feedback        [index]                               ),
-      .z_output_o         ( result          [index]                               ),
-      .fma_is_boxed_i     ( fma_is_boxed_i                                        ),
-      .noncomp_is_boxed_i ( noncomp_is_boxed_i                                    ),
-      .stage1_rnd_i       ( stage1_rnd_i                                          ),
-      .stage2_rnd_i       ( stage2_rnd_i                                          ),
-      .op1_i              ( op1_i                                                 ),
-      .op2_i              ( op2_i                                                 ),
-      .op_mod_i           ( op_mod_i                                              ),
-      .tag_i              ( tag_i                                                 ),
-      .aux_i              ( aux_i                                                 ),
-      .in_valid_i         ( in_valid_i                                            ),
-      .in_ready_o         ( in_ready_o      [index]                               ),
-      .reg_enable_i       ( reg_enable_i                                          ),
-      .flush_i            ( flush_i                                               ),
-      .status_o           ( status_o        [index]                               ),
-      .extension_bit_o    ( extension_bit_o [index]                               ),
-      .class_mask_o       ( class_mask_o    [index]                               ),
-      .is_class_o         ( is_class_o      [index]                               ),
-      .tag_o              ( tag_o           [index]                               ),
-      .aux_o              ( aux_o           [index]                               ),
-      .out_valid_o        ( out_valid_o     [index]                               ),
-      .out_ready_i        ( out_ready_i                                           ),
-      .busy_o             ( busy_o          [index]                               )
+      .w_input_i          ( w_input_i               ),
+      .y_bias_i           ( feedback        [index] ),
+      .z_output_o         ( result          [index] ),
+      .fma_is_boxed_i     ( fma_is_boxed_i          ),
+      .noncomp_is_boxed_i ( noncomp_is_boxed_i      ),
+      .stage1_rnd_i       ( stage1_rnd_i            ),
+      .stage2_rnd_i       ( stage2_rnd_i            ),
+      .op1_i              ( op1_i                   ),
+      .op2_i              ( op2_i                   ),
+      .op_mod_i           ( op_mod_i                ),
+      .tag_i              ( tag_i                   ),
+      .aux_i              ( aux_i                   ),
+      .in_valid_i         ( in_valid_i              ),
+      .in_ready_o         ( in_ready_o      [index] ),
+      .reg_enable_i       ( reg_enable_i            ),
+      .flush_i            ( flush_i                 ),
+      .status_o           ( status_o        [index] ),
+      .extension_bit_o    ( extension_bit_o [index] ),
+      .class_mask_o       ( class_mask_o    [index] ),
+      .is_class_o         ( is_class_o      [index] ),
+      .tag_o              ( tag_o           [index] ),
+      .aux_o              ( aux_o           [index] ),
+      .out_valid_o        ( out_valid_o     [index] ),
+      .out_ready_i        ( out_ready_i             ),
+      .busy_o             ( busy_o          [index] )
     );
 
     // In case input matrix is bigger than the array, we feedback the partial results to continue the computation

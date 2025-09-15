@@ -77,9 +77,6 @@
 #define REDMULE_MCFG0_PTR 0x0C
 #define REDMULE_MCFG1_PTR 0x10
 #define REDMULE_ARITH_PTR 0x14
-#define REDMULE_REG_G_PTR 0x18
-#define REDMULE_REG_S_PTR 0x1C
-#define REDMULE_REG_B_PTR 0x20
 
 // OPs definition
 #define MATMUL 0x0
@@ -103,10 +100,5 @@
 #define FP8 0x3
 #define FP16ALT 0x4
 #define FP8ALT 0x5
-
-// Quantized formats
-#define Q_INT2 0x0
-#define Q_INT4 0x1
-#define Q_INT8 0x2
 
 #endif

@@ -49,9 +49,6 @@ sources:
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
     - rtl/redmule_memory_scheduler.sv
-    - rtl/redmule_gidx_buffer.sv
-    - rtl/redmule_dequantizer.sv
-    - rtl/redmule_qint_cast.sv
 
     - target: redmule_hwpe
       files:

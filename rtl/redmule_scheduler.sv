@@ -17,7 +17,6 @@ module redmule_scheduler
   parameter  int unsigned Height      = ARRAY_HEIGHT  ,
   parameter  int unsigned Width       = ARRAY_WIDTH   ,
   parameter  int unsigned NumPipeRegs = PIPE_REGS     ,
-  parameter  int unsigned GID_WIDTH   = GROUP_ID_WIDTH,
   localparam int unsigned D           = TOT_DEPTH     ,
   localparam int unsigned H           = Height        ,
   localparam int unsigned W           = Width
@@ -34,10 +33,6 @@ module redmule_scheduler
   input  logic                            w_valid_i         ,
   input  logic                            y_valid_i         ,
   input  logic                            z_ready_i         ,
-
-  input  logic                            wq_valid_i        ,
-  input  logic                            zeros_valid_i     ,
-  input  logic                            next_wrow_valid_i ,
 
   input  logic                            engine_flush_i    ,
 
@@ -59,7 +54,6 @@ module redmule_scheduler
   output x_buffer_ctrl_t                  cntrl_x_buffer_o   ,
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
-  output gidx_buffer_ctrl_t               cntrl_gidx_buffer_o,
   output flgs_scheduler_t                 flgs_scheduler_o
 );
 
@@ -197,9 +191,6 @@ module redmule_scheduler
 
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
 
-  assign cntrl_x_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
-  assign cntrl_x_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
-
   /******************************
    *     X Reload Control       *
    ******************************/
@@ -271,7 +262,7 @@ module redmule_scheduler
     end
   end
 
-  assign w_rows_iter_en = current_state == LOAD_W && (w_valid_i || reg_file_i.hwpe_params[DEQUANT_MODE][0] && flgs_w_buffer_i.gid_repeated) && ~stall_engine;
+  assign w_rows_iter_en = current_state == LOAD_W && w_valid_i && ~stall_engine;
   assign w_rows_iter_d  = w_rows_iter_q == reg_file_i.hwpe_params[W_ITERS][31:16]-1 ? '0 : w_rows_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_columns_iteration
@@ -336,9 +327,6 @@ module redmule_scheduler
 
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine && ~w_done;
   assign cntrl_w_buffer_o.shift = (current_state == LOAD_W || current_state == WAIT) && ~stall_engine;
-
-  assign cntrl_w_buffer_o.dequant   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
-  assign cntrl_w_buffer_o.q_int_fmt = qint_fmt_e'(reg_file_i.hwpe_params[DEQUANT_MODE][2:1]);
 
   always_comb begin
     cntrl_w_buffer_o.zero_set = '0;
@@ -518,9 +506,6 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
 
-  assign cntrl_gidx_buffer_o.num_w_iters = reg_file_i.hwpe_params[X_ITERS][15:0];
-
-
   /**********************************
    *           Counters             *
    **********************************/
@@ -573,7 +558,6 @@ module redmule_scheduler
   assign cntrl_engine_o.in_valid         = 1'b1;
   assign cntrl_engine_o.flush            = engine_flush_i;
   assign cntrl_engine_o.out_ready        = 1'b1;
-  assign cntrl_engine_o.dequant_enable   = reg_file_i.hwpe_params[DEQUANT_MODE][0];
 `ifdef PACE_ENABLED
   assign cntrl_engine_o.pace_mode        = fpnew_pkg::operation_e'(reg_file_i.hwpe_params[OP_SELECTION][1]);
   assign cntrl_engine_o.accumulate       = cntrl_engine_o.pace_mode ? '0 : ~pushing_y;
@@ -618,10 +602,8 @@ module redmule_scheduler
   logic check_x_full, check_x_full_en;
   logic check_y_loaded, check_y_loaded_en;
 
-  logic check_quant_valid, check_quant_valid_en;
-
   // Check if the next w row is valid
-  assign check_w_valid     = w_valid_i || (flgs_w_buffer_i.gid_repeated && reg_file_i.hwpe_params[DEQUANT_MODE][0]);
+  assign check_w_valid     = w_valid_i;
   assign check_w_valid_en  = ~w_done;
 
   // Check if the x buffer is full
@@ -635,9 +617,6 @@ module redmule_scheduler
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
-  assign check_quant_valid = (zeros_valid_i || flgs_w_buffer_i.gid_repeated) && wq_valid_i && (next_wrow_valid_i || current_state != LOAD_W || x_done_en);
-  assign check_quant_valid_en = ~w_done && reg_file_i.hwpe_params[DEQUANT_MODE][0];
-
   /******************************
    *           FLAGS            *
    ******************************/
@@ -646,15 +625,13 @@ module redmule_scheduler
                           ~check_x_full && check_x_full_en
                         ) : current_state == LOAD_W && (
                           ~check_w_valid     && check_w_valid_en     ||
-                          ~check_y_loaded    && check_y_loaded_en    ||
-                          ~check_quant_valid && check_quant_valid_en
+                          ~check_y_loaded    && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
                           || current_state == WAIT && ~check_x_full && check_x_full_en;
 `else
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid     && check_w_valid_en     ||
-                          ~check_y_loaded    && check_y_loaded_en    ||
-                          ~check_quant_valid && check_quant_valid_en
+                          ~check_y_loaded    && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
                           || current_state == WAIT && ~check_x_full && check_x_full_en;
 `endif

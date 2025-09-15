@@ -290,7 +290,6 @@ f_d.write('#define SRC_FMT FP16\n'         )
 f_d.write('#define DST_FMT FP16\n'         )
 f_d.write('#define FPFORMAT 16\n'          )
 f_d.write('uint8_t gemm_ops = GEMM; \n'    )
-f_d.write('uint8_t quant_fmt = 0; \n'      )
 f_d.write('\n#endif\n'                     )
 f_d.close()
 
