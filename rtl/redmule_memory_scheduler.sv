@@ -195,6 +195,32 @@ module redmule_memory_scheduler
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 
+    // Here we initialize the streamer source signals
+    // for the R stream source
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[R_ADDR];
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[N_SIZE]/W;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d1_stride = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
+
+    // Here we initialize the streamer source signals
+    // for the R stream sink
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[R_ADDR];
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[N_SIZE]/W;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_len = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d1_len = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d1_stride = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d2_stride = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d2_len = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
+
 `ifdef PACE_ENABLED
    // for the PACE stream source
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
@@ -237,12 +263,16 @@ module redmule_memory_scheduler
     cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
+    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[R_CONF][0] && flgs_streamer_i.r_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
+    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (reg_file_i.hwpe_params[R_CONF][2:1] != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
 `else
     cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
+    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[R_CONF][0] && flgs_streamer_i.r_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
+    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (reg_file_i.hwpe_params[R_CONF][2:1] != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
 `endif
   end
 

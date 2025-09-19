@@ -49,6 +49,7 @@ sources:
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
     - rtl/redmule_memory_scheduler.sv
+    - rtl/redmule_reduction_unit.sv
 
     - target: redmule_hwpe
       files:

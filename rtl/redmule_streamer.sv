@@ -32,8 +32,12 @@ module redmule_streamer
   // Engine Y input + HS signals (output for the streamer)
   hwpe_stream_intf_stream.source y_stream_o,
 
+  hwpe_stream_intf_stream.source r_stream_o,
+
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
+
+  hwpe_stream_intf_stream.sink   r_stream_i,
 
 `ifdef PACE_ENABLED
   // Engine PACE input + HS signals  (output from the streamer)
@@ -158,7 +162,7 @@ hci_core_intf #(
 `endif
   .DW ( DW ),
   .UW ( UW )
-) virt_tcdm [0:NumStreamSources-1] ( .clk ( clk_i ) );
+) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 
 
 hci_core_mux_ooo #(
@@ -187,7 +191,7 @@ hci_core_r_id_filter #(
 
 
 hci_core_mux_ooo #(
-  .NB_CHAN              ( NumStreamSources           ),
+  .NB_CHAN              ( NumStreamSources+1         ),
   .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_ldst_mux          (
   .clk_i              ( clk_i                ),
@@ -286,7 +290,6 @@ hci_core_r_valid_filter #(
   );
 `endif
 
-
 // Store interface FIFO buses.
 hci_core_intf #(
 `ifndef SYNTHESIS
@@ -298,6 +301,32 @@ hci_core_intf #(
 ) z_fifo_d ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
+
+hci_core_intf #(
+`ifndef SYNTHESIS
+  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
+  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
+`endif
+  .DW ( DW ),
+  .UW ( UW )
+) r_sink_fifo_d ( .clk ( clk_i ) );
+hci_core_intf #( .DW ( DW ),
+                 .UW ( UW ) ) r_sink_fifo_q ( .clk ( clk_i ) );
+
+hci_core_sink         #(
+  .MISALIGNED_ACCESSES ( REALIGN                      ),
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_r_stream_sink        (
+  .clk_i               ( clk_i                       ),
+  .rst_ni              ( rst_ni                      ),
+  .test_mode_i         ( test_mode_i                 ),
+  .clear_i             ( clear_i                     ),
+  .enable_i            ( enable_i                    ),
+  .tcdm                ( r_sink_fifo_d               ),
+  .stream              ( r_stream_i                  ),
+  .ctrl_i              ( ctrl_i.r_stream_sink_ctrl   ),
+  .flags_o             ( flags_o.r_stream_sink_flags )
+);
 
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
@@ -356,6 +385,20 @@ hci_core_fifo #(
 // Assigning the store FIFO output to the store side of the y/z multiplexer.
 hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (yz_tcdm[1]) );
 
+hci_core_fifo #(
+  .FIFO_DEPTH                      ( 2                          ),
+  .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_r_store_fifo (
+  .clk_i          ( clk_i    ),
+  .rst_ni         ( rst_ni   ),
+  .clear_i        ( clear_i  ),
+  .flags_o        (          ),
+  .tcdm_target    ( r_sink_fifo_d ),
+  .tcdm_initiator ( r_sink_fifo_q )
+);
+
+hci_core_assign i_r_store_assign ( .tcdm_target (r_sink_fifo_q), .tcdm_initiator (virt_tcdm[NumStreamSources]) );
+
 /**************************************** Load Channel ****************************************/
 /* The load channel of the streamer connects the incoming TCDM interface to three different   *
  * stream interfaces: X stream (ID: 0), W stream (ID: 1), and Y stream (ID: 2). The load side *
@@ -369,7 +412,9 @@ hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (yz_tc
 // X   -> virt_tcdm[0]
 // W   -> virt_tcdm[1]
 // Y/Z -> virt_tcdm[2]
-// PACE_IN -> virt_tcdm[3] , Output is shared with Y/Z streams
+// R   -> virt_tcdm[3]
+// PACE_IN -> virt_tcdm[4] , Output is shared with Y/Z streams
+// R SINK  -> virt_tcdm[5]
 
 // One TCDM FIFO and one HCI core source unit per stream channel.
 hci_core_intf #(
@@ -410,6 +455,7 @@ hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
 assign source_ctrl[XsourceStreamId]      = ctrl_i.x_stream_source_ctrl;
 assign source_ctrl[WsourceStreamId]      = ctrl_i.w_stream_source_ctrl;
 assign source_ctrl[YsourceStreamId]      = ctrl_i.y_stream_source_ctrl;
+assign source_ctrl[RsourceStreamId]      = ctrl_i.r_stream_source_ctrl;
 `ifdef PACE_ENABLED
   assign source_ctrl[PACEsourceStreamId]   = ctrl_i.pace_stream_source_ctrl;
 `endif
@@ -495,6 +541,7 @@ end
 assign flags_o.x_stream_source_flags = source_flags[XsourceStreamId];
 assign flags_o.w_stream_source_flags = source_flags[WsourceStreamId];
 assign flags_o.y_stream_source_flags = source_flags[YsourceStreamId];
+assign flags_o.r_stream_source_flags = source_flags[RsourceStreamId];
 
 `ifdef PACE_ENABLED
   assign flags_o.pace_stream_source_flags = source_flags[PACEsourceStreamId];
@@ -509,6 +556,9 @@ hwpe_stream_assign i_wstream_assign ( .push_i( out_stream[WsourceStreamId] ) ,
 
 hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
                                       .pop_o ( y_stream_o                  ) );
+
+hwpe_stream_assign i_rstream_assign ( .push_i( out_stream[RsourceStreamId] ) ,
+                                      .pop_o ( r_stream_o                  ) );
 `ifdef PACE_ENABLED
   hwpe_stream_assign i_pace_in_stream_assign ( .push_i( out_stream[PACEsourceStreamId] ) ,
                                                .pop_o ( pace_stream_o               ) );

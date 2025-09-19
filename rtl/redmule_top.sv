@@ -94,6 +94,8 @@ ctrl_regfile_t reg_file;
 flags_fifo_t   w_fifo_flgs, z_fifo_flgs;
 cntrl_flags_t  cntrl_flags;
 
+flgs_red_t red_flags;
+
 /*--------------------------------------------------------------*/
 /* |                         Streamer                         | */
 /*--------------------------------------------------------------*/
@@ -112,9 +114,17 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_i ) );
 
+// R streaming interface + R FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_init_d         ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_init_fifo      ( .clk( clk_i ) );
+
 // Z streaming interface + Z FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_i ) );
+
+// R streaming interface + R FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_out_q          ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_out_fifo       ( .clk( clk_i ) );
 
 `ifdef PACE_ENABLED
 // PACE streaming interface + PACE FIFO interface
@@ -140,8 +150,10 @@ redmule_streamer #(
   .x_stream_o      ( x_buffer_d      ),
   .w_stream_o      ( w_buffer_d      ),
   .y_stream_o      ( y_buffer_d      ),
+  .r_stream_o      ( red_init_d      ),
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo   ),
+  .r_stream_i      ( red_out_fifo    ),
 `ifdef PACE_ENABLED
   // PACE interface
   .pace_stream_o   ( pace_inp_d      ),
@@ -179,6 +191,18 @@ hwpe_stream_fifo #(
 
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .FIFO_DEPTH     ( 2             )
+) i_red_init_fifo (
+  .clk_i          ( clk_i         ),
+  .rst_ni         ( rst_ni        ),
+  .clear_i        ( clear         ),
+  .flags_o        (               ),
+  .push_i         ( red_init_d    ),
+  .pop_o          ( red_init_fifo )
+);
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN   ),
   .FIFO_DEPTH     ( 4             )
 ) i_y_buffer_fifo (
   .clk_i          ( clk_i         ),
@@ -200,6 +224,19 @@ hwpe_stream_fifo #(
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
 );
+
+hwpe_stream_fifo #(
+  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .FIFO_DEPTH     ( 2             )
+) i_red_out_fifo (
+  .clk_i          ( clk_i         ),
+  .rst_ni         ( rst_ni        ),
+  .clear_i        ( clear         ),
+  .flags_o        (               ),
+  .push_i         ( red_out_q     ),
+  .pop_o          ( red_out_fifo  )
+);
+
 `ifdef PACE_ENABLED
   hwpe_stream_fifo #(
     .DATA_WIDTH     ( DATAW_ALIGN   ),
@@ -288,6 +325,40 @@ redmule_z_buffer #(
   .z_buffer_o    ( z_buffer_q.data    ),
   .z_strb_o      ( z_buffer_q.strb    )
 );
+
+// REDUCTION UNIT //
+
+cntrl_red_t red_ctrl;
+
+assign red_ctrl.row_len = reg_file.hwpe_params[K_SIZE];
+assign red_ctrl.op      = reg_file.hwpe_params[R_CONF][2:1];
+assign red_ctrl.load    = reg_file.hwpe_params[R_CONF][0];
+assign red_ctrl.enable  = busy_o;
+assign red_ctrl.ready   = red_out_q.ready;
+
+assign red_init_fifo.ready = ~red_flags.is_initialized;
+
+redmule_reduction_unit #(
+  .Width    ( Width    ),
+  .Height   ( Height   ),
+  .FpFormat ( FpFormat ),
+  .MaxLat   ( 0        ),
+  .SumLat   ( 1        )
+) (
+  .clk_i        ( clk_i                        ),
+  .rst_ni       ( rst_ni                       ),
+  .clear_i      ( clear_i                      ),
+  .ctrl_i       ( red_ctrl                     ),
+  .valid_i      ( z_buffer_ctrl.fill           ),
+  .data_i       ( z_buffer_d                   ),
+  .init_i       ( red_init_fifo.data           ),
+  .init_valid_i ( red_init_fifo.valid          ),
+  .red_o        ( red_out_q.data               ),
+  .red_valid_o  ( red_out_q.valid              ),
+  .flags_o      ( red_flags                    )
+);
+
+assign red_out_q.strb = 2 ** (DW/8 / (NumPipeRegs+1)) - 1;
 
 `ifdef PACE_ENABLED
 
@@ -534,6 +605,7 @@ redmule_scheduler #(
   .flgs_w_buffer_i     ( w_buffer_flgs             ),
   .flgs_z_buffer_i     ( z_buffer_flgs             ),
   .flgs_engine_i       ( flgs_engine               ),
+  .flgs_red_i          ( red_flags                 ),
   .cntrl_scheduler_i   ( cntrl_scheduler           ),
   .reg_enable_o        ( reg_enable                ),
   .cntrl_engine_o      ( cntrl_engine              ),

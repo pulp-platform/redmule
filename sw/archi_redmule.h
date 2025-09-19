@@ -77,6 +77,7 @@
 #define REDMULE_MCFG0_PTR 0x0C
 #define REDMULE_MCFG1_PTR 0x10
 #define REDMULE_ARITH_PTR 0x14
+#define REDMULE_REG_R_PTR 0x18
 
 // OPs definition
 #define MATMUL 0x0

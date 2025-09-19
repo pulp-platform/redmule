@@ -42,6 +42,7 @@ module redmule_scheduler
   input  x_buffer_flgs_t                  flgs_x_buffer_i   ,
   input  w_buffer_flgs_t                  flgs_w_buffer_i   ,
   input  z_buffer_flgs_t                  flgs_z_buffer_i   ,
+  input  flgs_red_t                       flgs_red_i        ,
 
   input  flgs_engine_t                    flgs_engine_i     ,
   input  cntrl_scheduler_t                cntrl_scheduler_i ,
@@ -624,16 +625,18 @@ module redmule_scheduler
   assign stall_engine =  cntrl_engine_o.pace_mode ? current_state == LOAD_PACE && (
                           ~check_x_full && check_x_full_en
                         ) : current_state == LOAD_W && (
-                          ~check_w_valid     && check_w_valid_en     ||
-                          ~check_y_loaded    && check_y_loaded_en
+                          ~check_w_valid  && check_w_valid_en     ||
+                          ~check_y_loaded && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
-                          || current_state == WAIT && ~check_x_full && check_x_full_en;
+                          || current_state == WAIT && ~check_x_full && check_x_full_en
+                          || z_wait_counter_q == PIPE_REGS && ~flgs_red_i.is_initialized;
 `else
   assign stall_engine = current_state == LOAD_W && (
-                          ~check_w_valid     && check_w_valid_en     ||
-                          ~check_y_loaded    && check_y_loaded_en
+                          ~check_w_valid  && check_w_valid_en     ||
+                          ~check_y_loaded && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
-                          || current_state == WAIT && ~check_x_full && check_x_full_en;
+                          || current_state == WAIT && ~check_x_full && check_x_full_en
+                          || z_wait_counter_q == PIPE_REGS && ~flgs_red_i.is_initialized;
 `endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register

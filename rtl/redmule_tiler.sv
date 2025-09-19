@@ -52,15 +52,18 @@ assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
 `ifdef PACE_ENABLED
-  assign config_d.pace_tot_len  = reg_file_i.hwpe_params[MCFIG0][31:16];
-  assign config_d.pace_d0_stride= reg_file_i.hwpe_params[MCFIG1][15: 0];
-  assign config_d.pace_mode     = reg_file_i.hwpe_params[MACFG][13];
-  assign config_d.pace_in_addr  = reg_file_i.hwpe_params[W_ADDR];
-  assign config_d.pace_out_addr = reg_file_i.hwpe_params[Z_ADDR];
+  assign config_d.pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16];
+  assign config_d.pace_d0_stride = reg_file_i.hwpe_params[MCFIG1][15: 0];
+  assign config_d.pace_mode      = reg_file_i.hwpe_params[MACFG][13];
+  assign config_d.pace_in_addr   = reg_file_i.hwpe_params[W_ADDR];
+  assign config_d.pace_out_addr  = reg_file_i.hwpe_params[Z_ADDR];
 `endif
 assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
 assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
 assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
+assign config_d.r_addr          = reg_file_i.hwpe_params[R_ADDR_R];
+assign config_d.red_init        = reg_file_i.hwpe_params[MACFG][16];
+assign config_d.red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
@@ -273,6 +276,12 @@ assign reg_file_o.hwpe_params[OP_SELECTION][25:21] = config_q.stage_1_op;
 assign reg_file_o.hwpe_params[OP_SELECTION][20:16] = config_q.stage_2_op;
 assign reg_file_o.hwpe_params[OP_SELECTION][15:13] = config_q.input_format;
 assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
+assign reg_file_o.hwpe_params[M_SIZE]              = config_d.m_size;
+assign reg_file_o.hwpe_params[N_SIZE]              = config_d.n_size;
+assign reg_file_o.hwpe_params[K_SIZE]              = config_d.k_size;
+assign reg_file_o.hwpe_params[R_ADDR]              = config_d.r_addr;
+assign reg_file_o.hwpe_params[R_CONF][0]           = config_d.red_init;
+assign reg_file_o.hwpe_params[R_CONF][2:1]         = config_d.red_op;
 `ifdef PACE_ENABLED
   assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 2] = '0;
   assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;

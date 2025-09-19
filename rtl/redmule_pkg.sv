@@ -17,7 +17,7 @@ package redmule_pkg;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W;
-  parameter int unsigned            REDMULE_REGS = 26;
+  parameter int unsigned            REDMULE_REGS = 27;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
@@ -46,10 +46,14 @@ package redmule_pkg;
   parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
   parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
   // Matrix arithmetic config register
+  // [16:16] -> Reduction initialization
+  // [15:14] -> Reduction operation
   // [13:13] -> PACE mode selection
   // [12:10] -> Operation selection
   // [ 9: 7] -> Input/Output format
   parameter int unsigned MACFG = 5; // 0x14
+  // Reduction initialization values addr
+  parameter int unsigned R_ADDR_R = 6; // 0x18
   /**********************
   ** Final RF indexing **
   **********************/
@@ -71,7 +75,7 @@ package redmule_pkg;
   parameter int unsigned X_D1_STRIDE = 7;  // 0x1C
   parameter int unsigned W_TOT_LEN   = 8;  // 0x20
   parameter int unsigned TOT_X_READ  = 9;  // 0x24
-  parameter int unsigned W_D0_STRIDE = 10; // 0x20
+  parameter int unsigned W_D0_STRIDE = 10; // 0x28
   parameter int unsigned Z_TOT_LEN   = 11; // 0x2C
   parameter int unsigned Z_D0_STRIDE = 12; // 0x30
   parameter int unsigned Z_D2_STRIDE = 13; // 0x34
@@ -90,11 +94,20 @@ package redmule_pkg;
   // [0:0]   -> GEMM selection
   parameter int unsigned OP_SELECTION = 17; // 0x44
 
+  parameter int unsigned M_SIZE      = 18; // 0x48
+  parameter int unsigned N_SIZE      = 19; // 0x4C
+  parameter int unsigned K_SIZE      = 20; // 0x50
+  parameter int unsigned R_ADDR      = 21; // 0x54
+
+  // [2:1]   -> reduction operation
+  // [0:0]   -> init enable
+  parameter int unsigned R_CONF      = 22; // 0x58
+
   `ifdef PACE_ENABLED
-    parameter int unsigned PACE_IN_ADDR   = 22; // 0x58
-    parameter int unsigned PACE_OUT_ADDR  = 23; // 0x5C
-    parameter int unsigned PACE_D0_STRIDE = 24; // 0x60
-    parameter int unsigned PACE_D0_LENGTH = 25; // 0x64
+    parameter int unsigned PACE_IN_ADDR   = 23; // 0x5C
+    parameter int unsigned PACE_OUT_ADDR  = 24; // 0x60
+    parameter int unsigned PACE_D0_STRIDE = 25; // 0x64
+    parameter int unsigned PACE_D0_LENGTH = 26; // 0x68
   `endif
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
@@ -122,15 +135,16 @@ package redmule_pkg;
   } redmule_csr_num_e;
 
 `ifdef PACE_ENABLED
-  parameter int unsigned NumStreamSources     = 4; // X, W, Y, PACE_IN
-  parameter int unsigned PACEsourceStreamId   = 3;
+  parameter int unsigned NumStreamSources     = 5; // X, W, Y, R, PACE_IN
+  parameter int unsigned PACEsourceStreamId   = 4;
 `else
-  parameter int unsigned NumStreamSources     = 3; // X, W, Y
+  parameter int unsigned NumStreamSources     = 4; // X, W, Y, R
 `endif
 
   parameter int unsigned XsourceStreamId      = 0;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
+  parameter int unsigned RsourceStreamId      = 3;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
@@ -139,7 +153,9 @@ package redmule_pkg;
     hci_package::hci_streamer_ctrl_t        x_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t        w_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t        y_stream_source_ctrl;
+    hci_package::hci_streamer_ctrl_t        r_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t        z_stream_sink_ctrl;
+    hci_package::hci_streamer_ctrl_t        r_stream_sink_ctrl;
     fpnew_pkg::fp_format_e                  input_cast_src_fmt;
     fpnew_pkg::fp_format_e                  input_cast_dst_fmt;
     fpnew_pkg::fp_format_e                  output_cast_src_fmt;
@@ -156,7 +172,9 @@ package redmule_pkg;
     hci_package::hci_streamer_flags_t x_stream_source_flags;
     hci_package::hci_streamer_flags_t w_stream_source_flags;
     hci_package::hci_streamer_flags_t y_stream_source_flags;
+    hci_package::hci_streamer_flags_t r_stream_source_flags;
     hci_package::hci_streamer_flags_t z_stream_sink_flags;
+    hci_package::hci_streamer_flags_t r_stream_sink_flags;
 `ifdef PACE_ENABLED
     hci_package::hci_streamer_flags_t pace_stream_source_flags;
     hci_package::hci_streamer_flags_t pace_stream_sink_flags;
@@ -273,6 +291,21 @@ package redmule_pkg;
     logic idle;
   } cntrl_flags_t;
 
+  typedef enum logic [1:0] { RED_NONE, MAX, SUM } red_op_t;
+
+  typedef struct packed {
+    logic [15:0]  row_len;
+    red_op_t      op;
+    logic         load;
+    logic         enable;
+    logic         ready;
+  } cntrl_red_t;
+
+
+  typedef struct packed {
+    logic is_initialized;
+  } flgs_red_t;
+
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;
   typedef enum logic [1:0] { Float8=2'h0, Float16=2'h1, Float8Alt=2'h2, Float16Alt=2'h3 } gemm_fmt_e;
   typedef enum logic       { RNE=1'h0, RTZ=1'h1 } rnd_mode_e;
@@ -333,6 +366,9 @@ package redmule_pkg;
     fpu_fmt_e input_format;
     fpu_fmt_e computing_format;
     logic        gemm_selection;
+    logic [31:0] r_addr;
+    logic        red_init;
+    red_op_t     red_op;
   } redmule_config_t;
 
   typedef enum {

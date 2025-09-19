@@ -160,7 +160,7 @@ module redmule_ctrl
         end
       end
       REDMULE_COMPUTING: begin
-        if (flgs_streamer_i.z_stream_sink_flags.done) begin
+        if (flgs_streamer_i.z_stream_sink_flags.ready_start && ((reg_file_q.hwpe_params[R_CONF][2:1] == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
           next = REDMULE_FINISHED;
         end
       end
