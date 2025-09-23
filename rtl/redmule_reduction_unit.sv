@@ -32,16 +32,21 @@ module redmule_reduction_unit
   output flgs_red_t                        flags_o
 );
 
-  logic [Width-1:0][BITW-1:0] red_q, red_d, max_d, neutral_d;
+  localparam int unsigned RedLat = SumLat > MaxLat ? SumLat : MaxLat;
+
+  logic [Width-1:0][BITW-1:0] red_q, red_d, neutral_d;
 
   logic [Width-1:0] red_valid;
 
   logic new_iter;
   logic red_valid_q;
   logic [15:0] row_elem_counter_d, row_elem_counter_q;
-  logic [$clog2(PipeRegs+1)-1:0] op_counter_d, op_counter_q;
+  logic [$clog2(RedLat+1)-1:0] op_counter_d, op_counter_q, sel_lat;
+  logic op_counter_en;
 
   logic is_init_q;
+
+  assign sel_lat = ctrl_i.op == MAX ? MaxLat : SumLat;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : is_init_register
     if (~rst_ni) begin
@@ -51,7 +56,7 @@ module redmule_reduction_unit
         is_init_q <= '0;
       end else if ((~ctrl_i.load || (ctrl_i.load && init_valid_i)) && ~is_init_q && ctrl_i.enable) begin
         is_init_q <= '1;
-      end else if (red_valid_q && red_valid_o && ctrl_i.ready) begin
+      end else if (red_valid_q && ctrl_i.ready) begin
         is_init_q <= '0;
       end
     end
@@ -69,7 +74,7 @@ module redmule_reduction_unit
     end
   end
 
-  assign op_counter_d = |red_valid ? (op_counter_q == PipeRegs ? '0 : op_counter_q+1) : op_counter_q;
+  assign op_counter_d = op_counter_en ? (op_counter_q == sel_lat ? '0 : op_counter_q+1) : op_counter_q;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : row_elem_counter
     if (~rst_ni) begin
@@ -83,8 +88,8 @@ module redmule_reduction_unit
     end
   end
 
-  assign row_elem_counter_d = (op_counter_q == PipeRegs) && |red_valid ? (row_elem_counter_q == ctrl_i.row_len-1 ? '0 : row_elem_counter_q+1) : row_elem_counter_q;
-  assign new_iter = (op_counter_q == PipeRegs) && |red_valid && (row_elem_counter_q == ctrl_i.row_len-1);
+  assign row_elem_counter_d = (op_counter_q == sel_lat) && op_counter_en ? (row_elem_counter_q == ctrl_i.row_len-1 ? '0 : row_elem_counter_q+1) : row_elem_counter_q;
+  assign new_iter = (op_counter_q == sel_lat) && op_counter_en && (row_elem_counter_q == ctrl_i.row_len-1);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : res_valid_register
     if (~rst_ni) begin
@@ -100,12 +105,34 @@ module redmule_reduction_unit
 
   assign red_valid_o = red_valid_q;
 
-  // Use new_iter to initiate the reset
-
   // MAX //
-  //TODO
+  logic [Width-1:0][BITW-1:0] max_d;
+  logic [Width-1:0]           max_out_valid;
+
   always_comb begin : max_assignment
-    max_d = red_q;
+    max_d = '0;
+    max_out_valid = '0;
+
+    for (int unsigned i = 0; i < Width; i++) begin
+      if ((ctrl_i.op == MAX) && valid_i) begin
+        if (data_i[i][BITW-1] < red_q[i][BITW-1]) begin
+          max_d[i] = data_i[i];
+          max_out_valid[i] = 1'b1;
+        end else if (data_i[i][BITW-1] == red_q[i][BITW-1]) begin
+          if (red_q[i][BITW-1] == 1'b0) begin
+            if (data_i[i][BITW-2:0] > red_q[i][BITW-2:0]) begin
+              max_d[i] = data_i[i];
+              max_out_valid[i] = 1'b1;
+            end
+          end else begin
+            if (data_i[i][BITW-2:0] < red_q[i][BITW-2:0]) begin
+              max_d[i] = data_i[i];
+              max_out_valid[i] = 1'b1;
+            end
+          end
+        end
+      end
+    end
   end
 
   // SUM //
@@ -218,14 +245,19 @@ module redmule_reduction_unit
 
     unique case (ctrl_i.op)
       SUM: begin
-        red_d     = sum_d;
-        red_valid = sum_out_valid;
+        red_d         = sum_d;
+        red_valid     = sum_out_valid;
+        op_counter_en = |red_valid;
       end
       MAX: begin
+        red_d         = max_d;
+        red_valid     = max_out_valid;
+        op_counter_en = valid_i;
       end
       default: begin
-        red_d = '0;
-        red_valid = '0;
+        red_d         = '0;
+        red_valid     = '0;
+        op_counter_en = '0;
       end
     endcase
   end
@@ -233,7 +265,7 @@ module redmule_reduction_unit
   always_comb begin : neutral_element_assignment
     unique case (ctrl_i.op)
       SUM     : neutral_d = '0;
-      MAX     : neutral_d = '1;
+      MAX     : neutral_d = '1; // To keep things simple we do not treat NaNs differently
       default : neutral_d = '0;
     endcase
   end
