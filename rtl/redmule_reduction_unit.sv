@@ -16,6 +16,8 @@ module redmule_reduction_unit
   parameter fpnew_pkg::fp_format_e FpFormat = fpnew_pkg::FP16,
   parameter int unsigned           MaxLat   = 0,
   parameter int unsigned           SumLat   = 1,
+  parameter logic                  MaxEn    = 1,
+  parameter logic                  SumEn    = 1,
 
   localparam int unsigned          BITW     = fpnew_pkg::fp_width(FpFormat)
 ) (
@@ -109,30 +111,35 @@ module redmule_reduction_unit
   logic [Width-1:0][BITW-1:0] max_d;
   logic [Width-1:0]           max_out_valid;
 
-  always_comb begin : max_assignment
-    max_d = '0;
-    max_out_valid = '0;
+  if (MaxEn) begin
+    always_comb begin : max_assignment
+      max_d = '0;
+      max_out_valid = '0;
 
-    for (int unsigned i = 0; i < Width; i++) begin
-      if ((ctrl_i.op == MAX) && valid_i) begin
-        if (data_i[i][BITW-1] < red_q[i][BITW-1]) begin
-          max_d[i] = data_i[i];
-          max_out_valid[i] = 1'b1;
-        end else if (data_i[i][BITW-1] == red_q[i][BITW-1]) begin
-          if (red_q[i][BITW-1] == 1'b0) begin
-            if (data_i[i][BITW-2:0] > red_q[i][BITW-2:0]) begin
-              max_d[i] = data_i[i];
-              max_out_valid[i] = 1'b1;
-            end
-          end else begin
-            if (data_i[i][BITW-2:0] < red_q[i][BITW-2:0]) begin
-              max_d[i] = data_i[i];
-              max_out_valid[i] = 1'b1;
+      for (int unsigned i = 0; i < Width; i++) begin
+        if ((ctrl_i.op == MAX) && valid_i) begin
+          if (data_i[i][BITW-1] < red_q[i][BITW-1]) begin
+            max_d[i] = data_i[i];
+            max_out_valid[i] = 1'b1;
+          end else if (data_i[i][BITW-1] == red_q[i][BITW-1]) begin
+            if (red_q[i][BITW-1] == 1'b0) begin
+              if (data_i[i][BITW-2:0] > red_q[i][BITW-2:0]) begin
+                max_d[i] = data_i[i];
+                max_out_valid[i] = 1'b1;
+              end
+            end else begin
+              if (data_i[i][BITW-2:0] < red_q[i][BITW-2:0]) begin
+                max_d[i] = data_i[i];
+                max_out_valid[i] = 1'b1;
+              end
             end
           end
         end
       end
     end
+  end else begin
+    assign max_d = '0;
+    assign max_out_valid = '0;
   end
 
   // SUM //
@@ -171,72 +178,77 @@ module redmule_reduction_unit
 
   assign sum_out_rr_counter_d = |sum_out_valid && (ctrl_i.op == SUM) ? (sum_out_rr_counter_q == SumLat ? '0 : sum_out_rr_counter_q + 1) : sum_out_rr_counter_q;
 
-  for (genvar i = 0; i < Width; i += SumLat+1) begin : gen_sum
-    logic [SumLat:0][BITW-1:0] sum_fifo_d, sum_fifo_q;
-    logic [2:0][BITW-1:0]      operands;
-    logic [SumLat:0]           fifo_empty;
+  if (SumEn) begin
+    for (genvar i = 0; i < Width; i += SumLat+1) begin : gen_sum
+      logic [SumLat:0][BITW-1:0] sum_fifo_d, sum_fifo_q;
+      logic [2:0][BITW-1:0]      operands;
+      logic [SumLat:0]           fifo_empty;
 
-    logic [BITW-1]             sum_tmp;
-    logic                      sum_valid_tmp;
+      logic [BITW-1]             sum_tmp;
+      logic                      sum_valid_tmp;
 
-    assign operands [0] = '0;
-    assign operands [1] = red_q[i+sum_in_rr_counter_q];
-    assign operands [2] = sum_fifo_q[sum_in_rr_counter_q];
+      assign operands [0] = '0;
+      assign operands [1] = red_q[i+sum_in_rr_counter_q];
+      assign operands [2] = sum_fifo_q[sum_in_rr_counter_q];
 
-    for (genvar j = 0; j < SumLat+1; j++) begin : gen_inp_fifos
-      assign sum_fifo_d[j] = data_i[i+j];
+      for (genvar j = 0; j < SumLat+1; j++) begin : gen_inp_fifos
+        assign sum_fifo_d[j] = data_i[i+j];
 
-      fifo_v3 #(
-        .FALL_THROUGH ( 1                                                             ),
-        .DATA_WIDTH   ( BITW                                                          ),
-        .DEPTH        ( (PipeRegs+1)*Height-((PipeRegs+1)*Height+SumLat)/(SumLat+1)+1 )
-      ) sum_fifo (
-        .clk_i      ( clk_i                                        ),
-        .rst_ni     ( rst_ni                                       ),
-        .flush_i    ( clear_i                                      ),
-        .testmode_i ( '0                                           ),
-        .full_o     (                                              ),
-        .empty_o    ( fifo_empty[j]                                ),
-        .usage_o    (                                              ),
-        .data_i     ( sum_fifo_d[j]                                ),
-        .push_i     ( valid_i && (ctrl_i.op == SUM)                ),
-        .data_o     ( sum_fifo_q[j]                                ),
-        .pop_i      ( ~fifo_empty[j] && (sum_in_rr_counter_q == j) )
+        fifo_v3 #(
+          .FALL_THROUGH ( 1                                                             ),
+          .DATA_WIDTH   ( BITW                                                          ),
+          .DEPTH        ( (PipeRegs+1)*Height-((PipeRegs+1)*Height+SumLat)/(SumLat+1)+1 )
+        ) sum_fifo (
+          .clk_i      ( clk_i                                        ),
+          .rst_ni     ( rst_ni                                       ),
+          .flush_i    ( clear_i                                      ),
+          .testmode_i ( '0                                           ),
+          .full_o     (                                              ),
+          .empty_o    ( fifo_empty[j]                                ),
+          .usage_o    (                                              ),
+          .data_i     ( sum_fifo_d[j]                                ),
+          .push_i     ( valid_i && (ctrl_i.op == SUM)                ),
+          .data_o     ( sum_fifo_q[j]                                ),
+          .pop_i      ( ~fifo_empty[j] && (sum_in_rr_counter_q == j) )
+        );
+
+        assign fifos_empty[i+j] = fifo_empty[j];
+      end
+
+      redmule_fma   #(
+        .FpFormat    ( FpFormat               ),
+        .NumPipeRegs ( SumLat                 ),
+        .PipeConfig  ( fpnew_pkg::DISTRIBUTED ),
+        .Stallable   ( 0                      )
+      ) i_sum (
+        .clk_i           ( clk_i                    ),
+        .rst_ni          ( rst_ni                   ),
+        .operands_i      ( operands                 ),
+        .is_boxed_i      ( '1                       ),
+        .rnd_mode_i      ( fpnew_pkg::RNE           ),
+        .op_i            ( fpnew_pkg::ADD           ),
+        .op_mod_i        ( '0                       ),
+        .tag_i           ( '0                       ),
+        .aux_i           ( '0                       ),
+        .in_valid_i      ( ~&fifo_empty             ),
+        .in_ready_o      (                          ),
+        .reg_enable_i    ( '1                       ),
+        .flush_i         ( clear_i                  ),
+        .result_o        ( sum_tmp                  ),
+        .out_valid_o     ( sum_valid_tmp            ),
+        .out_ready_i     ( '1                       ),
+        .busy_o          (                          )
       );
 
-      assign fifos_empty[i+j] = fifo_empty[j];
+      // Set the reamining sum_d and sum_out_valid elements to 0
+      for (genvar j = 0; j < SumLat+1; j++) begin : assign_sum
+        assign sum_d[i+j]         = sum_out_rr_counter_q == j ? sum_tmp       : '0;
+        assign sum_out_valid[i+j] = sum_out_rr_counter_q == j ? sum_valid_tmp : '0;
+      end
     end
-
-    redmule_fma   #(
-      .FpFormat    ( FpFormat               ),
-      .NumPipeRegs ( SumLat                 ),
-      .PipeConfig  ( fpnew_pkg::DISTRIBUTED ),
-      .Stallable   ( 0                      )
-    ) i_sum (
-      .clk_i           ( clk_i                    ),
-      .rst_ni          ( rst_ni                   ),
-      .operands_i      ( operands                 ),
-      .is_boxed_i      ( '1                       ),
-      .rnd_mode_i      ( fpnew_pkg::RNE           ),
-      .op_i            ( fpnew_pkg::ADD           ),
-      .op_mod_i        ( '0                       ),
-      .tag_i           ( '0                       ),
-      .aux_i           ( '0                       ),
-      .in_valid_i      ( ~&fifo_empty             ),
-      .in_ready_o      (                          ),
-      .reg_enable_i    ( '1                       ),
-      .flush_i         ( clear_i                  ),
-      .result_o        ( sum_tmp                  ),
-      .out_valid_o     ( sum_valid_tmp            ),
-      .out_ready_i     ( '1                       ),
-      .busy_o          (                          )
-    );
-
-    // Set the reamining sum_d and sum_out_valid elements to 0
-    for (genvar j = 0; j < SumLat+1; j++) begin : assign_sum
-      assign sum_d[i+j]         = sum_out_rr_counter_q == j ? sum_tmp       : '0;
-      assign sum_out_valid[i+j] = sum_out_rr_counter_q == j ? sum_valid_tmp : '0;
-    end
+  end else begin
+    assign sum_d = '0;
+    assign sum_out_valid = '0;
   end
 
   always_comb begin : red_assignment
