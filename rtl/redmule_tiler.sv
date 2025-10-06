@@ -52,8 +52,7 @@ assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
 `ifdef PACE_ENABLED
-  assign config_d.pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16];
-  assign config_d.pace_d0_stride = reg_file_i.hwpe_params[MCFIG1][15: 0];
+  assign config_d.pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16] / (DATAW/BITW);
   assign config_d.pace_mode      = reg_file_i.hwpe_params[MACFG][13];
   assign config_d.pace_in_addr   = reg_file_i.hwpe_params[W_ADDR];
   assign config_d.pace_out_addr  = reg_file_i.hwpe_params[Z_ADDR];
@@ -286,7 +285,6 @@ assign reg_file_o.hwpe_params[R_CONF][2:1]         = config_d.red_op;
   assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 2] = '0;
   assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
   assign reg_file_o.hwpe_params[OP_SELECTION][1]     = config_q.pace_mode;
-  assign reg_file_o.hwpe_params[PACE_D0_STRIDE]      = config_q.pace_d0_stride;
   assign reg_file_o.hwpe_params[PACE_D0_LENGTH]      = config_q.pace_tot_len;
 `else
   assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;

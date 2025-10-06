@@ -12,7 +12,7 @@ import hwpe_stream_package::*;
 
 package redmule_pkg;
 
-  parameter int unsigned            DATA_W       = 512; // TCDM port dimension (in bits)
+  parameter int unsigned            DATA_W       = 256; // TCDM port dimension (in bits)
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
@@ -21,7 +21,7 @@ package redmule_pkg;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
-  parameter int unsigned            ARRAY_HEIGHT = 16;
+  parameter int unsigned            ARRAY_HEIGHT = 8;
   parameter int unsigned            PIPE_REGS    = 1;
   parameter int unsigned            ARRAY_WIDTH  = ARRAY_HEIGHT*PIPE_REGS; // Superior limit, smaller values are allowed.
   parameter int unsigned            TOT_DEPTH    = DATAW/BITW;
@@ -106,8 +106,7 @@ package redmule_pkg;
   `ifdef PACE_ENABLED
     parameter int unsigned PACE_IN_ADDR   = 23; // 0x5C
     parameter int unsigned PACE_OUT_ADDR  = 24; // 0x60
-    parameter int unsigned PACE_D0_STRIDE = 25; // 0x64
-    parameter int unsigned PACE_D0_LENGTH = 26; // 0x68
+    parameter int unsigned PACE_D0_LENGTH = 25; // 0x68
   `endif
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
@@ -353,7 +352,6 @@ package redmule_pkg;
     logic [31:0] yz_d0_stride;
     logic [31:0] yz_d2_stride;
 `ifdef PACE_ENABLED
-    logic [15:0] pace_d0_stride;
     logic [15:0] pace_tot_len;
 `endif
     logic [31:0] x_rows_offs;

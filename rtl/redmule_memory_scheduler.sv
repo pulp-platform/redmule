@@ -225,22 +225,26 @@ module redmule_memory_scheduler
    // for the PACE stream source
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[PACE_D0_STRIDE];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_stride = JMP;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_stride = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
 
     // for the PACE stream sink
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[PACE_D0_STRIDE];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_len = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_stride = JMP;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_len = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_stride = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d2_stride = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d2_len = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
 `endif
   end
 `ifdef PACE_ENABLED

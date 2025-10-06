@@ -254,7 +254,7 @@ def write_tensor_dim_inc_file(stimuli_file = "tensor_dim.h", n_tests=1000):
     f_d.write('#define __TENSOR_DIM__\n\n'     )
     f_d.write('#define M_SIZE  8 \n'           )
     f_d.write('#define N_SIZE  64\n'            )
-    f_d.write(f'#define K_SIZE  {n_tests/32} \n')
+    f_d.write(f'#define K_SIZE  {n_tests} \n')
     f_d.write('#define SRC_FMT FP16\n'         )
     f_d.write('#define DST_FMT FP16\n'         )
     f_d.write('#define FPFORMAT 16\n'          )
