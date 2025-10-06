@@ -60,7 +60,7 @@ static inline void hwpe_cg_enable() { return; }
 static inline void hwpe_cg_disable() { return; }
 
 void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size, uint16_t n_size,
-                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt, unsigned int r) {
+                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt) {
 
   uint32_t mcfg_reg0 = 0;
   uint32_t mcfg_reg1 = 0;
