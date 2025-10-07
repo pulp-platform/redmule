@@ -278,6 +278,6 @@ module redmule_ctrl
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_slave.evt[7:0];
-  assign clear_o = clear || latch_clear;
+  assign clear_o = clear || latch_clear || cntrl_slave.done;
 
 endmodule : redmule_ctrl
