@@ -127,7 +127,29 @@ if (EW > 1) begin : gen_ecc_encoder
   assign ecc_errors_o.meta_single_err = meta_single_err & tcdm.r_valid;
   assign ecc_errors_o.meta_multi_err  = meta_multi_err  & tcdm.r_valid;
 end else begin : gen_ldst_assign
-  hci_core_assign i_ldst_assign ( .tcdm_target (ldst_tcdm), .tcdm_initiator (tcdm) );
+  assign tcdm.req           = ldst_tcdm.req;
+  assign ldst_tcdm.gnt      = tcdm.gnt;
+  assign tcdm.add           = ldst_tcdm.add;
+  assign tcdm.wen           = ldst_tcdm.wen;
+  assign tcdm.data          = ldst_tcdm.data;
+  assign tcdm.be            = ldst_tcdm.be;
+  assign tcdm.r_ready       = 1'b1;
+  assign tcdm.user          = ldst_tcdm.user;
+  assign tcdm.id            = ldst_tcdm.id;
+  assign ldst_tcdm.r_data   = tcdm.r_data;
+  assign ldst_tcdm.r_valid  = tcdm.r_valid;
+  assign ldst_tcdm.r_user   = tcdm.r_user;
+  assign ldst_tcdm.r_id     = tcdm.r_id;
+  assign ldst_tcdm.r_opc    = tcdm.r_opc;
+
+  // ECC signals
+  assign tcdm.ereq          = ldst_tcdm.ereq;
+  assign ldst_tcdm.egnt     = tcdm.egnt;
+  assign ldst_tcdm.r_evalid = tcdm.r_evalid;
+  assign tcdm.r_eready      = ldst_tcdm.r_eready;
+  assign tcdm.ecc           = ldst_tcdm.ecc;
+  assign ldst_tcdm.r_ecc    = tcdm.r_ecc;
+
   assign ecc_errors_o = '0;
 end
 
