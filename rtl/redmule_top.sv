@@ -97,8 +97,8 @@ z_buffer_flgs_t z_buffer_flgs;
 cntrl_scheduler_t cntrl_scheduler;
 flgs_scheduler_t  flgs_scheduler;
 
-// Register file binded from controller to FSM
-ctrl_regfile_t reg_file;
+// Configuration of the current operation
+redmule_config_t redmule_config;
 flags_fifo_t   w_fifo_flgs, z_fifo_flgs;
 cntrl_flags_t  cntrl_flags;
 
@@ -178,8 +178,8 @@ redmule_streamer #(
 logic w_sel;
 logic w_send;
 
-assign w_sel  = reg_file.hwpe_params[STREAM_CONF][0];
-assign w_send = reg_file.hwpe_params[STREAM_CONF][1];
+assign w_sel  = redmule_config.receive_w;
+assign w_send = redmule_config.send_w;
 
 assign w_buffer_d.valid   = ((w_sel) ? w_stream_i.valid : w_stream_str.valid) && ((w_send) ? w_stream_o.ready && w_buffer_d.ready : 1'b1);
 assign w_buffer_d.data    = (w_sel) ? w_stream_i.data  : w_stream_str.data;
@@ -194,8 +194,8 @@ assign w_stream_o.strb  = (w_send) ? w_buffer_d.strb : '0;
 logic x_sel;
 logic x_send;
 
-assign x_sel  = reg_file.hwpe_params[STREAM_CONF][2];
-assign x_send =  reg_file.hwpe_params[STREAM_CONF][3];
+assign x_sel  = redmule_config.receive_x;
+assign x_send = redmule_config.send_x;
 
 assign x_buffer_d.valid   = ((x_sel) ? x_stream_i.valid : x_stream_str.valid) && ((x_send) ? x_stream_o.ready && x_buffer_d.ready : 1'b1);
 assign x_buffer_d.data    = (x_sel) ? x_stream_i.data  : x_stream_str.data;
@@ -372,9 +372,9 @@ redmule_z_buffer #(
 
 cntrl_red_t red_ctrl;
 
-assign red_ctrl.row_len = reg_file.hwpe_params[K_SIZE];
-assign red_ctrl.op      = red_op_t'(reg_file.hwpe_params[R_CONF][2:1]);
-assign red_ctrl.load    = reg_file.hwpe_params[R_CONF][0];
+assign red_ctrl.row_len = redmule_config.k_size;
+assign red_ctrl.op      = redmule_config.red_op;
+assign red_ctrl.load    = redmule_config.red_init;
 assign red_ctrl.enable  = busy_o;
 assign red_ctrl.ready   = red_out_q.ready;
 
@@ -583,7 +583,7 @@ redmule_memory_scheduler #(
   .rst_ni            ( rst_ni          ),
   .clear_i           ( clear           ),
   .z_priority_i      ( z_priority      ),
-  .reg_file_i        ( reg_file        ),
+  .config_i          ( redmule_config        ),
   .flgs_streamer_i   ( flgs_streamer   ),
   .cntrl_scheduler_i ( cntrl_scheduler ),
   .cntrl_flags_i     ( cntrl_flags     ),
@@ -612,7 +612,7 @@ redmule_ctrl        #(
   .busy_o            ( busy_o                  ),
   .clear_o           ( clear                   ),
   .evt_o             ( evt_o                   ),
-  .reg_file_o        ( reg_file                ),
+  .config_o          ( redmule_config                ),
   .reg_enable_i      ( reg_enable              ),
   .start_cfg_i       ( start_cfg               ),
   .cfg_complete_o    ( cfg_complete            ),
@@ -641,7 +641,7 @@ redmule_scheduler #(
   .y_valid_i           ( y_buffer_fifo.valid       ),
   .z_ready_i           ( z_buffer_q.ready          ),
   .engine_flush_i      ( engine_flush              ),
-  .reg_file_i          ( reg_file                  ),
+  .config_i            ( redmule_config                  ),
   .flgs_streamer_i     ( flgs_streamer             ),
   .flgs_x_buffer_i     ( x_buffer_flgs             ),
   .flgs_w_buffer_i     ( w_buffer_flgs             ),

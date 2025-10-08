@@ -20,7 +20,7 @@ module redmule_memory_scheduler
   input  logic                   rst_ni           ,
   input  logic                   clear_i          ,
   input  logic                   z_priority_i     ,
-  input  ctrl_regfile_t          reg_file_i       ,
+  input  redmule_config_t          config_i       ,
   input  flgs_streamer_t         flgs_streamer_i  ,
   input  cntrl_scheduler_t       cntrl_scheduler_i,
   input  cntrl_flags_t           cntrl_flags_i    ,
@@ -54,7 +54,7 @@ module redmule_memory_scheduler
     end
   end
 
-  assign x_cols_iters_d = x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 ? '0 : x_cols_iters_q + 1;
+  assign x_cols_iters_d = x_cols_iters_q == config_i.x_cols_iter-1 ? '0 : x_cols_iters_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : w_iters_register
     if (~rst_ni) begin
@@ -62,13 +62,13 @@ module redmule_memory_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
         w_iters_q <= '0;
-      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1) begin
+      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == config_i.x_cols_iter-1) begin
         w_iters_q <= w_iters_d;
       end
     end
   end
 
-  assign w_iters_d = w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1 ? '0 : w_iters_q + 1;
+  assign w_iters_d = w_iters_q == config_i.w_cols_iter-1 ? '0 : w_iters_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_rows_iters_register
     if (~rst_ni) begin
@@ -76,13 +76,13 @@ module redmule_memory_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
         x_rows_iters_q <= '0;
-      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1) begin
+      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == config_i.x_cols_iter-1 && w_iters_q == config_i.w_cols_iter-1) begin
         x_rows_iters_q <= x_rows_iters_d;
       end
     end
   end
 
-  assign x_rows_iters_d = x_rows_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 ? '0 : x_rows_iters_q + 1;
+  assign x_rows_iters_d = x_rows_iters_q == config_i.x_rows_iter-1 ? '0 : x_rows_iters_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : tot_x_read_register
     if (~rst_ni) begin
@@ -96,7 +96,7 @@ module redmule_memory_scheduler
     end
   end
 
-  assign tot_x_read_d = tot_x_read_q == reg_file_i.hwpe_params[TOT_X_READ] ? '0 : tot_x_read_q + 1;
+  assign tot_x_read_d = tot_x_read_q == config_i.tot_x_read ? '0 : tot_x_read_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_offs_register
     if (~rst_ni) begin
@@ -110,7 +110,7 @@ module redmule_memory_scheduler
     end
   end
 
-  assign x_cols_offs_d = x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 ? '0 : x_cols_offs_q + JMP;
+  assign x_cols_offs_d = x_cols_iters_q == config_i.x_cols_iter-1 ? '0 : x_cols_offs_q + JMP;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_rows_offs_register
     if (~rst_ni) begin
@@ -118,38 +118,38 @@ module redmule_memory_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
         x_rows_offs_q <= '0;
-      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == reg_file_i.hwpe_params[X_ITERS][15:0]-1 && w_iters_q == reg_file_i.hwpe_params[W_ITERS][15:0]-1) begin
+      end else if (flgs_streamer_i.x_stream_source_flags.done && x_cols_iters_q == config_i.x_cols_iter-1 && w_iters_q == config_i.w_cols_iter-1) begin
         x_rows_offs_q <= x_rows_offs_d;
       end
     end
   end
 
-  assign x_rows_offs_d = x_rows_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 ? '0 : x_rows_offs_q + reg_file_i.hwpe_params[X_ROWS_OFFS];
+  assign x_rows_offs_d = x_rows_iters_q == config_i.x_rows_iter-1 ? '0 : x_rows_offs_q + config_i.x_rows_offs;
 
-  assign num_x_reads = x_rows_iters_q == reg_file_i.hwpe_params[X_ITERS][31:16]-1 && reg_file_i.hwpe_params[LEFTOVERS][31:24] != '0 ? reg_file_i.hwpe_params[LEFTOVERS][31:24] : W;
+  assign num_x_reads = x_rows_iters_q == config_i.x_rows_iter-1 && config_i.x_rows_lftovr != '0 ? config_i.x_rows_lftovr : W;
 
   always_comb begin : address_gen_signals
     // Here we initialize the streamer source signals
     // for the X stream source
   `ifdef PACE_ENABLED
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.x_addr
                                                                       + x_rows_offs_q + x_cols_offs_q;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : num_x_reads;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = cntrl_streamer_o.pace_mode ? PACE_PART_BST_STAGES+PACE_NPOLY+1 : 'd1;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = cntrl_streamer_o.pace_mode ? (PACE_PART_BST_STAGES+PACE_NPOLY+1)*2 : 'd0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = config_i.x_d1_stride;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 `else
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.x_addr
                                                                       + x_rows_offs_q + x_cols_offs_q;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_len = 'd1;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d0_stride = 'd0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_len = W;
-    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = reg_file_i.hwpe_params[X_D1_STRIDE];
+    cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d1_stride = config_i.x_d1_stride;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
     cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
@@ -158,11 +158,11 @@ module redmule_memory_scheduler
     // Here we initialize the streamer source signals
     // for the W stream source
     // In quantization mode this is used to load the scales instead
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[W_TOT_LEN];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = reg_file_i.hwpe_params[W_ITERS][31:16];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[W_D0_STRIDE];
-    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.w_addr;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.tot_len = config_i.w_tot_len;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_len = config_i.w_rows_iter;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d0_stride = config_i.w_d0_stride;
+    cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_len = config_i.w_cols_iter;
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_stride = 'd0;
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
@@ -171,34 +171,34 @@ module redmule_memory_scheduler
 
     // Here we initialize the streamer source signals
     // for the Y stream source
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[Z_TOT_LEN];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.z_addr;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = config_i.yz_tot_len;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[Z_D0_STRIDE];
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride = config_i.yz_d0_stride;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len = config_i.w_cols_iter;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d2_stride = config_i.yz_d2_stride;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 
     // Here we initialize the streamer sink signals for
     // the Z stream sink
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[Z_TOT_LEN];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = config_i.z_addr;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = config_i.yz_tot_len;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = W;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride = reg_file_i.hwpe_params[Z_D0_STRIDE];
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len = reg_file_i.hwpe_params[W_ITERS][15:0];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride = config_i.yz_d0_stride;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len = config_i.w_cols_iter;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_stride = reg_file_i.hwpe_params[Z_D2_STRIDE];
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_stride = config_i.yz_d2_stride;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_len = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 
     // Here we initialize the streamer source signals
     // for the R stream source
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[R_ADDR];
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[N_SIZE]/W;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.r_addr;
+    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.tot_len = config_i.n_size/W;
     cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
     cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
     cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
@@ -210,8 +210,8 @@ module redmule_memory_scheduler
 
     // Here we initialize the streamer source signals
     // for the R stream sink
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[R_ADDR];
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[N_SIZE]/W;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.base_addr = config_i.r_addr;
+    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.tot_len = config_i.n_size/W;
     cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_len = '0;
     cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
     cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d1_len = '0;
@@ -223,8 +223,8 @@ module redmule_memory_scheduler
 
 `ifdef PACE_ENABLED
    // for the PACE stream source
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[W_ADDR];
-    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.w_addr;
+    cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.tot_len = config_i.pace_tot_len;
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d0_stride = JMP;
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
@@ -235,8 +235,8 @@ module redmule_memory_scheduler
     cntrl_streamer_o.pace_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
 
     // for the PACE stream sink
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
-    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[PACE_D0_LENGTH];
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.base_addr = config_i.z_addr;
+    cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.tot_len = config_i.pace_tot_len;
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_len = '0;
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d0_stride = JMP;
     cntrl_streamer_o.pace_stream_sink_ctrl.addressgen_ctrl.d1_len = '0;
@@ -261,32 +261,32 @@ module redmule_memory_scheduler
 `endif
   always_comb begin : req_start_assignment
 `ifdef PACE_ENABLED
-    cntrl_streamer_o.pace_mode = reg_file_i.hwpe_params[OP_SELECTION][1];
+    cntrl_streamer_o.pace_mode = config_i.pace_mode;
     cntrl_streamer_o.pace_stream_source_ctrl.req_start  = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
     cntrl_streamer_o.pace_stream_sink_ctrl.req_start    = ~cntrl_streamer_o.pace_mode ? 1'b0 : flgs_streamer_i.x_stream_source_flags.done;
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? cntrl_scheduler_i.first_load && flgs_streamer_i.x_stream_source_flags.ready_start  && !x_first_load_q : !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != config_i.tot_x_read) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
-    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
-    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[R_CONF][0] && flgs_streamer_i.r_stream_source_flags.ready_start;
+    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && config_i.gemm_selection && flgs_streamer_i.y_stream_source_flags.ready_start;
+    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && config_i.red_init && flgs_streamer_i.r_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_streamer_o.pace_mode ? 1'b0 : cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (reg_file_i.hwpe_params[R_CONF][2:1] != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
+    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (config_i.red_op != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
 `else
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != reg_file_i.hwpe_params[TOT_X_READ]) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (cntrl_scheduler_i.first_load || tot_x_read_q != '0 && tot_x_read_q != config_i.tot_x_read) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && flgs_streamer_i.w_stream_source_flags.ready_start;
-    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
-    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[R_CONF][0] && flgs_streamer_i.r_stream_source_flags.ready_start;
+    cntrl_streamer_o.y_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && config_i.gemm_selection && flgs_streamer_i.y_stream_source_flags.ready_start;
+    cntrl_streamer_o.r_stream_source_ctrl.req_start     = cntrl_scheduler_i.first_load && config_i.red_init && flgs_streamer_i.r_stream_source_flags.ready_start;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (reg_file_i.hwpe_params[R_CONF][2:1] != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
+    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = cntrl_scheduler_i.first_load && (config_i.red_op != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
 `endif
   end
 
-  assign cntrl_streamer_o.input_cast_src_fmt  = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
-  assign cntrl_streamer_o.input_cast_dst_fmt  = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
-  assign cntrl_streamer_o.output_cast_src_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][12:10]);
-  assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
+  assign cntrl_streamer_o.input_cast_src_fmt  = fpnew_pkg::fp_format_e'(config_i.input_format);
+  assign cntrl_streamer_o.input_cast_dst_fmt  = fpnew_pkg::fp_format_e'(config_i.computing_format);
+  assign cntrl_streamer_o.output_cast_src_fmt = fpnew_pkg::fp_format_e'(config_i.computing_format);
+  assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(config_i.input_format);
 
   assign cntrl_streamer_o.z_priority = z_priority_i;
 
-  assign cntrl_streamer_o.receive_w_stream = reg_file_i.hwpe_params[STREAM_CONF][0];
-  assign cntrl_streamer_o.receive_x_stream = reg_file_i.hwpe_params[STREAM_CONF][2];
+  assign cntrl_streamer_o.receive_w_stream = config_i.receive_w;
+  assign cntrl_streamer_o.receive_x_stream = config_i.receive_x;
 endmodule : redmule_memory_scheduler

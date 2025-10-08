@@ -18,7 +18,7 @@ module redmule_tiler
   input  logic              start_cfg_i,
   input  ctrl_regfile_t     reg_file_i ,
   output logic              valid_o    ,
-  output ctrl_regfile_t     reg_file_o
+  output redmule_config_t   config_o
 );
 
 logic clk_en;
@@ -246,57 +246,6 @@ always_ff @(posedge clk_int or negedge rst_ni) begin
     valid_o <= x_rows_by_w_cols_by_w_rows_iter_valid;
 end
 
-// re-encode in older RedMulE regfile map
-assign reg_file_o.generic_params = '0;
-assign reg_file_o.ext_data = '0;
-assign reg_file_o.hwpe_params[REGFILE_N_MAX_IO_REGS-1:REDMULE_REGS] = '0;
-assign reg_file_o.hwpe_params[      X_ADDR]        = config_d.x_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[      W_ADDR]        = config_d.w_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[      Z_ADDR]        = config_d.z_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[     X_ITERS][31:16] = config_q.x_rows_iter;
-assign reg_file_o.hwpe_params[     X_ITERS][15: 0] = config_q.x_cols_iter;
-assign reg_file_o.hwpe_params[     W_ITERS][31:16] = config_q.w_rows_iter;
-assign reg_file_o.hwpe_params[     W_ITERS][15: 0] = config_q.w_cols_iter;
-assign reg_file_o.hwpe_params[   LEFTOVERS][31:24] = config_q.x_rows_lftovr;
-assign reg_file_o.hwpe_params[   LEFTOVERS][23:16] = config_q.x_cols_lftovr;
-assign reg_file_o.hwpe_params[   LEFTOVERS][15: 8] = config_q.w_rows_lftovr;
-assign reg_file_o.hwpe_params[   LEFTOVERS][ 7: 0] = config_q.w_cols_lftovr;
-assign reg_file_o.hwpe_params[ LEFT_PARAMS][31:16] = config_q.tot_stores;
-assign reg_file_o.hwpe_params[ LEFT_PARAMS][15: 0] = '0;
-assign reg_file_o.hwpe_params[ X_D1_STRIDE]        = config_q.x_d1_stride;
-assign reg_file_o.hwpe_params[   W_TOT_LEN]        = config_q.w_tot_len;
-assign reg_file_o.hwpe_params[  TOT_X_READ]        = config_q.tot_x_read;
-assign reg_file_o.hwpe_params[ W_D0_STRIDE]        = config_q.w_d0_stride;
-assign reg_file_o.hwpe_params[   Z_TOT_LEN]        = config_q.yz_tot_len;
-assign reg_file_o.hwpe_params[ Z_D0_STRIDE]        = config_q.yz_d0_stride;
-assign reg_file_o.hwpe_params[ Z_D2_STRIDE]        = config_q.yz_d2_stride;
-assign reg_file_o.hwpe_params[ X_ROWS_OFFS]        = config_q.x_rows_offs;
-assign reg_file_o.hwpe_params[     X_SLOTS]        = config_q.x_buffer_slots;
-assign reg_file_o.hwpe_params[  IN_TOT_LEN]        = config_q.x_tot_len;
-assign reg_file_o.hwpe_params[OP_SELECTION][31:29] = config_q.stage_1_rnd_mode;
-assign reg_file_o.hwpe_params[OP_SELECTION][28:26] = config_q.stage_2_rnd_mode;
-assign reg_file_o.hwpe_params[OP_SELECTION][25:21] = config_q.stage_1_op;
-assign reg_file_o.hwpe_params[OP_SELECTION][20:16] = config_q.stage_2_op;
-assign reg_file_o.hwpe_params[OP_SELECTION][15:13] = config_q.input_format;
-assign reg_file_o.hwpe_params[OP_SELECTION][12:10] = config_q.computing_format;
-assign reg_file_o.hwpe_params[M_SIZE]              = config_d.m_size;
-assign reg_file_o.hwpe_params[N_SIZE]              = config_d.n_size;
-assign reg_file_o.hwpe_params[K_SIZE]              = config_d.k_size;
-assign reg_file_o.hwpe_params[R_ADDR]              = config_d.r_addr;
-assign reg_file_o.hwpe_params[R_CONF][0]           = config_d.red_init;
-assign reg_file_o.hwpe_params[R_CONF][2:1]         = config_d.red_op;
-assign reg_file_o.hwpe_params[STREAM_CONF][0]      = config_d.receive_w;
-assign reg_file_o.hwpe_params[STREAM_CONF][1]      = config_d.send_w;
-assign reg_file_o.hwpe_params[STREAM_CONF][2]      = config_d.receive_x;
-assign reg_file_o.hwpe_params[STREAM_CONF][3]      = config_d.send_x;
-`ifdef PACE_ENABLED
-  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 2] = '0;
-  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
-  assign reg_file_o.hwpe_params[OP_SELECTION][1]     = config_q.pace_mode;
-  assign reg_file_o.hwpe_params[PACE_D0_LENGTH]      = config_q.pace_tot_len;
-`else
-  assign reg_file_o.hwpe_params[OP_SELECTION][ 9: 1] = '0;
-  assign reg_file_o.hwpe_params[OP_SELECTION][0]     = config_q.gemm_selection;
-`endif
+assign config_o = config_q;
 
 endmodule: redmule_tiler

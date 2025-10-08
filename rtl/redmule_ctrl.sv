@@ -27,7 +27,7 @@ module redmule_ctrl
   output logic                    busy_o            ,
   output logic                    clear_o           ,
   output logic [N_CORES-1:0][1:0] evt_o             ,
-  output ctrl_regfile_t           reg_file_o        ,
+  output redmule_config_t         config_o        ,
   input  logic                    reg_enable_i      ,
   input  logic                    start_cfg_i       ,
   input  flgs_streamer_t          flgs_streamer_i   ,
@@ -56,7 +56,9 @@ module redmule_ctrl
 
   redmule_ctrl_state_e current, next;
 
-  hwpe_ctrl_package::ctrl_regfile_t reg_file_d, reg_file_q;
+  redmule_config_t redmule_config;
+
+  hwpe_ctrl_package::ctrl_regfile_t reg_file;
   hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
   hwpe_ctrl_package::flags_slave_t  flgs_slave;
 
@@ -75,18 +77,18 @@ module redmule_ctrl
     .cfg            ( periph       ),
     .ctrl_i         ( cntrl_slave  ),
     .flags_o        ( flgs_slave   ),
-    .reg_file       ( reg_file_d   )
+    .reg_file       ( reg_file     )
   );
 
   redmule_tiler  i_cfg_tiler (
-    .clk_i       ( clk_i         ),
-    .rst_ni      ( rst_ni        ),
-    .clear_i     ( clear         ),
-    .setback_i   ( tiler_setback ),
-    .start_cfg_i ( start_cfg_i   ),
-    .reg_file_i  ( reg_file_d    ),
-    .valid_o     ( tiler_valid   ),
-    .reg_file_o  ( reg_file_q    )
+    .clk_i       ( clk_i          ),
+    .rst_ni      ( rst_ni         ),
+    .clear_i     ( clear          ),
+    .setback_i   ( tiler_setback  ),
+    .start_cfg_i ( start_cfg_i    ),
+    .reg_file_i  ( reg_file       ),
+    .valid_o     ( tiler_valid    ),
+    .config_o    ( redmule_config )
   );
 
   assign cfg_complete_o = tiler_valid;
@@ -121,7 +123,7 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                                   Register file assignment                                  */
   /*---------------------------------------------------------------------------------------------*/
-  assign reg_file_o = reg_file_q;
+  assign config_o = redmule_config;
 
   /*---------------------------------------------------------------------------------------------*/
   /*                                        Controller FSM                                       */
@@ -160,7 +162,7 @@ module redmule_ctrl
         end
       end
       REDMULE_COMPUTING: begin
-        if (flgs_streamer_i.z_stream_sink_flags.ready_start && ((reg_file_q.hwpe_params[R_CONF][2:1] == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
+        if (flgs_streamer_i.z_stream_sink_flags.ready_start && ((redmule_config.red_op == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
           next = REDMULE_FINISHED;
         end
       end
