@@ -399,7 +399,9 @@ assign source_ctrl[RsourceStreamId]      = ctrl_i.r_stream_source_ctrl;
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
-    hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (virt_tcdm[i]) );
+  logic source_enable;
+
+  hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (virt_tcdm[i]) );
 
   hci_core_fifo #(
     .FIFO_DEPTH  ( 4  ), // to avoid protocol violations, as the consumer has a throughput
@@ -453,6 +455,13 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   assign load_fifo_q[i].ecc      = tcdm_cast[i].ecc;
   assign tcdm_cast[i].r_ecc      = load_fifo_q[i].r_ecc;
 
+  if (i == WsourceStreamId) begin
+    assign source_enable = enable_i & ~ctrl_i.receive_w_stream;
+  end else if (i == XsourceStreamId) begin
+    assign source_enable = enable_i & ~ctrl_i.receive_x_stream;
+  end else begin
+    assign source_enable = enable_i;
+  end
 
   hci_core_source       #(
     .MISALIGNED_ACCESSES   ( REALIGN                    ),
@@ -462,7 +471,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     .rst_ni              ( rst_ni          ),
     .test_mode_i         ( test_mode_i     ),
     .clear_i             ( clear_i         ),
-    .enable_i            ( enable_i        ),
+    .enable_i            ( source_enable   ),
     .tcdm                ( tcdm_cast[i]    ),
     .stream              ( out_stream[i]   ),
     .ctrl_i              ( source_ctrl[i]  ),

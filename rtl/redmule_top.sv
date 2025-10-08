@@ -35,6 +35,14 @@ module redmule_top
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
   output logic [N_CORES-1:0][1:0] evt_o      ,
+  // External W stream
+  hwpe_stream_intf_stream.sink    w_stream_i ,
+  // External X stream
+  hwpe_stream_intf_stream.sink    x_stream_i ,
+  // Broadcasted W stream
+  hwpe_stream_intf_stream.source  w_stream_o ,
+  // Broadcasted X stream
+  hwpe_stream_intf_stream.source  x_stream_o ,
   // Periph slave port for the controller side
   hwpe_ctrl_intf_periph.slave periph,
   // TCDM master ports for the memory side
@@ -103,10 +111,12 @@ flgs_red_t red_flags;
 // Implementation of the incoming and outgoing streaming interfaces (one for each kind of data)
 
 // X streaming interface + X FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_stream_str       ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo      ( .clk( clk_i ) );
 
 // W streaming interface + W FIFO interface
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_stream_str       ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d         ( .clk( clk_i ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .clk( clk_i ) );
 
@@ -147,8 +157,8 @@ redmule_streamer #(
   .enable_i        ( 1'b1            ),
   .clear_i         ( clear           ),
   // Source interfaces for the incoming streams
-  .x_stream_o      ( x_buffer_d      ),
-  .w_stream_o      ( w_buffer_d      ),
+  .x_stream_o      ( x_stream_str    ),
+  .w_stream_o      ( w_stream_str    ),
   .y_stream_o      ( y_buffer_d      ),
   .r_stream_o      ( red_init_d      ),
   // Sink interface for the outgoing stream
@@ -164,6 +174,38 @@ redmule_streamer #(
   .ctrl_i          ( cntrl_streamer  ),
   .flags_o         ( flgs_streamer   )
 );
+
+logic w_sel;
+logic w_send;
+
+assign w_sel  = reg_file.hwpe_params[STREAM_CONF][0];
+assign w_send = reg_file.hwpe_params[STREAM_CONF][1];
+
+assign w_buffer_d.valid   = ((w_sel) ? w_stream_i.valid : w_stream_str.valid) && ((w_send) ? w_stream_o.ready && w_buffer_d.ready : 1'b1);
+assign w_buffer_d.data    = (w_sel) ? w_stream_i.data  : w_stream_str.data;
+assign w_buffer_d.strb    = (w_sel) ? w_stream_i.strb  : w_stream_str.strb;
+assign w_stream_str.ready = (w_sel) ? 1'b0             : w_buffer_d.ready && ((w_send) ? w_stream_o.ready : 1'b1);
+assign w_stream_i.ready   = (w_sel) ? w_buffer_d.ready : 1'b0;
+
+assign w_stream_o.valid = (w_send) ? w_buffer_d.valid : 1'b0;
+assign w_stream_o.data  = (w_send) ? w_buffer_d.data : '0;
+assign w_stream_o.strb  = (w_send) ? w_buffer_d.strb : '0;
+
+logic x_sel;
+logic x_send;
+
+assign x_sel  = reg_file.hwpe_params[STREAM_CONF][2];
+assign x_send =  reg_file.hwpe_params[STREAM_CONF][3];
+
+assign x_buffer_d.valid   = ((x_sel) ? x_stream_i.valid : x_stream_str.valid) && ((x_send) ? x_stream_o.ready && x_buffer_d.ready : 1'b1);
+assign x_buffer_d.data    = (x_sel) ? x_stream_i.data  : x_stream_str.data;
+assign x_buffer_d.strb    = (x_sel) ? x_stream_i.strb  : x_stream_str.strb;
+assign x_stream_str.ready = (x_sel) ? 1'b0             : x_buffer_d.ready && ((x_send) ? x_stream_o.ready : 1'b1);
+assign x_stream_i.ready   = (x_sel) ? x_buffer_d.ready : 1'b0;
+
+assign x_stream_o.valid = (x_send) ? x_buffer_d.valid : 1'b0;
+assign x_stream_o.data  = (x_send) ? x_buffer_d.data : '0;
+assign x_stream_o.strb  = (x_send) ? x_buffer_d.strb : '0;
 
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DATAW_ALIGN   ),
@@ -331,7 +373,7 @@ redmule_z_buffer #(
 cntrl_red_t red_ctrl;
 
 assign red_ctrl.row_len = reg_file.hwpe_params[K_SIZE];
-assign red_ctrl.op      = reg_file.hwpe_params[R_CONF][2:1];
+assign red_ctrl.op      = red_op_t'(reg_file.hwpe_params[R_CONF][2:1]);
 assign red_ctrl.load    = reg_file.hwpe_params[R_CONF][0];
 assign red_ctrl.enable  = busy_o;
 assign red_ctrl.ready   = red_out_q.ready;

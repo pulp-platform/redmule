@@ -286,4 +286,7 @@ module redmule_memory_scheduler
   assign cntrl_streamer_o.output_cast_dst_fmt = fpnew_pkg::fp_format_e'(reg_file_i.hwpe_params[OP_SELECTION][15:13]);
 
   assign cntrl_streamer_o.z_priority = z_priority_i;
+
+  assign cntrl_streamer_o.receive_w_stream = reg_file_i.hwpe_params[STREAM_CONF][0];
+  assign cntrl_streamer_o.receive_x_stream = reg_file_i.hwpe_params[STREAM_CONF][2];
 endmodule : redmule_memory_scheduler

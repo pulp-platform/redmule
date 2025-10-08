@@ -52,7 +52,7 @@ sources:
     - rtl/redmule_reduction_unit.sv
     - rtl/redmule_mux.sv
 
-    - target: redmule_hwpe
+    - target: redmule_test_hwpe
       files:
         - rtl/redmule_wrap.sv
 

@@ -46,6 +46,10 @@ package redmule_pkg;
   parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
   parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
   // Matrix arithmetic config register
+  // [20:20] -> Send X stream
+  // [19:19] -> Receive X stream
+  // [18:18] -> Send W stream
+  // [17:17] -> Receive W stream
   // [16:16] -> Reduction initialization
   // [15:14] -> Reduction operation
   // [13:13] -> PACE mode selection
@@ -103,10 +107,17 @@ package redmule_pkg;
   // [0:0]   -> init enable
   parameter int unsigned R_CONF      = 22; // 0x58
 
+  // X/W Streams configuration
+  // [3:3]   -> Send X
+  // [2:2]   -> Receive X
+  // [1:1]   -> Send W
+  // [0:0]   -> Receive W
+  parameter int unsigned STREAM_CONF = 23; // 0x5C
+
   `ifdef PACE_ENABLED
-    parameter int unsigned PACE_IN_ADDR   = 23; // 0x5C
-    parameter int unsigned PACE_OUT_ADDR  = 24; // 0x60
-    parameter int unsigned PACE_D0_LENGTH = 25; // 0x68
+    parameter int unsigned PACE_IN_ADDR   = 24; // 0x60
+    parameter int unsigned PACE_OUT_ADDR  = 25; // 0x68
+    parameter int unsigned PACE_D0_LENGTH = 26; // 0x6C
   `endif
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
@@ -161,6 +172,8 @@ package redmule_pkg;
     fpnew_pkg::fp_format_e                  output_cast_dst_fmt;
     logic                                   z_priority;
     logic                                   pace_mode;
+    logic                                   receive_w_stream;
+    logic                                   receive_x_stream;
 `ifdef PACE_ENABLED
     hci_package::hci_streamer_ctrl_t        pace_stream_source_ctrl;
     hci_package::hci_streamer_ctrl_t        pace_stream_sink_ctrl;
@@ -367,6 +380,10 @@ package redmule_pkg;
     logic [31:0] r_addr;
     logic        red_init;
     red_op_t     red_op;
+    logic        send_w;
+    logic        receive_w;
+    logic        send_x;
+    logic        receive_x;
   } redmule_config_t;
 
   typedef enum {

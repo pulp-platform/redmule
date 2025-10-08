@@ -184,6 +184,65 @@ logic [N_CORES-1:0][1:0] evt;
   assign periph_r_id_o    = periph.r_id;
 `endif
 
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) w_stream_i ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) w_stream_o ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) x_stream_i ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) x_stream_o ( .clk( clk_i ) );
+
+logic w_stream_ready, x_stream_ready;
+logic w_stream_valid, x_stream_valid;
+
+assign w_stream_i.valid = w_stream_valid;
+assign w_stream_i.data  = '1;
+assign w_stream_i.strb  = '1;
+
+assign x_stream_i.valid = x_stream_valid;
+assign x_stream_i.data  = '1;
+assign x_stream_i.strb  = '1;
+
+assign w_stream_o.ready = w_stream_ready;
+assign x_stream_o.ready = x_stream_ready;
+
+always_ff @(posedge clk_i, negedge rst_ni) begin
+  if (~rst_ni) begin
+    w_stream_valid <= '0;
+  end else begin
+    if (w_stream_i.ready && w_stream_i.valid || ~w_stream_i.valid) begin
+      w_stream_valid <= $urandom_range(1, 0);
+    end
+  end
+end
+
+always_ff @(posedge clk_i, negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_stream_valid <= '0;
+  end else begin
+    if (x_stream_i.ready && x_stream_i.valid || ~x_stream_o.valid) begin
+      x_stream_valid <= $urandom_range(1, 0);
+    end
+  end
+end
+
+always_ff @(posedge clk_i, negedge rst_ni) begin
+  if (~rst_ni) begin
+    w_stream_ready <= '0;
+  end else begin
+    if (w_stream_o.ready && w_stream_o.valid || ~w_stream_o.ready) begin
+      w_stream_ready <= $urandom_range(1, 0);
+    end
+  end
+end
+
+always_ff @(posedge clk_i, negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_stream_ready <= '0;
+  end else begin
+    if (x_stream_o.ready && x_stream_o.valid || ~x_stream_o.ready) begin
+      x_stream_ready <= $urandom_range(1, 0);
+    end
+  end
+end
+
 redmule_top #(
   .ID_WIDTH              ( ID_WIDTH              ),
   .N_CORES               ( N_CORES               ),
@@ -198,6 +257,10 @@ redmule_top #(
   .test_mode_i        ( test_mode_i        ),
   .evt_o              ( evt_o              ),
   .busy_o             ( busy_o             ),
+  .w_stream_i         ( w_stream_i         ),
+  .w_stream_o         ( w_stream_o         ),
+  .x_stream_i         ( x_stream_i         ),
+  .x_stream_o         ( x_stream_o         ),
   .tcdm               ( tcdm               ),
   .periph             ( periph             )
 );
