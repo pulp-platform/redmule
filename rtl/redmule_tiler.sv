@@ -82,76 +82,100 @@ assign config_d.x_cols_iter = config_d.x_cols_lftovr != '0 ? x_cols_iter_nolftov
 assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftovr + 1 : x_rows_iter_nolftovr;
 
 // Sequential multiplier x_rows x w_cols
-logic [31:0] x_rows_by_w_cols_iter;
-logic        x_rows_by_w_cols_iter_valid, x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
-logic        x_rows_by_w_cols_iter_ready;
-hwpe_ctrl_seq_mult #(
-  .AW ( 16 ),
-  .BW ( 16 )
-) i_x_rows_by_w_cols_seqmult (
-  .clk_i    ( clk_i                         ),
-  .rst_ni   ( rst_ni                        ),
-  .clear_i  ( clear_i | setback_i           ),
-  .start_i  ( start_cfg_i                   ),
-  .a_i      ( config_d.x_rows_iter          ),
-  .b_i      ( config_d.w_cols_iter          ),
-  .invert_i ( 1'b0                          ),
-  .valid_o  ( x_rows_by_w_cols_iter_valid_d ),
-  .ready_o  ( x_rows_by_w_cols_iter_ready   ),
-  .prod_o   ( x_rows_by_w_cols_iter         )
-);
-always_ff @(posedge clk_int or negedge rst_ni) begin
-  if(~rst_ni) begin
+logic [31:0] x_rows_by_w_cols_iter_d, x_rows_by_w_cols_iter_q;
+logic        x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
+
+assign x_rows_by_w_cols_iter_d = start_cfg_i ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_rows_by_w_cols_iter_q <= '0;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_iter_q <= '0;
+    end else begin
+      x_rows_by_w_cols_iter_q <= x_rows_by_w_cols_iter_d;
+    end
+  end
+end
+
+assign x_rows_by_w_cols_iter_valid_d = start_cfg_i;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
     x_rows_by_w_cols_iter_valid_q <= '0;
-    x_rows_by_w_cols_iter_valid <= '0;
-  end else if(clear_i | setback_i) begin
-    x_rows_by_w_cols_iter_valid_q <= '0;
-    x_rows_by_w_cols_iter_valid <= '0;
-  end else begin
-    x_rows_by_w_cols_iter_valid_q <= x_rows_by_w_cols_iter_valid_d;
-    x_rows_by_w_cols_iter_valid <= ~x_rows_by_w_cols_iter_valid_q & x_rows_by_w_cols_iter_valid_d;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_iter_valid_q <= '0;
+    end else begin
+      x_rows_by_w_cols_iter_valid_q <= x_rows_by_w_cols_iter_valid_d;
+    end
   end
 end
 
 // Sequential multiplier x_rows x w_cols x x_cols
-logic [47:0] x_rows_by_w_cols_by_x_cols_iter;
-logic        x_rows_by_w_cols_by_x_cols_iter_valid;
-logic        x_rows_by_w_cols_by_x_cols_iter_ready;
-hwpe_ctrl_seq_mult #(
-  .AW ( 16 ),
-  .BW ( 32 )
-) i_x_rows_by_w_cols_by_x_cols_seqmult (
-  .clk_i    ( clk_int                               ),
-  .rst_ni   ( rst_ni                                ),
-  .clear_i  ( clear_i | setback_i                   ),
-  .start_i  ( x_rows_by_w_cols_iter_valid           ),
-  .a_i      ( config_d.x_cols_iter                  ),
-  .b_i      ( x_rows_by_w_cols_iter                 ),
-  .invert_i ( 1'b0                                  ),
-  .valid_o  ( x_rows_by_w_cols_by_x_cols_iter_valid ),
-  .ready_o  ( x_rows_by_w_cols_by_x_cols_iter_ready ),
-  .prod_o   ( x_rows_by_w_cols_by_x_cols_iter       )
-);
+logic [47:0] x_rows_by_w_cols_by_x_cols_iter_d, x_rows_by_w_cols_by_x_cols_iter_q;
+logic        x_rows_by_w_cols_by_x_cols_iter_valid_d, x_rows_by_w_cols_by_x_cols_iter_valid_q;
+
+assign x_rows_by_w_cols_by_x_cols_iter_d = x_rows_by_w_cols_iter_valid_q ? config_d.x_cols_iter * x_rows_by_w_cols_iter_q : x_rows_by_w_cols_by_x_cols_iter_q;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_rows_by_w_cols_by_x_cols_iter_q <= '0;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_by_x_cols_iter_q <= '0;
+    end else begin
+      x_rows_by_w_cols_by_x_cols_iter_q <= x_rows_by_w_cols_by_x_cols_iter_d;
+    end
+  end
+end
+
+assign x_rows_by_w_cols_by_x_cols_iter_valid_d = x_rows_by_w_cols_iter_valid_q;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_rows_by_w_cols_by_x_cols_iter_valid_q <= '0;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_by_x_cols_iter_valid_q <= '0;
+    end else begin
+      x_rows_by_w_cols_by_x_cols_iter_valid_q <= x_rows_by_w_cols_by_x_cols_iter_valid_d;
+    end
+  end
+end
 
 // Sequential multiplier x_rows x w_cols x w_rows
-logic [47:0] x_rows_by_w_cols_by_w_rows_iter;
-logic        x_rows_by_w_cols_by_w_rows_iter_valid;
-logic        x_rows_by_w_cols_by_w_rows_iter_ready;
-hwpe_ctrl_seq_mult #(
-  .AW ( 16 ),
-  .BW ( 32 )
-) i_x_rows_by_w_cols_by_w_rows_seqmult (
-  .clk_i    ( clk_int                               ),
-  .rst_ni   ( rst_ni                                ),
-  .clear_i  ( clear_i | setback_i                   ),
-  .start_i  ( x_rows_by_w_cols_iter_valid           ),
-  .a_i      ( config_d.w_rows_iter                  ),
-  .b_i      ( x_rows_by_w_cols_iter                 ),
-  .invert_i ( 1'b0                                  ),
-  .valid_o  ( x_rows_by_w_cols_by_w_rows_iter_valid ),
-  .ready_o  ( x_rows_by_w_cols_by_w_rows_iter_ready ),
-  .prod_o   ( x_rows_by_w_cols_by_w_rows_iter       )
-);
+logic [47:0] x_rows_by_w_cols_by_w_rows_iter_d, x_rows_by_w_cols_by_w_rows_iter_q;
+logic        x_rows_by_w_cols_by_w_rows_iter_valid_d, x_rows_by_w_cols_by_w_rows_iter_valid_q;
+
+assign x_rows_by_w_cols_by_w_rows_iter_d = x_rows_by_w_cols_iter_valid_q ? config_d.w_rows_iter * x_rows_by_w_cols_iter_q : x_rows_by_w_cols_by_w_rows_iter_q;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_rows_by_w_cols_by_w_rows_iter_q <= '0;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_by_w_rows_iter_q <= '0;
+    end else begin
+      x_rows_by_w_cols_by_w_rows_iter_q <= x_rows_by_w_cols_by_w_rows_iter_d;
+    end
+  end
+end
+
+assign x_rows_by_w_cols_by_w_rows_iter_valid_d = x_rows_by_w_cols_iter_valid_q;
+
+always_ff @(posedge clk_i or negedge rst_ni) begin
+  if (~rst_ni) begin
+    x_rows_by_w_cols_by_w_rows_iter_valid_q <= '0;
+  end begin
+    if (clear_i | setback_i) begin
+      x_rows_by_w_cols_by_w_rows_iter_valid_q <= '0;
+    end else begin
+      x_rows_by_w_cols_by_w_rows_iter_valid_q <= x_rows_by_w_cols_by_w_rows_iter_valid_d;
+    end
+  end
+end
 
 // Calculate x_buffer_slots
 logic [31:0] buffer_slots;
@@ -164,7 +188,7 @@ assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % ARRAY_HEIGHT != '0) 
                                                                                                 buffer_slots) * ARRAY_HEIGHT;
 
 // Calculating the number of total stores
-assign config_d.tot_stores = x_rows_by_w_cols_iter[15:0];
+assign config_d.tot_stores = x_rows_by_w_cols_iter_q[15:0];
 
 assign config_d.stage_1_rnd_mode = config_d.gemm_ops == MATMUL ? RNE :
                                    config_d.gemm_ops == GEMM   ? RNE :
@@ -203,12 +227,12 @@ assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
 
 assign config_d.x_d1_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);
 assign config_d.x_rows_offs = ARRAY_WIDTH*config_d.x_d1_stride;
-assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter[31:0];
+assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter_q[31:0];
 assign config_d.w_d0_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*w_cols_iter_nolftovr) + config_d.w_cols_lftovr);
-assign config_d.yz_tot_len  = ARRAY_WIDTH*x_rows_by_w_cols_iter[15:0];
+assign config_d.yz_tot_len  = ARRAY_WIDTH*x_rows_by_w_cols_iter_q[15:0];
 assign config_d.yz_d0_stride = config_d.w_d0_stride;
 assign config_d.yz_d2_stride = ARRAY_WIDTH*config_d.w_d0_stride;
-assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter[31:0];
+assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter_q[31:0];
 assign config_d.x_tot_len    = '0; // not used
 
 // register configuration to avoid critical paths (maybe removable!)
@@ -217,7 +241,7 @@ always_ff @(posedge clk_int or negedge rst_ni) begin
     config_q <= '0;
   else if (clear_i)
     config_q <= '0;
-  else if(x_rows_by_w_cols_by_w_rows_iter_valid & x_rows_by_w_cols_by_w_rows_iter_ready)
+  else if(x_rows_by_w_cols_by_w_rows_iter_valid_q && x_rows_by_w_cols_by_x_cols_iter_valid_q)
     config_q <= config_d;
 end
 
@@ -227,8 +251,8 @@ always_ff @(posedge clk_int or negedge rst_ni) begin
     valid_o <= '0;
   else if (clear_i | setback_i)
     valid_o <= '0;
-  else if(x_rows_by_w_cols_by_w_rows_iter_ready)
-    valid_o <= x_rows_by_w_cols_by_w_rows_iter_valid;
+  else if(x_rows_by_w_cols_by_w_rows_iter_valid_q && x_rows_by_w_cols_by_x_cols_iter_valid_q)
+    valid_o <= x_rows_by_w_cols_by_w_rows_iter_valid_q;
 end
 
 // re-encode in older RedMulE regfile map
