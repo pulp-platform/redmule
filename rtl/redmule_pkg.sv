@@ -17,7 +17,7 @@ package redmule_pkg;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
   parameter int unsigned            DATAW        = DATA_W;
-  parameter int unsigned            REDMULE_REGS = 27;
+  parameter int unsigned            REDMULE_REGS = 7;
   parameter int unsigned            N_CONTEXT    = 2;
   parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
   parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
@@ -58,67 +58,6 @@ package redmule_pkg;
   parameter int unsigned MACFG = 5; // 0x14
   // Reduction initialization values addr
   parameter int unsigned R_ADDR_R = 6; // 0x18
-  /**********************
-  ** Final RF indexing **
-  **********************/
-  // Number of iterations on X and W matrices
-  // (15 bits for number of rows iterations, 15 bits for number of columns iterations)
-  parameter int unsigned X_ITERS   = 3; // 0x0C --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
-  parameter int unsigned W_ITERS   = 4; // 0x10 --> [31:16] -> ROWS ITERATIONS, [15:0] -> COLUMNS ITERATIONS
-  // Number of rows and columns leftovers (8 bits for each)
-  // [31:24] -> X/Y ROWS LEFTOVERS
-  // [23:16] -> X COLUMNS LEFTOVERS
-  // [15:8]  -> W ROWS LEFTOVERS
-  // [7:0]   -> W/Y COLUMNS LEFTOVERS
-  parameter int unsigned LEFTOVERS = 5; // 0x14
-  // We keep a register for the remaining params
-  // [31:16] -> TOT_NUMBER_OF_STORES
-  // [14]    -> 1'b0: X cols/W rows >= ARRAY_HEIGHT; 1'b1: X cols/W rows < ARRAY_HEIGHT
-  // [13]    -> 1'b0: W cols >= TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT ); 1'b1: W cols < TILE ( TILE = (PIPE_REGS + 1)*ARRAY_HEIGHT )
-  parameter int unsigned LEFT_PARAMS = 6;  // 0x18
-  parameter int unsigned X_D1_STRIDE = 7;  // 0x1C
-  parameter int unsigned W_TOT_LEN   = 8;  // 0x20
-  parameter int unsigned TOT_X_READ  = 9;  // 0x24
-  parameter int unsigned W_D0_STRIDE = 10; // 0x28
-  parameter int unsigned Z_TOT_LEN   = 11; // 0x2C
-  parameter int unsigned Z_D0_STRIDE = 12; // 0x30
-  parameter int unsigned Z_D2_STRIDE = 13; // 0x34
-  parameter int unsigned X_ROWS_OFFS = 14; // 0x38
-  parameter int unsigned X_SLOTS     = 15; // 0x3C
-  parameter int unsigned IN_TOT_LEN  = 16; // 0x40
-
-  // One register is used for the round modes and operations of the Computing Elements.
-  // [31:29] -> roundmode of the stage 1
-  // [28:26] -> roundmode of the stage 2
-  // [25:21] -> operation of the stage 1
-  // [20:16] -> operation of the stage 2
-  // [15:13] -> input/output format
-  // [12:10] -> computing format
-  // [1:1]   -> pace mode
-  // [0:0]   -> GEMM selection
-  parameter int unsigned OP_SELECTION = 17; // 0x44
-
-  parameter int unsigned M_SIZE      = 18; // 0x48
-  parameter int unsigned N_SIZE      = 19; // 0x4C
-  parameter int unsigned K_SIZE      = 20; // 0x50
-  parameter int unsigned R_ADDR      = 21; // 0x54
-
-  // [2:1]   -> reduction operation
-  // [0:0]   -> init enable
-  parameter int unsigned R_CONF      = 22; // 0x58
-
-  // X/W Streams configuration
-  // [3:3]   -> Send X
-  // [2:2]   -> Receive X
-  // [1:1]   -> Send W
-  // [0:0]   -> Receive W
-  parameter int unsigned STREAM_CONF = 23; // 0x5C
-
-  `ifdef PACE_ENABLED
-    parameter int unsigned PACE_IN_ADDR   = 24; // 0x60
-    parameter int unsigned PACE_OUT_ADDR  = 25; // 0x68
-    parameter int unsigned PACE_D0_LENGTH = 26; // 0x6C
-  `endif
 
   parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
   parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
