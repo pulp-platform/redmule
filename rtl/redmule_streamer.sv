@@ -44,6 +44,7 @@ localparam int unsigned DW  = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
 localparam int unsigned IW  = `HCI_SIZE_GET_IW(tcdm);
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
+localparam int unsigned EHW  = `HCI_SIZE_GET_EHW(tcdm);
 
 // this localparam is reused for all internal, non-ecc HCI interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
@@ -51,7 +52,9 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   AW:  DEFAULT_AW,
   BW:  DEFAULT_BW,
   UW:  UW,
-  IW:  IW
+  IW:  IW,
+  EW:  EW,
+  EHW: EHW
 };
 
 // Virtual internal TCDM interface splitting the upstream TCDM
@@ -97,26 +100,35 @@ hci_outstanding_rob #(
 	.in 	( virt_tcdm[2] ),
 	.out 	( virt_tcdm_rob[2] )
 );
-hci_outstanding_rob #(
-	.ROB_NW ( ROB_NW ),
-	.`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_streamer_rob_z (
-	.clk_i 	( clk_i 	),
-	.rst_ni ( rst_ni 	),
-	.in 	( virt_tcdm[3] ),
-	.out 	( virt_tcdm_rob[3] )
+
+flags_fifo_t z_fifo_flags;
+logic [NumStreamSources:0][$clog2(NumStreamSources+1)-1:0] priority_encoding;
+assign priority_encoding[1] = 0;
+assign priority_encoding[2] = z_fifo_flags.full & ctrl_i.z_priority ? 3 : 1;
+assign priority_encoding[0] = 2;
+assign priority_encoding[3] = z_fifo_flags.full & ctrl_i.z_priority ? 1 : 3;
+hci_outstanding_fifo #(
+  .FIFO_DEPTH ( ARRAY_WIDTH / 4 ),
+  .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_z_fifo (
+  .clk_i  ( clk_i   ),
+  .rst_ni ( rst_ni  ),
+  .clear_i         ( clear_i          ),
+  .flags_o         ( z_fifo_flags     ),
+  .tcdm_target     ( virt_tcdm[3]     ),
+  .tcdm_initiator  ( virt_tcdm_rob[3] )
 );
 
 // XWYZ-MUX A single TCDM port is used to load XW and to store Z / load Y
 hci_outstanding_mux #(
-  .NB_CHAN              ( NumStreamSources+1           ),
+  .NB_CHAN              ( NumStreamSources+1         ),
   .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_ldst_mux          (
   .clk_i              ( clk_i                ),
   .rst_ni             ( rst_ni               ),
   .clear_i            ( clear_i              ),
-  .priority_force_i   ( '0                   ),
-  .priority_i         ( '0                   ),
+  .priority_force_i   ( 1'b1                 ),
+  .priority_i         ( priority_encoding    ),
   .in                 ( virt_tcdm_rob        ),
   .out                ( tcdm                 )
 );
@@ -184,11 +196,11 @@ assign z_store.req_id           = zstream2cast.req_id;
 assign z_store.req_valid        = zstream2cast.req_valid;
 assign zstream2cast.req_ready   = z_store.req_ready;
 // Right TCDM buses assignment.
-assign zstream2cast.resp_data   = z_store.resp_data;
-assign zstream2cast.resp_user   = z_store.resp_user;
-assign zstream2cast.resp_id     = z_store.resp_id;
-assign zstream2cast.resp_valid  = z_store.resp_valid;
-assign z_store.resp_ready       = zstream2cast.resp_ready;
+assign zstream2cast.resp_data   = '0;
+assign zstream2cast.resp_user   = '0;
+assign zstream2cast.resp_id     = '0;
+assign zstream2cast.resp_valid  = 1'b1;
+assign z_store.resp_ready       = 1'b1;
 
 // Assigning the store output to the store side of the y/z multiplexer.
 hci_outstanding_assign i_store_assign ( .tcdm_target (z_store), .tcdm_initiator (virt_tcdm[3]) );
