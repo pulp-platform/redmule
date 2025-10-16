@@ -103,8 +103,8 @@ module redmule_ctrl
   if (HCI_ECC) begin : gen_ecc_manager
     hwpe_ctrl_intf_periph   #( .ID_WIDTH ( ID_WIDTH ) ) periph_ecc ( .clk( clk_i ) );
 
-    hci_ecc_req_t hci_ecc_req;
-    hci_ecc_rsp_t hci_ecc_rsp;
+    hci_package::hci_ecc_req_t hci_ecc_req;
+    hci_package::hci_ecc_rsp_t hci_ecc_rsp;
 
     logic periph_ecc_redirect, periph_ecc_redirect_q;
 
