@@ -16,8 +16,8 @@ module redmule_tiler
   input  logic              clear_i    ,
   input  logic              setback_i  ,
   input  logic              start_cfg_i,
-  input  ctrl_regfile_t     reg_file_i ,
   output logic              valid_o    ,
+  input  redmule_config_t   config_i   ,
   output redmule_config_t   config_o
 );
 
@@ -45,28 +45,28 @@ tc_clk_gating i_tiler_clockg (
   .clk_o      ( clk_int )
 );
 
-assign config_d.x_addr          = reg_file_i.hwpe_params[X_ADDR];
-assign config_d.w_addr          = reg_file_i.hwpe_params[W_ADDR];
-assign config_d.z_addr          = reg_file_i.hwpe_params[Z_ADDR];
-assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
-assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
-assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
+assign config_d.x_addr          = config_i.x_addr;
+assign config_d.w_addr          = config_i.w_addr;
+assign config_d.z_addr          = config_i.z_addr;
+assign config_d.m_size          = config_i.m_size;
+assign config_d.k_size          = config_i.k_size;
+assign config_d.n_size          = config_i.n_size;
 `ifdef PACE_ENABLED
-  assign config_d.pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16] / (DATAW/BITW);
-  assign config_d.pace_mode      = reg_file_i.hwpe_params[MACFG][13];
-  assign config_d.pace_in_addr   = reg_file_i.hwpe_params[W_ADDR];
-  assign config_d.pace_out_addr  = reg_file_i.hwpe_params[Z_ADDR];
+  assign config_d.pace_tot_len   = config_i.k_size / (DATAW/BITW);
+  assign config_d.pace_mode      = '0; // FIXME //reg_file_i.hwpe_params[MACFG][13];
+  assign config_d.pace_in_addr   = config_i.w_addr;
+  assign config_d.pace_out_addr  = config_i.z_addr;
 `endif
-assign config_d.gemm_ops        = gemm_op_e' (reg_file_i.hwpe_params[MACFG][12:10]);
-assign config_d.gemm_input_fmt  = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
-assign config_d.gemm_output_fmt = gemm_fmt_e'(reg_file_i.hwpe_params[MACFG][ 9: 7]);
-assign config_d.r_addr          = reg_file_i.hwpe_params[R_ADDR_R];
-assign config_d.red_init        = reg_file_i.hwpe_params[MACFG][16];
-assign config_d.red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);
-assign config_d.receive_w       = reg_file_i.hwpe_params[MACFG][17];
-assign config_d.send_w          = reg_file_i.hwpe_params[MACFG][18];
-assign config_d.receive_x       = reg_file_i.hwpe_params[MACFG][19];
-assign config_d.send_x          = reg_file_i.hwpe_params[MACFG][20];
+assign config_d.gemm_ops        = config_i.gemm_ops;
+assign config_d.gemm_input_fmt  = config_i.gemm_input_fmt;
+assign config_d.gemm_output_fmt = config_i.gemm_output_fmt;
+assign config_d.r_addr          = config_i.r_addr;
+assign config_d.red_init        = config_i.red_init;
+assign config_d.red_op          = config_i.red_op;
+assign config_d.receive_w       = config_i.receive_w;
+assign config_d.send_w          = config_i.send_w;
+assign config_d.receive_x       = config_i.receive_x;
+assign config_d.send_x          = config_i.send_x;
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;

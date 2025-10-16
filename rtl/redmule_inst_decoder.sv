@@ -1,218 +1,306 @@
-// Copyright 2023 ETH Zurich and University of Bologna.
+// Copyright 2025 ETH Zurich and University of Bologna.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51
 //
-// Yvan Tortorella <yvan.tortorella@unibo.it>
+// Andrea Belano <andrea.belano2@unibo.it>
 //
 
 module redmule_inst_decoder
   import redmule_pkg::*;
   import cv32e40x_pkg::*;
 #(
-  parameter  int unsigned SysInstWidth  = 32            ,
-  parameter  int unsigned SysDataWidth  = 32            ,
-  parameter  int unsigned NumRfReadPrts = 2             ,
-  parameter  int unsigned OpWidth       = 3             ,
-  parameter  int unsigned FormatWidth   = 3             ,
-  parameter  int unsigned OpCodeWidth   = 7             ,
-  parameter  int unsigned NumCfgRegs    = 6             ,
-  localparam int unsigned SizeLarge     = SysDataWidth/2,
-  localparam int unsigned SizeSmall     = SysDataWidth/4
+  parameter  int unsigned InstFifoDepth         = 4,
+  parameter  int unsigned XifIdWidth            = 4,
+  parameter  int unsigned XifNumHarts           = 1,
+  parameter  int unsigned XifIssueRegisterSplit = 0,
+  parameter type          x_issue_req_t         = logic,
+  parameter type          x_issue_resp_t        = logic,
+  parameter type          x_register_t          = logic,
+  parameter type          x_commit_t            = logic,
+  parameter type          x_result_t            = logic
 )(
-  input  logic                     clk_i          ,
-  input  logic                     rst_ni         ,
-  input  logic                     clear_i        ,
-  cv32e40x_if_xif.coproc_issue     xif_issue_if_i ,
-  cv32e40x_if_xif.coproc_result    xif_result_if_o,
-  cv32e40x_if_xif.coproc_compressed xif_compressed_if_i,
-  cv32e40x_if_xif.coproc_mem        xif_mem_if_o,
-  hwpe_ctrl_intf_periph.master     periph       ,
-  input  logic                     cfg_complete_i ,
-  output logic                     start_cfg_o
+  input  logic            clk_i,
+  input  logic            rst_ni,
+  input  logic            clear_i,
+  input  logic            busy_i,
+  output logic            config_valid_o,
+  output redmule_config_t config_o,
+  input  x_issue_req_t    x_issue_req_i,
+  output x_issue_resp_t   x_issue_resp_o,
+  input  logic            x_issue_valid_i,
+  output logic            x_issue_ready_o,
+  input  x_register_t     x_register_i,
+  input  logic            x_register_valid_i,
+  output logic            x_register_ready_o,
+  input  x_commit_t       x_commit_i,
+  input  logic            x_commit_valid_i,
+  output x_result_t       x_result_o,
+  output logic            x_result_valid_o,
+  input  logic            x_result_ready_i
 );
 
-logic [OpCodeWidth-1:0] op_code;
-logic [    OpWidth-1:0] operation_d;
-logic [FormatWidth-1:0] format_d;
-logic [NumCfgRegs-1:0][SysDataWidth-1:0] cfg_reg_d, cfg_reg_q;
-logic is_gemm_d,
-      widening_d,
-      custom_fmt_d;
-logic clk_en, clk_int;
-logic cfg_ready;
-logic count_rst, count_update;
-logic [NumCfgRegs-1:0] reg_offs;
+  localparam int unsigned HartIdWidth = XifNumHarts > 1 ? $clog2(XifNumHarts) : 1;
 
-typedef enum logic [1:0] {
-  Idle,
-  WriteCfg,
-  Trigger
-} redmule_instr_cfg_state_e;
+  logic [XifNumHarts-1:0] issue_fifo_full,  register_fifo_full,
+                          issue_fifo_empty, register_fifo_empty;
+  logic [HartIdWidth-1:0] current_hartid_d, current_hartid_q;
 
-redmule_instr_cfg_state_e current, next;
+  x_issue_req_t [XifNumHarts-1:0] cur_issue;
+  x_register_t  [XifNumHarts-1:0] cur_register;
 
-// Xif static binding
-assign xif_compressed_if_i.compressed_ready = 1'b0;
-assign xif_compressed_if_i.compressed_resp  = '0;
+  logic [HartIdWidth-1:0]                  rr_counter_d, rr_counter_q;
+  logic [XifNumHarts-1:0][HartIdWidth-1:0] rr_priority;
+  logic [HartIdWidth-1:0]                  winner;
 
-assign xif_mem_if_o.mem_valid = 1'b0;
-assign xif_mem_if_o.mem_req   = '0;
+  logic legal_inst;
 
-tc_clk_gating i_arith_clock_gating (
-  .clk_i     ( clk_i   ),
-  .en_i      ( clk_en  ),
-  .test_en_i ( '0      ),
-  .clk_o     ( clk_int )
-);
+  redmule_config_t [XifNumHarts-1:0] config_d, config_q;
 
-assign op_code = xif_issue_if_i.issue_req.instr[OpCodeWidth-1:0];
-assign xif_result_if_o.result_valid = (xif_result_if_o.result_ready) ? 1'b1 : 1'b0;
-assign xif_result_if_o.result = '0;
+  always_comb begin : legal_inst_assignment
+    legal_inst = 1'b0;
 
-always_comb begin: opcode_decoder
-  clk_en       = '0;
-  cfg_ready    = '0;
-  cfg_reg_d    = cfg_reg_q;
-  xif_issue_if_i.issue_ready = 1'b0;
-  xif_issue_if_i.issue_resp = '0;
-  is_gemm_d    = '0;
-  widening_d   = '0;
-  custom_fmt_d = '0;
-  format_d     = '0;
-  operation_d  = '0;
-
-  if (xif_issue_if_i.issue_valid) begin
-    case (op_code)
-      MCNFIG: begin
-        xif_issue_if_i.issue_ready = 1'b1;
-        xif_issue_if_i.issue_resp.accept = 1'b1;
-        clk_en = 1'b1 | clear_i;
-        if (xif_issue_if_i.issue_req.rs_valid) begin
-          // HalfWord[0] of Rs1 contains M size
-          cfg_reg_d[3][SizeLarge-1:0] = xif_issue_if_i.issue_req.rs[0][SizeLarge-1:0];
-          // BalfWord[1] of Rs1 contains K size
-          cfg_reg_d[3][SysDataWidth-1:SizeLarge] = xif_issue_if_i.issue_req.rs[0][SysDataWidth-1:SizeLarge];
-          // Rs2 contains N size
-          cfg_reg_d[4] = xif_issue_if_i.issue_req.rs[1];
-        end
-      end
-
-      MARITH: begin
-        xif_issue_if_i.issue_ready = 1'b1;
-        xif_issue_if_i.issue_resp.accept = 1'b1;
-        clk_en = 1'b1 | clear_i;
-        cfg_reg_d[5] = xif_issue_if_i.issue_req.instr; // Arithmetic instruction
-        if (xif_issue_if_i.issue_req.rs_valid) begin
-          cfg_ready = 1'b1;
-          cfg_reg_d[0] = xif_issue_if_i.issue_req.rs[0]; // Rs1 contains X start pointer
-          cfg_reg_d[1] = xif_issue_if_i.issue_req.rs[1]; // Rs2 contains W start pointer
-          cfg_reg_d[2] = xif_issue_if_i.issue_req.rs[2]; // Rs3 contains Z start pointer
-        end
-      end
-
-      /* The core will try to offload all CSR instructions to the coupled co-processor, so we need to
-         check if the offloaded CSR instruction tries to access one of the CSRs available in RedMulE or
-         not. If not, we need to raise the issue_ready to signal that we received the offload request,
-         but keep the issue_resp.accept low to signal that we are not accepting the instruction.
-         For furhter details, look at the CORE-V Extension Interface documentation
-         (https://docs.openhwgroup.org/projects/openhw-group-core-v-xif/en/latest/x_ext.html#issue-interface)
-         and at the following issue: https://github.com/openhwgroup/cv32e40x/issues/945. */
-      RVCSR: begin
-      xif_issue_if_i.issue_ready = 1'b1;
-        if (xif_issue_if_i.issue_req.instr[31:20] <= CSR_REDMULE_MACFG &&
-            xif_issue_if_i.issue_req.instr[31:20] >= CSR_REDMULE_MACFG) begin
-          xif_issue_if_i.issue_resp.accept = 1'b1;
-        end else begin
-          xif_issue_if_i.issue_resp.accept = 1'b0;
-        end
-      end
+    unique case (x_issue_req_i.instr[6:0])
+      MCNFIG, MARITH: legal_inst = 1'b1;
+      default: legal_inst = 1'b0;
     endcase
   end
-end
 
-always_ff @(posedge clk_int, negedge rst_ni) begin : arith_pipe
-  if (~rst_ni) begin
-    cfg_reg_q <= '0;
-  end else begin
-    if (clear_i) begin
-      cfg_reg_q <= '0;
+  assign x_issue_resp_o.accept        = legal_inst;
+  assign x_issue_resp_o.writeback     = '0; // We never perform writebacks
+  assign x_issue_resp_o.register_read = 7;  // We always read 3 registers
+
+  assign x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i;
+  assign x_result_o.hartid = cur_issue[winner].hartid;
+  assign x_result_o.id     = cur_issue[winner].id;
+  assign x_result_o.data   = '0;
+  assign x_result_o.rd     = '0;
+  assign x_result_o.we     = '0;
+
+  assign config_o = config_d[winner];
+  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
+
+  always_comb begin : x_issue_ready_assignment
+    x_issue_ready_o = 1'b0;
+
+    for (int unsigned i = 0; i < XifNumHarts; i++) begin
+      if (x_issue_req_i.hartid == i) begin
+        x_issue_ready_o = ~issue_fifo_full[i];
+      end
+    end
+  end
+
+  always_comb begin : x_register_ready_assignment
+    x_register_ready_o = 1'b0;
+
+    for (int unsigned i = 0; i < XifNumHarts; i++) begin
+      if (x_register_i.hartid == i) begin
+        x_register_ready_o = ~register_fifo_full[i];
+      end
+    end
+  end
+
+  always_ff @(posedge clk_i, negedge rst_ni) begin : round_robin_counter
+    if(~rst_ni) begin
+      rr_counter_q <= '0;
     end else begin
-      cfg_reg_q <= cfg_reg_d;
+      if (clear_i) begin
+        rr_counter_q <= '0;
+      end else if (~busy_i && |(~issue_fifo_empty & ~register_fifo_empty)) begin
+        rr_counter_q <= rr_counter_d;
+      end
     end
   end
-end
 
-always_ff @(posedge clk_i, negedge rst_ni) begin : slave_cfg
-  if (~rst_ni) begin
-    current <= Idle;
-  end else begin
-    if (clear_i)
-      current <= Idle;
-    else
-      current <= next;
-  end
-end
+  assign rr_counter_d = rr_counter_q == XifNumHarts-1 ? 0 : rr_counter_q + 1;
 
-always_ff @(posedge clk_i, negedge rst_ni) begin : ptrs_counter
-  if (~rst_ni) begin
-    reg_offs <= '0;
-  end else begin
-    if (clear_i | count_rst)
-      reg_offs <= '0;
-    else if (count_update)
-      reg_offs <= reg_offs + 1;
-  end
-end
-
-always_comb begin : cfg_fsm
-  count_rst    = '0;
-  count_update = '0;
-  next       = current;
-  periph.req  = '0;
-  periph.wen  = '0;
-  periph.be   = '0;
-  periph.add  = '0;
-  periph.id   = '0;
-  periph.data = '0;
-  start_cfg_o = 1'b0;
-
-  case (current)
-    Idle: begin
-      if (cfg_ready)
-        next = WriteCfg;
+  always_comb begin : round_robin_priority
+    for(int i = 0; i < XifNumHarts; i++) begin
+      rr_priority[i] = (rr_counter_q + i < XifNumHarts) ? rr_counter_q + i : rr_counter_q + i - XifNumHarts;
     end
+  end
 
-    WriteCfg: begin
-      periph.req  = 1'b1;
-      periph.wen  = 1'b0;
-      periph.be   = '1;
-      periph.add  = 'h40 + 4*reg_offs;
-      periph.id   = '0;
-      periph.data = cfg_reg_q[reg_offs];
-      if (periph.gnt) begin
-        count_update = 1'b1;
-        if (reg_offs == NumCfgRegs - 1) begin
-          next = Trigger;
-          start_cfg_o = 1'b1;
-          count_rst = 1'b1;
+  always_comb begin : winner_assignment
+    winner = rr_counter_q;
+
+    for(int i = 0; i < XifNumHarts; i++) begin
+      if (~issue_fifo_empty[rr_priority[i]] && ~register_fifo_empty[rr_priority[i]]) begin
+        winner = rr_priority[i];
+      end
+    end
+  end
+
+  for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
+
+
+    logic [XifIdWidth-1:0] commit_id_d, commit_id_q,
+                           kill_id_d, kill_id_q;
+
+    logic commit_id_valid_d, commit_id_valid_q,
+          kill_id_valid_d, kill_id_valid_q;
+
+    logic commit_id_valid_flush,
+          kill_id_valid_flush;
+
+    logic fifo_flush;
+
+    logic issue_push, register_push,
+          issue_pop,  register_pop;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin : commit_id_register
+      if (~rst_ni) begin
+        commit_id_q <= '0;
+      end else begin
+        if (clear_i) begin
+          commit_id_q <= '0;
+        end else begin
+          commit_id_q <= commit_id_d;
         end
       end
     end
 
-    Trigger: begin
-      if (cfg_complete_i) begin
-        periph.req  = 1'b1;
-        periph.wen  = 1'b0;
-        periph.be   = '1;
-        periph.add  = '0;
-        periph.id   = '0;
-        periph.data = '0;
+    assign commit_id_d = (x_commit_valid_i && ~x_commit_i.commit_kill && x_commit_i.hartid == i) ? x_commit_i.id : commit_id_q;
 
-        if (periph.gnt)
-          next = Idle;
+    always_ff @(posedge clk_i or negedge rst_ni) begin : commid_id_valid_register
+      if (~rst_ni) begin
+        commit_id_valid_q <= 1'b0;
+      end else begin
+        if (clear_i || commit_id_valid_flush) begin
+          commit_id_valid_q <= 1'b0;
+        end else begin
+          commit_id_valid_q <= commit_id_valid_d;
+        end
       end
     end
-  endcase
-end
+
+    assign commit_id_valid_d     = (x_commit_valid_i && ~x_commit_i.commit_kill && x_commit_i.hartid == i) ? 1'b1 : commit_id_valid_q;
+    assign commit_id_valid_flush = issue_pop && cur_issue[i].id == commit_id_d && ~issue_fifo_empty[i];
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin : kill_id_register
+      if (~rst_ni) begin
+        kill_id_q <= '0;
+      end else begin
+        if (clear_i) begin
+          kill_id_q <= '0;
+        end else begin
+          kill_id_q <= kill_id_d;
+        end
+      end
+    end
+
+    assign kill_id_d = (x_commit_valid_i && x_commit_i.commit_kill && x_commit_i.hartid == i) ? x_commit_i.id : kill_id_q;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin : kill_id_valid_register
+      if (~rst_ni) begin
+        kill_id_valid_q <= 1'b0;
+      end else begin
+        if (clear_i || kill_id_valid_flush) begin
+          kill_id_valid_q <= 1'b0;
+        end else begin
+          kill_id_valid_q <= kill_id_valid_d;
+        end
+      end
+    end
+
+    assign kill_id_valid_d       = (x_commit_valid_i && x_commit_i.commit_kill && x_commit_i.hartid == i) ? 1'b1 : kill_id_valid_q;
+    assign kill_id_valid_flush   = fifo_flush;
+
+    assign fifo_flush   = cur_issue[i].id == kill_id_d && kill_id_valid_d && ~issue_fifo_empty[i];
+
+    assign issue_push   = x_issue_valid_i & legal_inst & x_commit_i.hartid == i;
+    assign issue_pop    = winner == i && ~busy_i && x_result_ready_i && ~issue_fifo_empty[i] && ~register_fifo_empty[i];
+    assign register_pop = issue_pop;
+
+    fifo_v3 #(
+      .FALL_THROUGH ( 0             ),
+      .DEPTH        ( InstFifoDepth ),
+      .dtype        ( x_issue_req_t )
+    ) i_instr_fifo (
+      .clk_i      ( clk_i                 ),
+      .rst_ni     ( rst_ni                ),
+      .flush_i    ( clear_i || fifo_flush ),
+      .testmode_i ( '0                    ),
+      .full_o     ( issue_fifo_full[i]    ),
+      .empty_o    ( issue_fifo_empty[i]   ),
+      .usage_o    (                       ),
+      .data_i     ( x_issue_req_i         ),
+      .push_i     ( issue_push            ),
+      .data_o     ( cur_issue[i]          ),
+      .pop_i      ( issue_pop             )
+    );
+
+    if (XifIssueRegisterSplit == 0) begin : gen_register_fifo // Register packets are guaranteed to arrive at the same time as the issue signal
+      assign register_push = x_register_valid_i & legal_inst & x_commit_i.hartid == i;
+
+      fifo_v3 #(
+        .FALL_THROUGH ( 0             ),
+        .DEPTH        ( InstFifoDepth ),
+        .dtype        ( x_register_t  )
+      ) i_instr_fifo (
+        .clk_i      ( clk_i                  ),
+        .rst_ni     ( rst_ni                 ),
+        .flush_i    ( clear_i || fifo_flush  ),
+        .testmode_i ( '0                     ),
+        .full_o     ( register_fifo_full[i]  ),
+        .empty_o    ( register_fifo_empty[i] ),
+        .usage_o    (                        ),
+        .data_i     ( x_register_i           ),
+        .push_i     ( register_push          ),
+        .data_o     ( cur_register[i]           ),
+        .pop_i      ( register_pop           )
+      );
+
+    end else begin : gen_register_buffer // If register split is enabled, we could receive register packets out of order
+      // When an instruction is marked as valid, reserve a slot for the instruction in the buffer
+
+      // The buffer has a number of slots equal to InstFifoDepth
+
+      $fatal("Not yet implemented!!!!");
+    end
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin : config_register
+      if (~rst_ni) begin
+        config_q[i] <= '0;
+      end else begin
+        if (clear_i) begin
+          config_q[i] <= '0;
+        end else if (issue_pop) begin
+          config_q[i] <= config_d[i];
+        end
+      end
+    end
+
+    always_comb begin : config_assignment
+      config_d[i] = config_q[i];
+
+      unique case (cur_issue[i].instr[6:0])
+        MCNFIG: begin
+          config_d[i].m_size = cur_register[i].rs[0][15:0];
+          config_d[i].n_size = cur_register[i].rs[1][31:0];
+          config_d[i].k_size = cur_register[i].rs[0][31:16];
+        end
+        MARITH: begin
+          config_d[i].x_addr        = cur_register[i].rs[0][31:0];
+          config_d[i].w_addr        = cur_register[i].rs[1][31:0];
+          config_d[i].z_addr        = cur_register[i].rs[2][31:0];
+          config_d[i].pace_in_addr  = cur_register[i].rs[1][31:0];
+          config_d[i].pace_out_addr = cur_register[i].rs[2][31:0];
+          // assign config_d[i].pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16] / (DATAW/BITW); FIXME this is K SIZE
+          // config_d[i].pace_mode      = reg_file_i.hwpe_params[MACFG][13]; FIXME
+          // config_d[i].pace_in_addr   = reg_file_i.hwpe_params[W_ADDR];
+          // config_d[i].pace_out_addr  = reg_file_i.hwpe_params[Z_ADDR];
+          // assign config_d[i].r_addr          = reg_file_i.hwpe_params[R_ADDR_R];  FIXME
+          // assign config_d[i].red_init        = reg_file_i.hwpe_params[MACFG][16];  FIXME
+          // assign config_d[i].red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);    FIXME
+          config_d[i].gemm_ops        = cur_issue[i].instr[12:10];
+          config_d[i].gemm_input_fmt  = cur_issue[i].instr[ 9: 7];
+          config_d[i].gemm_output_fmt = cur_issue[i].instr[ 9: 7];
+          config_d[i].receive_x       = cur_issue[i].instr[13];
+          config_d[i].send_x          = cur_issue[i].instr[14];
+          config_d[i].receive_w       = cur_issue[i].instr[25];
+          config_d[i].send_w          = cur_issue[i].instr[26];
+        end
+      endcase
+    end
+  end
 
 endmodule: redmule_inst_decoder

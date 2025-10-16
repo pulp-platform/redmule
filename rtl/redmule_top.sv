@@ -14,27 +14,36 @@ module redmule_top
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter int unsigned  ID_WIDTH           = 8                 ,
-  parameter int unsigned  N_CORES            = 8                 ,
-  parameter int unsigned  DW                 = DATA_W            , // TCDM port dimension (in bits)
-  parameter int unsigned  UW                 = 1                 ,
-  parameter int unsigned  X_EXT              = 0                 ,
-  parameter int unsigned  SysInstWidth       = 32                ,
-  parameter int unsigned  SysDataWidth       = 32                ,
-  parameter int unsigned  NumContext         = N_CONTEXT         , // Number of sequential jobs for the slave device
-  parameter fp_format_e   FpFormat           = FPFORMAT          , // Data format (default is FP16)
-  parameter int unsigned  Height             = ARRAY_HEIGHT      , // Number of PEs within a row
-  parameter int unsigned  Width              = ARRAY_WIDTH       , // Number of parallel rows
-  parameter int unsigned  NumPipeRegs        = PIPE_REGS         , // Number of pipeline registers within each PE
-  parameter pipe_config_t PipeConfig         = DISTRIBUTED       ,
-  parameter int unsigned  BITW               = fp_width(FpFormat),  // Number of bits for the given format
+  parameter int unsigned  ID_WIDTH               = 8                 ,
+  parameter int unsigned  N_CORES                = 8                 ,
+  parameter int unsigned  DW                     = DATA_W            , // TCDM port dimension (in bits)
+  parameter int unsigned  UW                     = 1                 ,
+  parameter int unsigned  SysInstWidth           = 32                ,
+  parameter int unsigned  SysDataWidth           = 32                ,
+  parameter int unsigned  NumContext             = N_CONTEXT         , // Number of sequential jobs for the slave device
+  parameter fp_format_e   FpFormat               = FPFORMAT          , // Data format (default is FP16)
+  parameter int unsigned  Height                 = ARRAY_HEIGHT      , // Number of PEs within a row
+  parameter int unsigned  Width                  = ARRAY_WIDTH       , // Number of parallel rows
+  parameter int unsigned  NumPipeRegs            = PIPE_REGS         , // Number of pipeline registers within each PE
+  parameter pipe_config_t PipeConfig             = DISTRIBUTED       ,
+  parameter int unsigned  BITW                   = fp_width(FpFormat),  // Number of bits for the given format
+  // XIF parameters
+  parameter int unsigned  XifNumHarts           = 1,
+  parameter int unsigned  XifIdWidth            = 1,
+  parameter int unsigned  XifIssueRegisterSplit = 0,
+  // XIF types
+  parameter type         x_issue_req_t  = logic,
+  parameter type         x_issue_resp_t = logic,
+  parameter type         x_register_t   = logic,
+  parameter type         x_commit_t     = logic,
+  parameter type         x_result_t     = logic,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input  logic                    clk_i      ,
   input  logic                    rst_ni     ,
   input  logic                    test_mode_i,
   output logic                    busy_o     ,
-  output logic [N_CORES-1:0][1:0] evt_o      ,
+  output logic                    evt_o      ,
   // External W stream
   hwpe_stream_intf_stream.sink    w_stream_i ,
   // External X stream
@@ -43,8 +52,19 @@ module redmule_top
   hwpe_stream_intf_stream.source  w_stream_o ,
   // Broadcasted X stream
   hwpe_stream_intf_stream.source  x_stream_o ,
-  // Periph slave port for the controller side
-  hwpe_ctrl_intf_periph.slave periph,
+  // XIF ports
+  input  x_issue_req_t  x_issue_req_i,
+  output x_issue_resp_t x_issue_resp_o,
+  input  logic          x_issue_valid_i,
+  output logic          x_issue_ready_o,
+  input  x_register_t   x_register_i,
+  input  logic          x_register_valid_i,
+  output logic          x_register_ready_o,
+  input  x_commit_t     x_commit_i,
+  input  logic          x_commit_valid_i,
+  output x_result_t     x_result_o,
+  output logic          x_result_valid_o,
+  input  logic          x_result_ready_i,
   // TCDM master ports for the memory side
   hci_core_intf.initiator tcdm
 );
@@ -70,9 +90,7 @@ logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
 logic [$clog2(Height):0]    w_rows_lftovr;
 logic [$clog2(Width):0]     y_rows_lftovr;
 
-assign start_cfg = ((periph.req) &&
-                    (periph.add[7:0] == 'h54) &&
-                    (!periph.wen) && (periph.gnt)) ? 1'b1 : 1'b0;
+assign start_cfg = '0; // TODO make this signal XIF-related
 
 // Streamer control signals and flags
 cntrl_streamer_t cntrl_streamer_int, cntrl_streamer;
@@ -386,7 +404,7 @@ redmule_reduction_unit #(
   .FpFormat ( FpFormat ),
   .MaxLat   ( 0        ),
   .SumLat   ( 1        )
-) (
+) i_red_unit (
   .clk_i        ( clk_i                        ),
   .rst_ni       ( rst_ni                       ),
   .clear_i      ( clear_i                      ),
@@ -583,13 +601,50 @@ redmule_memory_scheduler #(
   .rst_ni            ( rst_ni          ),
   .clear_i           ( clear           ),
   .z_priority_i      ( z_priority      ),
-  .config_i          ( redmule_config        ),
+  .config_i          ( redmule_config  ),
   .flgs_streamer_i   ( flgs_streamer   ),
   .cntrl_scheduler_i ( cntrl_scheduler ),
   .cntrl_flags_i     ( cntrl_flags     ),
   .cntrl_streamer_o  ( cntrl_streamer  )
 );
 
+/*---------------------------------------------------------------*/
+/* |                    Instruction Decoder                    | */
+/*---------------------------------------------------------------*/
+
+redmule_config_t dec_config;
+logic            dec_config_valid;
+
+redmule_inst_decoder #(
+  .InstFifoDepth         ( 4                     ),
+  .XifIdWidth            ( XifIdWidth            ),
+  .XifNumHarts           ( XifNumHarts           ),
+  .XifIssueRegisterSplit ( XifIssueRegisterSplit ),
+  .x_issue_req_t         ( x_issue_req_t         ),
+  .x_issue_resp_t        ( x_issue_resp_t        ),
+  .x_register_t          ( x_register_t          ),
+  .x_commit_t            ( x_commit_t            ),
+  .x_result_t            ( x_result_t            )
+) i_inst_decoder (
+  .clk_i              ( clk_i              ),
+  .rst_ni             ( rst_ni             ),
+  .clear_i            ( '0                 ),
+  .busy_i             ( busy_o             ),
+  .config_valid_o     ( dec_config_valid   ),
+  .config_o           ( dec_config         ),
+  .x_issue_req_i      ( x_issue_req_i      ),
+  .x_issue_resp_o     ( x_issue_resp_o     ),
+  .x_issue_valid_i    ( x_issue_valid_i    ),
+  .x_issue_ready_o    ( x_issue_ready_o    ),
+  .x_register_i       ( x_register_i       ),
+  .x_register_valid_i ( x_register_valid_i ),
+  .x_register_ready_o ( x_register_ready_o ),
+  .x_commit_i         ( x_commit_i         ),
+  .x_commit_valid_i   ( x_commit_valid_i   ),
+  .x_result_o         ( x_result_o         ),
+  .x_result_valid_o   ( x_result_valid_o   ),
+  .x_result_ready_i   ( x_result_ready_i   )
+);
 
 /*---------------------------------------------------------------*/
 /* |                        Controller                         | */
@@ -612,15 +667,15 @@ redmule_ctrl        #(
   .busy_o            ( busy_o                  ),
   .clear_o           ( clear                   ),
   .evt_o             ( evt_o                   ),
-  .config_o          ( redmule_config                ),
+  .config_i          ( dec_config              ),
+  .config_o          ( redmule_config          ),
   .reg_enable_i      ( reg_enable              ),
-  .start_cfg_i       ( start_cfg               ),
+  .start_cfg_i       ( dec_config_valid        ),
   .cfg_complete_o    ( cfg_complete            ),
   .w_loaded_i        ( flgs_scheduler.w_loaded ),
   .flush_o           ( engine_flush            ),
   .cntrl_scheduler_o ( cntrl_scheduler         ),
-  .cntrl_flags_o     ( cntrl_flags             ),
-  .periph            ( periph                  )
+  .cntrl_flags_o     ( cntrl_flags             )
 );
 
 
@@ -641,7 +696,7 @@ redmule_scheduler #(
   .y_valid_i           ( y_buffer_fifo.valid       ),
   .z_ready_i           ( z_buffer_q.ready          ),
   .engine_flush_i      ( engine_flush              ),
-  .config_i            ( redmule_config                  ),
+  .config_i            ( redmule_config            ),
   .flgs_streamer_i     ( flgs_streamer             ),
   .flgs_x_buffer_i     ( x_buffer_flgs             ),
   .flgs_w_buffer_i     ( w_buffer_flgs             ),

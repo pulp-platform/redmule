@@ -27,7 +27,8 @@ module redmule_ctrl
   output logic                    busy_o            ,
   output logic                    clear_o           ,
   output logic [N_CORES-1:0][1:0] evt_o             ,
-  output redmule_config_t         config_o        ,
+  input  redmule_config_t         config_i          ,
+  output redmule_config_t         config_o          ,
   input  logic                    reg_enable_i      ,
   input  logic                    start_cfg_i       ,
   input  flgs_streamer_t          flgs_streamer_i   ,
@@ -38,9 +39,7 @@ module redmule_ctrl
   output logic                    flush_o           ,
   // Control signals for the state machine
   output cntrl_scheduler_t        cntrl_scheduler_o ,
-  output cntrl_flags_t            cntrl_flags_o,
-  // Peripheral slave port
-  hwpe_ctrl_intf_periph.slave     periph
+  output cntrl_flags_t            cntrl_flags_o
 );
 
   logic        clear, latch_clear;
@@ -58,36 +57,14 @@ module redmule_ctrl
 
   redmule_config_t redmule_config;
 
-  hwpe_ctrl_package::ctrl_regfile_t reg_file;
-  hwpe_ctrl_package::ctrl_slave_t   cntrl_slave;
-  hwpe_ctrl_package::flags_slave_t  flgs_slave;
-
-  // Control slave interface
-  hwpe_ctrl_slave  #(
-    .REGFILE_SCM    ( 0            ),
-    .N_CORES        ( N_CORES      ),
-    .N_CONTEXT      ( N_CONTEXT    ),
-    .N_IO_REGS      ( REDMULE_REGS ),
-    .N_GENERIC_REGS ( 6            ),
-    .ID_WIDTH       ( ID_WIDTH     )
-  ) i_slave         (
-    .clk_i          ( clk_i        ),
-    .rst_ni         ( rst_ni       ),
-    .clear_o        ( clear        ),
-    .cfg            ( periph       ),
-    .ctrl_i         ( cntrl_slave  ),
-    .flags_o        ( flgs_slave   ),
-    .reg_file       ( reg_file     )
-  );
-
   redmule_tiler  i_cfg_tiler (
     .clk_i       ( clk_i          ),
     .rst_ni      ( rst_ni         ),
     .clear_i     ( clear          ),
     .setback_i   ( tiler_setback  ),
     .start_cfg_i ( start_cfg_i    ),
-    .reg_file_i  ( reg_file       ),
     .valid_o     ( tiler_valid    ),
+    .config_i    ( config_i       ),
     .config_o    ( redmule_config )
   );
 
@@ -115,7 +92,7 @@ module redmule_ctrl
     end else begin
       if (clear || tiler_setback)
         slave_start <= 1'b0;
-      else if (flgs_slave.start)
+      else if (start_cfg_i)
         slave_start <= 1'b1;
     end
   end
@@ -131,9 +108,7 @@ module redmule_ctrl
 
   assign cntrl_scheduler_o.first_load = current == REDMULE_STARTING;
   assign tiler_setback                = current == REDMULE_IDLE && next == REDMULE_STARTING;
-  assign cntrl_slave.done             = current == REDMULE_FINISHED;
-  assign cntrl_slave.evt              = '0;
-  assign busy_o                       = current != REDMULE_LATCH_RST && current != REDMULE_IDLE && current != REDMULE_FINISHED;
+  assign busy_o                       = slave_start | (current != REDMULE_LATCH_RST && current != REDMULE_IDLE && current != REDMULE_FINISHED);
   assign flush_o                      = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
@@ -176,7 +151,7 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
-  assign evt_o   = flgs_slave.evt[7:0];
-  assign clear_o = clear || latch_clear || cntrl_slave.done;
+  assign evt_o   = current == REDMULE_COMPUTING && next == REDMULE_FINISHED;
+  assign clear_o = clear || latch_clear || current == REDMULE_FINISHED;
 
 endmodule : redmule_ctrl
