@@ -184,7 +184,7 @@ module redmule_reduction_unit
       logic [2:0][BITW-1:0]      operands;
       logic [SumLat:0]           fifo_empty;
 
-      logic [BITW-1]             sum_tmp;
+      logic [BITW-1:0]           sum_tmp;
       logic                      sum_valid_tmp;
 
       assign operands [0] = '0;
