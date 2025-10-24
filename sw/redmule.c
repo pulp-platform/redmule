@@ -54,7 +54,7 @@ int main() {
   int pace_ops = 1;
   // int pace_ops = 0;
 
-  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size, 0,
               (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation

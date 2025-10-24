@@ -216,6 +216,15 @@ addrmap redmule_regif {
             sw = rw;
         } y_offs[31:0] = 0;
     };
+    reg mcnfig3 {
+        name = "MCNFIG3";
+        field {
+            name = "w_cols_offset";
+            desc = "Column offset applied to W/Z before starting the first pass.";
+            hw = r;
+            sw = rw;
+        } w_cols_offset[31:0] = 0;
+    };
     reg marith0 {
         name = "MARITH0";
         field {
@@ -263,6 +272,7 @@ addrmap redmule_regif {
         mcnfig0 mcnfig0 @ 0x00;
         mcnfig1 mcnfig1 @ 0x04;
         mcnfig2 mcnfig2 @ 0x08;
+        mcnfig3 mcnfig3 @ 0x1c;
         marith0 marith0 @ 0x0c;
         marith1 marith1 @ 0x10;
         marith2 marith2 @ 0x14;

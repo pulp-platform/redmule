@@ -155,6 +155,12 @@ typedef struct __attribute__ ((__packed__)) {
 #define REDMULE_REGIF__MOPCNT__OP_ID_CNT_bw 32
 #define REDMULE_REGIF__MOPCNT__OP_ID_CNT_reset 0x0
 
+// reg - redmule_regif::mcnfig3
+#define REDMULE_REGIF__MCNFIG3__W_COLS_OFFSET_bm 0xffffffff
+#define REDMULE_REGIF__MCNFIG3__W_COLS_OFFSET_bp 0
+#define REDMULE_REGIF__MCNFIG3__W_COLS_OFFSET_bw 32
+#define REDMULE_REGIF__MCNFIG3__W_COLS_OFFSET_reset 0x0
+
 // regfile - redmule_regif::hwpe_ctrl_job_dep
 typedef struct __attribute__ ((__packed__)) {
     uint32_t mcnfig0;
@@ -164,6 +170,7 @@ typedef struct __attribute__ ((__packed__)) {
     uint32_t marith1;
     uint32_t marith2;
     uint32_t mopcnt;
+    uint32_t mcnfig3;
 } redmule_regif__hwpe_ctrl_job_dep_t;
 
 // regfile - redmule_regif::hwpe_ctrl_job_indep
@@ -179,7 +186,7 @@ typedef struct __attribute__ ((__packed__)) {
 } redmule_regif_t;
 
 
-REDMULE_STATIC_ASSERT(sizeof(redmule_regif_t) == 0x40, "Packing error");
+REDMULE_STATIC_ASSERT(sizeof(redmule_regif_t) == 0x44, "Packing error");
 
 #ifdef __cplusplus
 }

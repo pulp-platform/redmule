@@ -137,6 +137,7 @@ module redmule_target_decoder
   assign config_o.receive_w       = hwif_out.hwpe_job_dep.mcnfig1.receive_w.value;
   assign config_o.send_w          = hwif_out.hwpe_job_dep.mcnfig1.send_w.value;
   assign config_o.y_offs          = hwif_out.hwpe_job_dep.mcnfig2.y_offs.value;
+  assign config_o.w_cols_offset   = hwif_out.hwpe_job_dep.mcnfig3.w_cols_offset.value[15:0];
   assign config_o.x_addr          = hwif_out.hwpe_job_dep.marith0.x_addr.value;
   assign config_o.w_addr          = hwif_out.hwpe_job_dep.marith1.w_addr.value;
   assign config_o.z_addr          = hwif_out.hwpe_job_dep.marith2.z_addr.value;

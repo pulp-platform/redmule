@@ -32,9 +32,12 @@ static inline void redmule_z_add_set(unsigned int value) {
   redmule_regs()->hwpe_job_dep.marith2 = value;
 }
 
-static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1) {
+static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1, uint32_t mcfg2,
+                                    uint32_t mcfg3) {
   redmule_regs()->hwpe_job_dep.mcnfig0 = mcfg0;
   redmule_regs()->hwpe_job_dep.mcnfig1 = mcfg1;
+  redmule_regs()->hwpe_job_dep.mcnfig2 = mcfg2;
+  redmule_regs()->hwpe_job_dep.mcnfig3 = mcfg3;
 }
 
 static inline void hwpe_trigger_job() { redmule_regs()->hwpe_ctrl.commit_trigger = 0; }
@@ -54,10 +57,12 @@ static inline void hwpe_cg_enable() { return; }
 static inline void hwpe_cg_disable() { return; }
 
 void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size, uint16_t n_size,
-                 uint16_t k_size, uint8_t gemm_op, uint8_t gemm_fmt) {
+                 uint16_t k_size, uint16_t w_col_off, uint8_t gemm_op, uint8_t gemm_fmt) {
 
   uint32_t mcfg_reg0 = 0;
   uint32_t mcfg_reg1 = 0;
+  uint32_t mcfg_reg2 = 0;
+  uint32_t mcfg_reg3 = 0;
 
   mcfg_reg0 = ((uint32_t)k_size << REDMULE_REGIF__MCNFIG0__K_SIZE_bp) |
               ((uint32_t)m_size << REDMULE_REGIF__MCNFIG0__M_SIZE_bp);
@@ -66,11 +71,13 @@ void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size
               ((uint32_t)gemm_op << REDMULE_REGIF__MCNFIG1__GEMM_OPS_bp) |
               ((uint32_t)gemm_fmt << REDMULE_REGIF__MCNFIG1__GEMM_INPUT_FMT_bp) |
               ((uint32_t)gemm_fmt << REDMULE_REGIF__MCNFIG1__GEMM_OUTPUT_FMT_bp);
+  mcfg_reg2 = 0;
+  mcfg_reg3 = ((uint32_t)w_col_off << REDMULE_REGIF__MCNFIG3__W_COLS_OFFSET_bp);
 
   redmule_x_add_set(x);
   redmule_w_add_set(w);
   redmule_z_add_set(z);
-  redmule_mcfg_set(mcfg_reg0, mcfg_reg1);
+  redmule_mcfg_set(mcfg_reg0, mcfg_reg1, mcfg_reg2, mcfg_reg3);
 }
 
 #endif

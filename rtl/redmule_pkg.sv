@@ -184,6 +184,7 @@ package redmule_pkg;
     logic [15:0] x_rows_iter;
     logic [15:0] w_cols_iter;
     logic [15:0] w_rows_iter;
+    logic [15:0] w_cols_offset;
     logic [ 7:0] x_cols_lftovr;
     logic [ 7:0] x_rows_lftovr;
     logic [ 7:0] w_cols_lftovr;

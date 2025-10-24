@@ -565,7 +565,7 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
     .rst_ni             ( rst_ni                                 ),
     .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
     .config_ready_i     ( ~config_fifo_full                      ),
-    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .op_done_i          ( evt_o                                  ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .x_issue_req_i      ( x_issue_req_i                          ),
@@ -595,7 +595,7 @@ else begin : mm_ctrl_intf_gen
     .clear_i            ( '0                                     ), // ORed internally with target_clear
     .target_clear_o     ( target_clear                           ),
     .config_ready_i     ( ~config_fifo_full                      ),
-    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .op_done_i          ( evt_o                                  ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .target             ( target                                 )
@@ -714,6 +714,7 @@ always_ff @(posedge clk_acc) begin
     $display("[redmule]   gemm_output_fmt = %s",     redmule_config.gemm_output_fmt.name());
     $display("[redmule]   x_cols_iter = 0x%h",       redmule_config.x_cols_iter);
     $display("[redmule]   x_rows_iter = 0x%h",       redmule_config.x_rows_iter);
+    $display("[redmule]   w_cols_offset = 0x%h",     redmule_config.w_cols_offset);
     $display("[redmule]   w_cols_iter = 0x%h",       redmule_config.w_cols_iter);
     $display("[redmule]   w_rows_iter = 0x%h",       redmule_config.w_rows_iter);
     $display("[redmule]   x_cols_lftovr = 0x%h",     redmule_config.x_cols_lftovr);
