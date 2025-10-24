@@ -13,6 +13,7 @@ module redmule_tiler
   input  logic              rst_ni     ,
   input  logic              clear_i    ,
   input  logic              setback_i  ,
+  input  logic              loopback_i ,
   input  logic              start_cfg_i,
   input  ctrl_regfile_t     reg_file_i ,
   output logic              valid_o    ,
@@ -23,6 +24,7 @@ logic clk_en;
 logic clk_int;
 
 redmule_config_t config_d, config_q;
+logic loopback_d, loopback_q;
 
 always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   if (~rst_ni) begin
@@ -30,9 +32,19 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   end else begin
     if (clear_i || setback_i) begin
       clk_en <= 1'b0;
-    end else if (start_cfg_i) begin
+    end else if (start_cfg_i || loopback_i) begin
       clk_en <= 1'b1;
     end
+  end
+end
+
+// Register loopback
+assign loopback_d = (clear_i || setback_i) ? 1'b0 : (loopback_i ? 1'b1 : loopback_q);
+always_ff @(posedge clk_i, negedge rst_ni) begin: loopback_ff
+  if (~rst_ni) begin
+    loopback_q <= 1'b0;
+  end else begin
+    loopback_q <= loopback_d;
   end
 end
 
@@ -44,8 +56,6 @@ tc_clk_gating i_tiler_clockg (
 );
 
 assign config_d.x_addr          = reg_file_i.hwpe_params[X_ADDR];
-assign config_d.w_addr          = reg_file_i.hwpe_params[W_ADDR];
-assign config_d.z_addr          = reg_file_i.hwpe_params[Z_ADDR];
 assign config_d.m_size          = reg_file_i.hwpe_params[MCFIG0][15: 0];
 assign config_d.k_size          = reg_file_i.hwpe_params[MCFIG0][31:16];
 assign config_d.n_size          = reg_file_i.hwpe_params[MCFIG1][15: 0];
@@ -75,8 +85,27 @@ assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(ARRAY_H
 assign config_d.w_rows_lftovr = config_d.n_size - (ARRAY_HEIGHT*(config_d.n_size/ARRAY_HEIGHT));
 assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(ARRAY_HEIGHT*(PIPE_REGS + 1)));
 
-// Calculate w_cols, x_cols, x_rows iterations
-assign config_d.w_cols_iter = config_d.w_cols_lftovr != '0 ? w_cols_iter_nolftovr + 1 : w_cols_iter_nolftovr;
+// Calculate the offset over the w columns
+assign config_d.w_cols_offset = reg_file_i.hwpe_params[MCFIG1][31:16]/(ARRAY_HEIGHT*(PIPE_REGS + 1));
+
+// Calculate w_cols iterations
+always_comb begin
+  if (loopback_q) begin
+    config_d.w_addr = reg_file_i.hwpe_params[W_ADDR];
+    config_d.z_addr = reg_file_i.hwpe_params[Z_ADDR];
+    config_d.w_cols_iter = config_d.w_cols_offset;
+  end else begin
+    config_d.w_addr = reg_file_i.hwpe_params[W_ADDR] + reg_file_i.hwpe_params[MCFIG1][31:16]*(BITW/8);
+    config_d.z_addr = reg_file_i.hwpe_params[Z_ADDR] + reg_file_i.hwpe_params[MCFIG1][31:16]*(BITW/8);
+    if (config_d.w_cols_lftovr != '0) begin
+      config_d.w_cols_iter = w_cols_iter_nolftovr - config_d.w_cols_offset + 1;
+    end else begin
+      config_d.w_cols_iter = w_cols_iter_nolftovr - config_d.w_cols_offset;
+    end
+  end
+end
+
+// Calculate w_rows, x_cols, x_rows iterations
 assign config_d.w_rows_iter = config_d.w_rows_lftovr != '0 ? w_rows_iter_lftovr       : w_rows_iter_nolftovr;
 assign config_d.x_cols_iter = config_d.x_cols_lftovr != '0 ? x_cols_iter_nolftovr + 1 : x_cols_iter_nolftovr;
 assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftovr + 1 : x_rows_iter_nolftovr;
@@ -92,7 +121,7 @@ hwpe_ctrl_seq_mult #(
   .clk_i    ( clk_i                         ),
   .rst_ni   ( rst_ni                        ),
   .clear_i  ( clear_i | setback_i           ),
-  .start_i  ( start_cfg_i                   ),
+  .start_i  ( start_cfg_i | loopback_i      ),
   .a_i      ( config_d.x_rows_iter          ),
   .b_i      ( config_d.w_cols_iter          ),
   .invert_i ( 1'b0                          ),
@@ -236,8 +265,8 @@ assign reg_file_o.generic_params = '0;
 assign reg_file_o.ext_data = '0;
 assign reg_file_o.hwpe_params[REGFILE_N_MAX_IO_REGS-1:REDMULE_REGS] = '0;
 assign reg_file_o.hwpe_params[      X_ADDR]        = config_d.x_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[      W_ADDR]        = config_d.w_addr; // do not register (these are straight from regfile)
-assign reg_file_o.hwpe_params[      Z_ADDR]        = config_d.z_addr; // do not register (these are straight from regfile)
+assign reg_file_o.hwpe_params[      Z_ADDR]        = config_q.z_addr;
+assign reg_file_o.hwpe_params[      W_ADDR]        = config_q.w_addr;
 assign reg_file_o.hwpe_params[     X_ITERS][31:16] = config_q.x_rows_iter;
 assign reg_file_o.hwpe_params[     X_ITERS][15: 0] = config_q.x_cols_iter;
 assign reg_file_o.hwpe_params[     W_ITERS][31:16] = config_q.w_rows_iter;

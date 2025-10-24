@@ -43,7 +43,7 @@ package redmule_pkg;
   parameter int unsigned W_ADDR = 1; // 0x04 /* These do not change between slave and final */
   parameter int unsigned Z_ADDR = 2; // 0x08 /* These do not change between slave and final */
   parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
-  parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
+  parameter int unsigned MCFIG1 = 4; // 0x10 --> [31:16] -> N_offset, [15: 0] -> N Size
   // Matrix arithmetic config register
   // [12:10] -> Operation selection
   // [ 9: 7] -> Input/Output format
@@ -242,6 +242,7 @@ package redmule_pkg;
     logic [15:0] x_rows_iter;
     logic [15:0] w_cols_iter;
     logic [15:0] w_rows_iter;
+    logic [15:0] w_cols_offset;
     logic [ 7:0] x_cols_lftovr;
     logic [ 7:0] x_rows_lftovr;
     logic [ 7:0] w_cols_lftovr;
