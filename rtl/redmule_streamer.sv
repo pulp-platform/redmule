@@ -108,7 +108,7 @@ assign priority_encoding[1] = 1;
 assign priority_encoding[2] = 2;
 assign priority_encoding[3] = 3;
 hci_outstanding_fifo #(
-  .FIFO_DEPTH ( ARRAY_WIDTH / 4 ),
+  .FIFO_DEPTH ( ARRAY_WIDTH ),
   .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_z_fifo (
   .clk_i  ( clk_i   ),

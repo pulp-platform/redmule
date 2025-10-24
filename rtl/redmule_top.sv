@@ -49,7 +49,7 @@ module redmule_top
 localparam int unsigned DATAW = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned HCI_ECC = (`HCI_SIZE_GET_EW(tcdm)>1);
 
-logic                       enable, clear;
+logic                       enable, clear, streamer_clear;
 logic                       reg_enable;
 logic                       start_cfg, cfg_complete;
 
@@ -174,7 +174,7 @@ redmule_streamer #(
   .test_mode_i     ( test_mode_i         ),
   // Controller generated signals
   .enable_i        ( 1'b1                ),
-  .clear_i         ( clear               ),
+  .clear_i         ( streamer_clear      ),
   // Source interfaces for the incoming streams
   .x_stream_o      ( x_buffer_d          ),
   .w_stream_o      ( w_buffer_d          ),
@@ -194,7 +194,7 @@ hwpe_stream_fifo #(
 ) i_x_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
+  .clear_i        ( streamer_clear),
   .flags_o        (               ),
   .push_i         ( x_buffer_d    ),
   .pop_o          ( x_buffer_fifo )
@@ -206,7 +206,7 @@ hwpe_stream_fifo #(
 ) i_w_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
+  .clear_i        ( streamer_clear),
   .flags_o        ( w_fifo_flgs   ),
   .push_i         ( w_buffer_d    ),
   .pop_o          ( w_buffer_fifo )
@@ -218,7 +218,7 @@ hwpe_stream_fifo #(
 ) i_y_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
+  .clear_i        ( streamer_clear),
   .flags_o        (               ),
   .push_i         ( y_buffer_d    ),
   .pop_o          ( y_buffer_fifo )
@@ -230,7 +230,7 @@ hwpe_stream_fifo #(
 ) i_z_buffer_fifo (
   .clk_i          ( clk_i         ),
   .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
+  .clear_i        ( streamer_clear),
   .flags_o        ( z_fifo_flgs   ),
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
@@ -443,6 +443,7 @@ redmule_ctrl        #(
   .flgs_streamer_i   ( flgs_streamer           ),
   .busy_o            ( busy_o                  ),
   .clear_o           ( clear                   ),
+  .streamer_clear_o  (streamer_clear           ),
   .evt_o             ( evt_o                   ),
   .reg_file_o        ( reg_file                ),
   .reg_enable_i      ( reg_enable              ),
