@@ -51,12 +51,6 @@ assign config_d.z_addr          = config_i.z_addr;
 assign config_d.m_size          = config_i.m_size;
 assign config_d.k_size          = config_i.k_size;
 assign config_d.n_size          = config_i.n_size;
-`ifdef PACE_ENABLED
-  assign config_d.pace_tot_len   = config_i.k_size / (DATAW/BITW);
-  assign config_d.pace_mode      = '0; // FIXME //reg_file_i.hwpe_params[MACFG][13];
-  assign config_d.pace_in_addr   = config_i.w_addr;
-  assign config_d.pace_out_addr  = config_i.z_addr;
-`endif
 assign config_d.gemm_ops        = config_i.gemm_ops;
 assign config_d.gemm_input_fmt  = config_i.gemm_input_fmt;
 assign config_d.gemm_output_fmt = config_i.gemm_output_fmt;

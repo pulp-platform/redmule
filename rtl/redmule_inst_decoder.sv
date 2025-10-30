@@ -7,7 +7,6 @@
 
 module redmule_inst_decoder
   import redmule_pkg::*;
-  import cv32e40x_pkg::*;
 #(
   parameter  int unsigned InstFifoDepth         = 4,
   parameter  int unsigned XifIdWidth            = 4,
@@ -282,12 +281,6 @@ module redmule_inst_decoder
           config_d[i].x_addr        = cur_register[i].rs[0][31:0];
           config_d[i].w_addr        = cur_register[i].rs[1][31:0];
           config_d[i].z_addr        = cur_register[i].rs[2][31:0];
-          config_d[i].pace_in_addr  = cur_register[i].rs[1][31:0];
-          config_d[i].pace_out_addr = cur_register[i].rs[2][31:0];
-          // assign config_d[i].pace_tot_len   = reg_file_i.hwpe_params[MCFIG0][31:16] / (DATAW/BITW); FIXME this is K SIZE
-          // config_d[i].pace_mode      = reg_file_i.hwpe_params[MACFG][13]; FIXME
-          // config_d[i].pace_in_addr   = reg_file_i.hwpe_params[W_ADDR];
-          // config_d[i].pace_out_addr  = reg_file_i.hwpe_params[Z_ADDR];
           // assign config_d[i].r_addr          = reg_file_i.hwpe_params[R_ADDR_R];  FIXME
           // assign config_d[i].red_init        = reg_file_i.hwpe_params[MACFG][16];  FIXME
           // assign config_d[i].red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);    FIXME

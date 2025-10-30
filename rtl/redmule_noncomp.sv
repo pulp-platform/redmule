@@ -26,15 +26,12 @@ module redmule_noncomp #(
   input fpnew_pkg::roundmode_e     rnd_mode_i,
   input fpnew_pkg::operation_e     op_i,
   input logic                      op_mod_i,
-`ifdef PACE_ENABLED
-  output logic                     is_opa_greater_o, // if operand- > operand-1 signal is_greater_o to 1
-`endif 
   input TagType                    tag_i,
   input AuxType                    aux_i,
   // Input Handshake
   input  logic                     in_valid_i,
   output logic                     in_ready_o,
-  input  logic                     reg_enable_i,  
+  input  logic                     reg_enable_i,
   input  logic                     flush_i,
   // Output signals
   output logic [WIDTH-1:0]         result_o,
@@ -163,12 +160,6 @@ module redmule_noncomp #(
   assign signalling_nan  = (| {info_a.is_signalling, info_b.is_signalling});
 
   logic operands_equal, operand_a_smaller;
-
-`ifdef PACE_ENABLED
-  logic operand_a_greater;
-  // For PACE x > bps is what we care for
-  assign operand_a_greater = ~(operands_equal | operand_a_smaller);
-`endif 
 
   // Equality checks for zeroes too
   assign operands_equal    = (operand_a == operand_b) || (info_a.is_zero && info_b.is_zero);
@@ -364,9 +355,6 @@ module redmule_noncomp #(
   TagType                [0:NUM_OUT_REGS] out_pipe_tag_q;
   AuxType                [0:NUM_OUT_REGS] out_pipe_aux_q;
   logic                  [0:NUM_OUT_REGS] out_pipe_valid_q;
-`ifdef PACE_ENABLED
-  logic                  [0:NUM_OUT_REGS] out_pipe_is_greater_q;
-`endif 
   // Ready signal is combinatorial for all stages
   logic [0:NUM_OUT_REGS] out_pipe_ready;
 
@@ -379,9 +367,6 @@ module redmule_noncomp #(
   assign out_pipe_tag_q[0]           = inp_pipe_tag_q[NUM_INP_REGS];
   assign out_pipe_aux_q[0]           = inp_pipe_aux_q[NUM_INP_REGS];
   assign out_pipe_valid_q[0]         = inp_pipe_valid_q[NUM_INP_REGS];
-`ifdef PACE_ENABLED
-  assign out_pipe_is_greater_q[0]    = operand_a_greater;
-`endif
   // Input stage: Propagate pipeline ready signal to inside pipe
   assign inp_pipe_ready[NUM_INP_REGS] = out_pipe_ready[0];
   // Generate the register stages
@@ -408,9 +393,6 @@ module redmule_noncomp #(
     `FFL(out_pipe_is_class_q[i+1],      out_pipe_is_class_q[i],      reg_ena, '0)
     `FFL(out_pipe_tag_q[i+1],           out_pipe_tag_q[i],           reg_ena, TagType'('0))
     `FFL(out_pipe_aux_q[i+1],           out_pipe_aux_q[i],           reg_ena, AuxType'('0))
-`ifdef PACE_ENABLED
-    `FFL(out_pipe_is_greater_q[i+1],    out_pipe_is_greater_q[i],    reg_ena, '0)
-`endif 
   end
   // Output stage: Ready travels backwards from output side, driven by downstream circuitry
   assign out_pipe_ready[NUM_OUT_REGS] = out_ready_i;
@@ -424,7 +406,4 @@ module redmule_noncomp #(
   assign aux_o           = out_pipe_aux_q[NUM_OUT_REGS];
   assign out_valid_o     = out_pipe_valid_q[NUM_OUT_REGS];
   assign busy_o          = (| {inp_pipe_valid_q, out_pipe_valid_q});
-`ifdef PACE_ENABLED
-  assign is_opa_greater_o= out_pipe_is_greater_q[NUM_OUT_REGS];
-`endif 
 endmodule: redmule_noncomp

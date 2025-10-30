@@ -39,13 +39,6 @@ module redmule_streamer
 
   hwpe_stream_intf_stream.sink   r_stream_i,
 
-`ifdef PACE_ENABLED
-  // Engine PACE input + HS signals  (output from the streamer)
-  hwpe_stream_intf_stream.source pace_stream_o,
-  // Engine PACE output + HS signals (input to the streamer)
-  hwpe_stream_intf_stream.sink   pace_stream_i,
-`endif
-
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
 
@@ -170,62 +163,22 @@ hci_core_r_valid_filter #(
  * side (virt_tcdm[NumStreamSources]) of the LD/ST multiplexer.                         */
 
 // Sink module that turns the incoming Z stream into TCDM.
-`ifndef PACE_ENABLED
-  hci_core_intf #( .DW ( DW ),
-                  .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
-  hci_core_sink         #(
-    .MISALIGNED_ACCESSES ( REALIGN                      ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-  ) i_stream_sink        (
-    .clk_i               ( clk_i                       ),
-    .rst_ni              ( rst_ni                      ),
-    .test_mode_i         ( test_mode_i                 ),
-    .clear_i             ( clear_i                     ),
-    .enable_i            ( enable_i                    ),
-    .tcdm                ( zstream2cast                ),
-    .stream              ( z_stream_i                  ),
-    .ctrl_i              ( ctrl_i.z_stream_sink_ctrl   ),
-    .flags_o             ( flags_o.z_stream_sink_flags )
-  );
-`else
-
-  hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) pacez_muxed ( .clk( clk_i ) );
-
-  hci_core_intf #( .DW ( DW ),
-                   .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
-  hci_package::hci_streamer_flags_t pacez_stream_sink_flags;
-  hci_package::hci_streamer_ctrl_t  pacez_stream_sink_ctrl;
-
-  assign flags_o.z_stream_sink_flags    = pacez_stream_sink_flags;
-  assign flags_o.pace_stream_sink_flags = pacez_stream_sink_flags;
-  assign pacez_stream_sink_ctrl         = ctrl_i.pace_mode ? ctrl_i.pace_stream_sink_ctrl : ctrl_i.z_stream_sink_ctrl;
-
-  hwpe_stream_mux_static i_hwpe_stream_mux_static
-  (
-    .clk_i               ( clk_i                       ),
-    .rst_ni              ( rst_ni                      ),
-    .clear_i             ( clear_i                     ),
-    .sel_i               ( ctrl_i.pace_mode            ),
-    .push_0_i            ( z_stream_i                  ),
-    .push_1_i            ( pace_stream_i               ),
-    .pop_o               ( pacez_muxed                 )
-  );
-
-  hci_core_sink         #(
-    .MISALIGNED_ACCESSES ( REALIGN                      ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-  ) i_stream_sink        (
-    .clk_i               ( clk_i                       ),
-    .rst_ni              ( rst_ni                      ),
-    .test_mode_i         ( test_mode_i                 ),
-    .clear_i             ( clear_i                     ),
-    .enable_i            ( enable_i                    ),
-    .tcdm                ( zstream2cast                ),
-    .stream              ( pacez_muxed                 ),
-    .ctrl_i              ( pacez_stream_sink_ctrl      ),
-    .flags_o             ( pacez_stream_sink_flags     )
-  );
-`endif
+hci_core_intf #( .DW ( DW ),
+                .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
+hci_core_sink         #(
+  .MISALIGNED_ACCESSES ( REALIGN                      ),
+  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_stream_sink        (
+  .clk_i               ( clk_i                       ),
+  .rst_ni              ( rst_ni                      ),
+  .test_mode_i         ( test_mode_i                 ),
+  .clear_i             ( clear_i                     ),
+  .enable_i            ( enable_i                    ),
+  .tcdm                ( zstream2cast                ),
+  .stream              ( z_stream_i                  ),
+  .ctrl_i              ( ctrl_i.z_stream_sink_ctrl   ),
+  .flags_o             ( flags_o.z_stream_sink_flags )
+);
 
 // Store interface FIFO buses.
 hci_core_intf #(
@@ -350,7 +303,6 @@ hci_core_assign i_r_store_assign ( .tcdm_target (r_sink_fifo_q), .tcdm_initiator
 // W   -> virt_tcdm[1]
 // Y/Z -> virt_tcdm[2]
 // R   -> virt_tcdm[3]
-// PACE_IN -> virt_tcdm[4] , Output is shared with Y/Z streams
 // R SINK  -> virt_tcdm[5]
 
 // One TCDM FIFO and one HCI core source unit per stream channel.
@@ -393,9 +345,6 @@ assign source_ctrl[XsourceStreamId]      = ctrl_i.x_stream_source_ctrl;
 assign source_ctrl[WsourceStreamId]      = ctrl_i.w_stream_source_ctrl;
 assign source_ctrl[YsourceStreamId]      = ctrl_i.y_stream_source_ctrl;
 assign source_ctrl[RsourceStreamId]      = ctrl_i.r_stream_source_ctrl;
-`ifdef PACE_ENABLED
-  assign source_ctrl[PACEsourceStreamId]   = ctrl_i.pace_stream_source_ctrl;
-`endif
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
@@ -485,10 +434,6 @@ assign flags_o.w_stream_source_flags = source_flags[WsourceStreamId];
 assign flags_o.y_stream_source_flags = source_flags[YsourceStreamId];
 assign flags_o.r_stream_source_flags = source_flags[RsourceStreamId];
 
-`ifdef PACE_ENABLED
-  assign flags_o.pace_stream_source_flags = source_flags[PACEsourceStreamId];
-`endif
-
 // Assign resulting streams.
 hwpe_stream_assign i_xstream_assign ( .push_i( out_stream[XsourceStreamId] ) ,
                                       .pop_o ( x_stream_o                  ) );
@@ -501,9 +446,5 @@ hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
 
 hwpe_stream_assign i_rstream_assign ( .push_i( out_stream[RsourceStreamId] ) ,
                                       .pop_o ( r_stream_o                  ) );
-`ifdef PACE_ENABLED
-  hwpe_stream_assign i_pace_in_stream_assign ( .push_i( out_stream[PACEsourceStreamId] ) ,
-                                               .pop_o ( pace_stream_o               ) );
-`endif
 
 endmodule : redmule_streamer

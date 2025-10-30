@@ -52,7 +52,6 @@ package redmule_pkg;
   // [17:17] -> Receive W stream
   // [16:16] -> Reduction initialization
   // [15:14] -> Reduction operation
-  // [13:13] -> PACE mode selection
   // [12:10] -> Operation selection
   // [ 9: 7] -> Input/Output format
   parameter int unsigned MACFG = 5; // 0x14
@@ -74,21 +73,10 @@ package redmule_pkg;
     CSR_REDMULE_Z_ADDR = 12'h802,
     CSR_REDMULE_MCFIG0 = 12'h803,
     CSR_REDMULE_MCFIG1 = 12'h804,
-`ifdef PACE_ENABLED
-    CSR_REDMULE_MACFG  = 12'h805,
-    CSR_PACE_INP_ADDR  = 12'h806,
-    CSR_PACE_OUP_ADDR  = 12'h807
-`else
     CSR_REDMULE_MACFG  = 12'h805
-`endif
   } redmule_csr_num_e;
 
-`ifdef PACE_ENABLED
-  parameter int unsigned NumStreamSources     = 5; // X, W, Y, R, PACE_IN
-  parameter int unsigned PACEsourceStreamId   = 4;
-`else
   parameter int unsigned NumStreamSources     = 4; // X, W, Y, R
-`endif
 
   parameter int unsigned XsourceStreamId      = 0;
   parameter int unsigned WsourceStreamId      = 1;
@@ -110,13 +98,8 @@ package redmule_pkg;
     fpnew_pkg::fp_format_e                  output_cast_src_fmt;
     fpnew_pkg::fp_format_e                  output_cast_dst_fmt;
     logic                                   z_priority;
-    logic                                   pace_mode;
     logic                                   receive_w_stream;
     logic                                   receive_x_stream;
-`ifdef PACE_ENABLED
-    hci_package::hci_streamer_ctrl_t        pace_stream_source_ctrl;
-    hci_package::hci_streamer_ctrl_t        pace_stream_sink_ctrl;
-`endif
   } cntrl_streamer_t;
 
   typedef struct packed {
@@ -126,10 +109,6 @@ package redmule_pkg;
     hci_package::hci_streamer_flags_t r_stream_source_flags;
     hci_package::hci_streamer_flags_t z_stream_sink_flags;
     hci_package::hci_streamer_flags_t r_stream_sink_flags;
-`ifdef PACE_ENABLED
-    hci_package::hci_streamer_flags_t pace_stream_source_flags;
-    hci_package::hci_streamer_flags_t pace_stream_sink_flags;
-`endif
   } flgs_streamer_t;
 
   typedef struct packed {
@@ -139,10 +118,6 @@ package redmule_pkg;
     logic [$clog2(ARRAY_WIDTH):0] width;
     logic [$clog2(TOT_DEPTH):0]   height;
     logic [$clog2(TOT_DEPTH):0]   slots;
-`ifdef PACE_ENABLED
-    logic                         pace_mode;
-`endif
-
     logic                         rst_w_index;
     logic                         last_x;
   } x_buffer_ctrl_t;
@@ -194,9 +169,6 @@ package redmule_pkg;
     fpnew_pkg::roundmode_e        stage2_rnd;
     fpnew_pkg::operation_e        op1;
     fpnew_pkg::operation_e        op2;
-`ifdef PACE_ENABLED
-    logic                         pace_mode;
-`endif
     logic                         op_mod;
     logic                         in_valid;
     logic                         flush;
@@ -267,17 +239,10 @@ package redmule_pkg;
     logic [31:0] x_addr;
     logic [31:0] w_addr;
     logic [31:0] z_addr;
-`ifdef PACE_ENABLED
-    logic [31:0] pace_in_addr;
-    logic [31:0] pace_out_addr;
-`endif
     logic [15:0] m_size;
     logic [15:0] n_size;
     logic [15:0] k_size;
     gemm_op_e gemm_ops;
-`ifdef PACE_ENABLED
-    logic     pace_mode;
-`endif
     gemm_fmt_e gemm_input_fmt;
     gemm_fmt_e gemm_output_fmt;
 
@@ -285,16 +250,10 @@ package redmule_pkg;
     logic [15:0] x_rows_iter;
     logic [15:0] w_cols_iter;
     logic [15:0] w_rows_iter;
-`ifdef PACE_ENABLED
-    logic [15:0] pace_iter;
-`endif
     logic [ 7:0] x_cols_lftovr;
     logic [ 7:0] x_rows_lftovr;
     logic [ 7:0] w_cols_lftovr;
     logic [ 7:0] w_rows_lftovr;
-`ifdef PACE_ENABLED
-    logic [15:0] pace_lftovr;
-`endif
     logic [15:0] tot_stores;
     logic [31:0] x_d1_stride;
     logic [31:0] w_tot_len;
@@ -303,9 +262,6 @@ package redmule_pkg;
     logic [31:0] yz_tot_len;
     logic [31:0] yz_d0_stride;
     logic [31:0] yz_d2_stride;
-`ifdef PACE_ENABLED
-    logic [15:0] pace_tot_len;
-`endif
     logic [31:0] x_rows_offs;
     logic [31:0] x_buffer_slots;
     logic [31:0] x_tot_len;
@@ -377,12 +333,5 @@ package redmule_pkg;
     logic r_opc;
     logic r_user;
   } redmule_default_data_rsp_t;
-
-`ifdef PACE_ENABLED
-  localparam int unsigned PACE_NPARTS = 8; // same as the height of the Redmule array or the number of rows in RedMule. It must be power of 2
-  localparam int unsigned PACE_PART_BST_STAGES = $clog2(PACE_NPARTS);
-  localparam int unsigned PIDW = PACE_PART_BST_STAGES;// Part ID width
-  localparam int unsigned PACE_NPOLY = 4; // Redmule Width - PACE_PART_BST_STAGES
-`endif
 
 endpackage

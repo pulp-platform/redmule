@@ -58,23 +58,12 @@ module redmule_scheduler
   output flgs_scheduler_t                 flgs_scheduler_o
 );
 
-`ifdef PACE_ENABLED
-  typedef enum logic [2:0] {
-    IDLE,
-    PRELOAD,
-    LOAD_W,
-    WAIT,
-    LOAD_PACE,
-    WAIT_LOAD_PACE
-  } redmule_fsm_state_e;
-`else
   typedef enum logic [1:0] {
     IDLE,
     PRELOAD,
     LOAD_W,
     WAIT
   } redmule_fsm_state_e;
-`endif
 
   redmule_fsm_state_e current_state, next_state;
 
@@ -225,12 +214,7 @@ module redmule_scheduler
   assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full;
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
-`ifdef PACE_ENABLED
-  assign cntrl_x_buffer_o.pad_setup   = cntrl_engine_o.pace_mode ? current_state == PRELOAD && next_state == LOAD_PACE: current_state == PRELOAD && next_state == LOAD_W;
-  assign cntrl_x_buffer_o.pace_mode   = cntrl_engine_o.pace_mode;
-`else
   assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
-`endif
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && (x_shift_cnt_q == H-1 || flgs_x_buffer_i.empty)) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en;
@@ -559,12 +543,7 @@ module redmule_scheduler
   assign cntrl_engine_o.in_valid         = 1'b1;
   assign cntrl_engine_o.flush            = engine_flush_i;
   assign cntrl_engine_o.out_ready        = 1'b1;
-`ifdef PACE_ENABLED
-  assign cntrl_engine_o.pace_mode        = fpnew_pkg::operation_e'(config_i.pace_mode);
-  assign cntrl_engine_o.accumulate       = cntrl_engine_o.pace_mode ? '0 : ~pushing_y;
-`else
   assign cntrl_engine_o.accumulate       = ~pushing_y;
-`endif
 
   logic [W-1:0] row_clk_en_d, row_clk_en_q;
 
@@ -621,23 +600,12 @@ module redmule_scheduler
   /******************************
    *           FLAGS            *
    ******************************/
-`ifdef PACE_ENABLED
-  assign stall_engine =  cntrl_engine_o.pace_mode ? current_state == LOAD_PACE && (
-                          ~check_x_full && check_x_full_en
-                        ) : current_state == LOAD_W && (
-                          ~check_w_valid  && check_w_valid_en     ||
-                          ~check_y_loaded && check_y_loaded_en
-                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
-                          || current_state == WAIT && ~check_x_full && check_x_full_en
-                          || z_wait_counter_q == PIPE_REGS && ~flgs_red_i.is_initialized;
-`else
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid  && check_w_valid_en     ||
                           ~check_y_loaded && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
                           || current_state == WAIT && ~check_x_full && check_x_full_en
                           || z_wait_counter_q == PIPE_REGS && ~flgs_red_i.is_initialized;
-`endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register
     if(~rst_ni) begin
@@ -657,17 +625,9 @@ module redmule_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst) begin
         computing <= '0;
-`ifdef PACE_ENABLED
-    end else if (cntrl_engine_o.pace_mode == 0 && current_state == PRELOAD && next_state == LOAD_W) begin
-      computing <= '1;
-    end else if (cntrl_engine_o.pace_mode == 1 && current_state == PRELOAD && next_state == LOAD_PACE) begin
-      computing <= '1;
-    end
-`else
-    end else if (current_state == PRELOAD && next_state == LOAD_W) begin
-      computing <= '1;
-    end
-`endif
+      end else if (current_state == PRELOAD && next_state == LOAD_W) begin
+        computing <= '1;
+      end
     end
   end
 
@@ -697,15 +657,11 @@ module redmule_scheduler
     end
   end
 
-  assign start             = current_state == IDLE && cntrl_scheduler_i.first_load;
+  assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
 
-`ifdef PACE_ENABLED
-  assign flgs_scheduler_o.w_loaded = cntrl_engine_o.pace_mode ? current_state == LOAD_PACE && ~stall_engine : current_state == LOAD_W && ~stall_engine;
-  assign start_computation = cntrl_engine_o.pace_mode ? first_load && next_state == LOAD_PACE && ~stall_engine : first_load && next_state == LOAD_W && ~stall_engine;
-`else
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
   assign start_computation = first_load && next_state == LOAD_W && ~stall_engine;
-`endif
+
   /*********************************
    *            FSM                *
    *********************************/
@@ -730,14 +686,10 @@ module redmule_scheduler
           next_state = PRELOAD;
         end
       end
-`ifdef PACE_ENABLED
+
       // Wait for the X and Y buffers to be full
       PRELOAD: begin
-        if (config_i.pace_mode) begin
-          if (flgs_x_buffer_i.full) begin
-            next_state = LOAD_PACE;
-          end
-        end else if (config_i.gemm_selection) begin
+        if (config_i.gemm_selection) begin
           if (flgs_x_buffer_i.full && flgs_z_buffer_i.loaded) begin
             next_state = LOAD_W;
           end
@@ -747,32 +699,6 @@ module redmule_scheduler
           end
         end
       end
-
-      LOAD_PACE: begin
-        if (~stall_engine) begin
-          next_state = WAIT_LOAD_PACE;
-        end
-      end
-
-      WAIT_LOAD_PACE: begin
-        if (waits_cnt == NumPipeRegs && ~stall_engine) begin
-          next_state = LOAD_PACE;
-        end
-      end
-`else
-    // Wait for the X and Y buffers to be full
-    PRELOAD: begin
-      if (config_i.gemm_selection) begin
-        if (flgs_x_buffer_i.full && flgs_z_buffer_i.loaded) begin
-          next_state = LOAD_W;
-        end
-      end else begin // The Y matrix is not required
-        if (flgs_x_buffer_i.full) begin
-          next_state = LOAD_W;
-        end
-      end
-    end
-`endif
 
       // in this state we should check that everything is ready to be loaded and
       // if something's amiss stall the engine
