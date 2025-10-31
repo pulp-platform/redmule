@@ -99,7 +99,7 @@ assign x_rows_by_w_cols_iter_d = start_cfg_i ? config_d.x_rows_iter * config_d.w
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_iter_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_iter_q <= '0;
     end else begin
@@ -113,7 +113,7 @@ assign x_rows_by_w_cols_iter_valid_d = start_cfg_i;
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_iter_valid_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_iter_valid_q <= '0;
     end else begin
@@ -131,7 +131,7 @@ assign x_rows_by_w_cols_by_x_cols_iter_d = x_rows_by_w_cols_iter_valid_q ? confi
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_by_x_cols_iter_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_by_x_cols_iter_q <= '0;
     end else begin
@@ -145,7 +145,7 @@ assign x_rows_by_w_cols_by_x_cols_iter_valid_d = x_rows_by_w_cols_iter_valid_q;
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_by_x_cols_iter_valid_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_by_x_cols_iter_valid_q <= '0;
     end else begin
@@ -163,7 +163,7 @@ assign x_rows_by_w_cols_by_w_rows_iter_d = x_rows_by_w_cols_iter_valid_q ? confi
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_by_w_rows_iter_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_by_w_rows_iter_q <= '0;
     end else begin
@@ -177,7 +177,7 @@ assign x_rows_by_w_cols_by_w_rows_iter_valid_d = x_rows_by_w_cols_iter_valid_q;
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
     x_rows_by_w_cols_by_w_rows_iter_valid_q <= '0;
-  end begin
+  end else begin
     if (clear_i | setback_i) begin
       x_rows_by_w_cols_by_w_rows_iter_valid_q <= '0;
     end else begin
