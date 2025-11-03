@@ -153,5 +153,6 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = current == REDMULE_COMPUTING && next == REDMULE_FINISHED;
   assign clear_o = clear || latch_clear || current == REDMULE_FINISHED;
+  assign clear   = '0;
 
 endmodule : redmule_ctrl
