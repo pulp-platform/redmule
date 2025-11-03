@@ -365,19 +365,20 @@ redmule_reduction_unit #(
   .MaxLat   ( 0        ),
   .SumLat   ( 1        )
 ) i_red_unit (
-  .clk_i        ( clk_i                        ),
-  .rst_ni       ( rst_ni                       ),
-  .clear_i      ( clear_i                      ),
-  .ctrl_i       ( red_ctrl                     ),
-  .valid_i      ( z_buffer_ctrl.fill           ),
-  .data_i       ( z_buffer_d                   ),
-  .init_i       ( red_init_fifo.data           ),
-  .init_valid_i ( red_init_fifo.valid          ),
-  .red_o        ( red_out_q.data               ),
-  .red_valid_o  ( red_out_q.valid              ),
-  .flags_o      ( red_flags                    )
+  .clk_i        ( clk_i                               ),
+  .rst_ni       ( rst_ni                              ),
+  .clear_i      ( '0                                  ),
+  .ctrl_i       ( red_ctrl                            ),
+  .valid_i      ( z_buffer_ctrl.fill                  ),
+  .data_i       ( z_buffer_d                          ),
+  .init_i       ( red_init_fifo.data [Width*BITW-1:0] ),
+  .init_valid_i ( red_init_fifo.valid                 ),
+  .red_o        ( red_out_q.data [Width*BITW-1:0]     ),
+  .red_valid_o  ( red_out_q.valid                     ),
+  .flags_o      ( red_flags                           )
 );
 
+assign red_out_q.data [(PIPE_REGS+1)*Width*BITW-1:Width*BITW] = '0;
 assign red_out_q.strb = 2 ** (DW/8 / (NumPipeRegs+1)) - 1;
 
 /*---------------------------------------------------------------*/

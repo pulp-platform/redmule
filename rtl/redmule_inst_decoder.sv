@@ -253,7 +253,7 @@ module redmule_inst_decoder
 
       // The buffer has a number of slots equal to InstFifoDepth
 
-      $fatal("Not yet implemented!!!!");
+      // TODO: implement
     end
 
     always_ff @(posedge clk_i or negedge rst_ni) begin : config_register

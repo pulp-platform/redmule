@@ -26,7 +26,7 @@ module redmule_ctrl
   input  logic                    test_mode_i       ,
   output logic                    busy_o            ,
   output logic                    clear_o           ,
-  output logic [N_CORES-1:0][1:0] evt_o             ,
+  output logic                    evt_o             ,
   input  redmule_config_t         config_i          ,
   output redmule_config_t         config_o          ,
   input  logic                    reg_enable_i      ,
