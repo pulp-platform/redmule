@@ -375,7 +375,7 @@ redmule_reduction_unit #(
   .MaxLat   ( 0        ),
   .SumLat   ( 1        )
 ) i_red_unit (
-  .clk_i        ( clk_i                               ),
+  .clk_i        ( clk_acc                             ),
   .rst_ni       ( rst_ni                              ),
   .clear_i      ( '0                                  ),
   .ctrl_i       ( red_ctrl                            ),
