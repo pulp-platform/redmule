@@ -284,7 +284,7 @@ module redmule_inst_decoder
           // assign config_d[i].r_addr          = reg_file_i.hwpe_params[R_ADDR_R];  FIXME
           // assign config_d[i].red_init        = reg_file_i.hwpe_params[MACFG][16];  FIXME
           // assign config_d[i].red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);    FIXME
-          config_d[i].gemm_ops        = cur_issue[i].instr[12:10];
+          config_d[i].gemm_ops        = GEMM;
           config_d[i].gemm_input_fmt  = cur_issue[i].instr[ 9: 7];
           config_d[i].gemm_output_fmt = cur_issue[i].instr[ 9: 7];
           config_d[i].receive_x       = cur_issue[i].instr[13];
