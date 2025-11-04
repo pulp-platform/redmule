@@ -273,9 +273,13 @@ module redmule_inst_decoder
 
       unique case (cur_issue[i].instr[6:0])
         MCNFIG: begin
-          config_d[i].m_size = cur_register[i].rs[0][15:0];
-          config_d[i].n_size = cur_register[i].rs[1][31:0];
-          config_d[i].k_size = cur_register[i].rs[0][31:16];
+          config_d[i].m_size    = cur_register[i].rs[0][15:0];
+          config_d[i].n_size    = cur_register[i].rs[1][15:0];
+          config_d[i].k_size    = cur_register[i].rs[0][31:16];
+          config_d[i].receive_x = cur_register[i].rs[1][16];
+          config_d[i].send_x    = cur_register[i].rs[1][17];
+          config_d[i].receive_w = cur_register[i].rs[1][18];
+          config_d[i].send_w    = cur_register[i].rs[1][19];
         end
         MARITH: begin
           config_d[i].x_addr        = cur_register[i].rs[0][31:0];
@@ -285,12 +289,8 @@ module redmule_inst_decoder
           // assign config_d[i].red_init        = reg_file_i.hwpe_params[MACFG][16];  FIXME
           // assign config_d[i].red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);    FIXME
           config_d[i].gemm_ops        = GEMM;
-          config_d[i].gemm_input_fmt  = cur_issue[i].instr[ 9: 7];
-          config_d[i].gemm_output_fmt = cur_issue[i].instr[ 9: 7];
-          config_d[i].receive_x       = cur_issue[i].instr[13];
-          config_d[i].send_x          = cur_issue[i].instr[14];
-          config_d[i].receive_w       = cur_issue[i].instr[25];
-          config_d[i].send_w          = cur_issue[i].instr[26];
+          config_d[i].gemm_input_fmt  = cur_issue[i].instr[9:7];
+          config_d[i].gemm_output_fmt = cur_issue[i].instr[9:7];
         end
       endcase
     end
