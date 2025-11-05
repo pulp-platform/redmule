@@ -335,7 +335,7 @@ hci_core_intf #(
   .DW ( DW ),
   .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [0:NumStreamSources-1] ( .clk( clk_i ) );
 
 hci_package::hci_streamer_ctrl_t        [NumStreamSources-1:0] source_ctrl;
 hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
