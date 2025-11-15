@@ -22,6 +22,7 @@ module redmule_inst_decoder
   input  logic            rst_ni,
   input  logic            clear_i,
   input  logic            busy_i,
+  input  logic            tiler_done_i,
   output logic            config_valid_o,
   output redmule_config_t config_o,
   input  x_issue_req_t    x_issue_req_i,
@@ -55,6 +56,9 @@ module redmule_inst_decoder
 
   redmule_config_t [XifNumHarts-1:0] config_d, config_q;
 
+  logic pop_enable;
+  logic busy_q;
+
   always_comb begin : legal_inst_assignment
     legal_inst = 1'b0;
 
@@ -76,7 +80,7 @@ module redmule_inst_decoder
   assign x_result_o.we     = '0;
 
   assign config_o = config_d[winner];
-  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
+  assign config_valid_o = ~busy_i && ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
 
   always_comb begin : x_issue_ready_assignment
     x_issue_ready_o = 1'b0;
@@ -104,7 +108,7 @@ module redmule_inst_decoder
     end else begin
       if (clear_i) begin
         rr_counter_q <= '0;
-      end else if (~busy_i && |(~issue_fifo_empty & ~register_fifo_empty)) begin
+      end else if (tiler_done_i/*~busy_i && ~config_valid_o && |(~issue_fifo_empty & ~register_fifo_empty)*/) begin
         rr_counter_q <= rr_counter_d;
       end
     end
@@ -127,6 +131,21 @@ module redmule_inst_decoder
       end
     end
   end
+
+  always_ff @(posedge clk_i, negedge rst_ni) begin : busy_delay
+    if(~rst_ni) begin
+      busy_q <= '0;
+    end else begin
+      if (clear_i) begin
+        busy_q <= '0;
+      end else begin
+        busy_q <= busy_i;
+      end
+    end
+  end
+
+  // Pop the fifos the first cycle the tiler is no longer busy if we detect a MARITH instruction
+  assign pop_enable = (cur_issue[winner].instr[6:0] == MARITH ? tiler_done_i : 1'b1);
 
   for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
 
@@ -206,7 +225,7 @@ module redmule_inst_decoder
     assign fifo_flush   = cur_issue[i].id == kill_id_d && kill_id_valid_d && ~issue_fifo_empty[i];
 
     assign issue_push   = x_issue_valid_i & legal_inst & x_commit_i.hartid == i;
-    assign issue_pop    = winner == i && ~busy_i && x_result_ready_i && ~issue_fifo_empty[i] && ~register_fifo_empty[i];
+    assign issue_pop    = winner == i && pop_enable && x_result_ready_i && ~issue_fifo_empty[i] && ~register_fifo_empty[i];
     assign register_pop = issue_pop;
 
     fifo_v3 #(
@@ -244,7 +263,7 @@ module redmule_inst_decoder
         .usage_o    (                        ),
         .data_i     ( x_register_i           ),
         .push_i     ( register_push          ),
-        .data_o     ( cur_register[i]           ),
+        .data_o     ( cur_register[i]        ),
         .pop_i      ( register_pop           )
       );
 
@@ -273,21 +292,18 @@ module redmule_inst_decoder
 
       unique case (cur_issue[i].instr[6:0])
         MCNFIG: begin
-          config_d[i].m_size    = cur_register[i].rs[0][15:0];
-          config_d[i].n_size    = cur_register[i].rs[1][15:0];
-          config_d[i].k_size    = cur_register[i].rs[0][31:16];
-          config_d[i].receive_x = cur_register[i].rs[1][16];
-          config_d[i].send_x    = cur_register[i].rs[1][17];
-          config_d[i].receive_w = cur_register[i].rs[1][18];
-          config_d[i].send_w    = cur_register[i].rs[1][19];
+          config_d[i].m_size          = cur_register[i].rs[0][15:0];
+          config_d[i].n_size          = cur_register[i].rs[1][15:0];
+          config_d[i].k_size          = cur_register[i].rs[0][31:16];
+          config_d[i].receive_x       = cur_register[i].rs[1][16];
+          config_d[i].send_x          = cur_register[i].rs[1][17];
+          config_d[i].receive_w       = cur_register[i].rs[1][18];
+          config_d[i].send_w          = cur_register[i].rs[1][19];
         end
         MARITH: begin
-          config_d[i].x_addr        = cur_register[i].rs[0][31:0];
-          config_d[i].w_addr        = cur_register[i].rs[1][31:0];
-          config_d[i].z_addr        = cur_register[i].rs[2][31:0];
-          // assign config_d[i].r_addr          = reg_file_i.hwpe_params[R_ADDR_R];  FIXME
-          // assign config_d[i].red_init        = reg_file_i.hwpe_params[MACFG][16];  FIXME
-          // assign config_d[i].red_op          = red_op_t'(reg_file_i.hwpe_params[MACFG][15:14]);    FIXME
+          config_d[i].x_addr          = cur_register[i].rs[0][31:0];
+          config_d[i].w_addr          = cur_register[i].rs[1][31:0];
+          config_d[i].z_addr          = cur_register[i].rs[2][31:0];
           config_d[i].gemm_ops        = GEMM;
           config_d[i].gemm_input_fmt  = cur_issue[i].instr[9:7];
           config_d[i].gemm_output_fmt = cur_issue[i].instr[9:7];

@@ -17,6 +17,8 @@ module redmule_tiler
   input  logic              setback_i  ,
   input  logic              start_cfg_i,
   output logic              valid_o    ,
+  output logic              busy_o     ,
+  input  logic              ready_i    ,
   input  redmule_config_t   config_i   ,
   output redmule_config_t   config_o
 );
@@ -32,7 +34,7 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   end else begin
     if (clear_i || setback_i) begin
       clk_en <= 1'b0;
-    end else if (start_cfg_i) begin
+    end else if (start_cfg_i && ready_i) begin
       clk_en <= 1'b1;
     end
   end
@@ -44,6 +46,8 @@ tc_clk_gating i_tiler_clockg (
   .test_en_i  ( '0      ),
   .clk_o      ( clk_int )
 );
+
+assign busy_o = clk_en || ~ready_i;
 
 assign config_d.x_addr          = config_i.x_addr;
 assign config_d.w_addr          = config_i.w_addr;

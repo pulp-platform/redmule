@@ -31,6 +31,9 @@ module redmule_ctrl
   output redmule_config_t         config_o          ,
   input  logic                    reg_enable_i      ,
   input  logic                    start_cfg_i       ,
+  output logic                    tiler_busy_o      ,
+  input  logic                    fifo_empty_i      ,
+  input  logic                    fifo_ready_i      ,
   input  flgs_streamer_t          flgs_streamer_i   ,
   output logic                    cfg_complete_o    ,
   // Flags coming from the state machine
@@ -64,6 +67,8 @@ module redmule_ctrl
     .setback_i   ( tiler_setback  ),
     .start_cfg_i ( start_cfg_i    ),
     .valid_o     ( tiler_valid    ),
+    .busy_o      ( tiler_busy_o   ),
+    .ready_i     ( fifo_ready_i   ),
     .config_i    ( config_i       ),
     .config_o    ( redmule_config )
   );
@@ -107,7 +112,7 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
 
   assign cntrl_scheduler_o.first_load = current == REDMULE_STARTING;
-  assign tiler_setback                = current == REDMULE_IDLE && next == REDMULE_STARTING;
+  assign tiler_setback                = tiler_valid;
   assign busy_o                       = slave_start | (current != REDMULE_LATCH_RST && current != REDMULE_IDLE && current != REDMULE_FINISHED);
   assign flush_o                      = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
@@ -137,7 +142,7 @@ module redmule_ctrl
         end
       end
       REDMULE_COMPUTING: begin
-        if (flgs_streamer_i.z_stream_sink_flags.ready_start && ((redmule_config.red_op == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
+        if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i && ((redmule_config.red_op == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
           next = REDMULE_FINISHED;
         end
       end
