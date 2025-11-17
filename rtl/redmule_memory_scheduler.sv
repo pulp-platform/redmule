@@ -50,7 +50,7 @@ module redmule_memory_scheduler
   logic            x_config_empty, w_config_empty, y_config_empty, z_config_empty;
   logic            x_config_full, w_config_full, y_config_full, z_config_full;
 
-  logic            start_x_streamer, start_streamer;
+  logic            start_x_streamer;
 
   assign x_done_o = tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done;
 
@@ -300,15 +300,14 @@ module redmule_memory_scheduler
   end
 
   assign start_x_streamer = (~x_config_empty && ~x_config_full && ~x_done_o) || x_config_full;
-  assign start_streamer   = ~y_config_empty;
 
   always_comb begin : req_start_assignment
-    cntrl_streamer_o.x_stream_source_ctrl.req_start     = !cntrl_flags_i.idle && (start_x_streamer || tot_x_read_q != '0 && tot_x_read_q != x_config.tot_x_read) && flgs_streamer_i.x_stream_source_flags.ready_start;
-    cntrl_streamer_o.w_stream_source_ctrl.req_start     = start_streamer && flgs_streamer_i.w_stream_source_flags.ready_start;
-    cntrl_streamer_o.y_stream_source_ctrl.req_start     = start_streamer && y_config.gemm_selection && flgs_streamer_i.y_stream_source_flags.ready_start;
-    cntrl_streamer_o.r_stream_source_ctrl.req_start     = start_streamer && config_i.red_init && flgs_streamer_i.r_stream_source_flags.ready_start;
-    cntrl_streamer_o.z_stream_sink_ctrl.req_start       = start_streamer && flgs_streamer_i.z_stream_sink_flags.ready_start;
-    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = start_streamer && (config_i.red_op != RED_NONE) && flgs_streamer_i.r_stream_sink_flags.ready_start;
+    cntrl_streamer_o.x_stream_source_ctrl.req_start     = (start_x_streamer || tot_x_read_q != '0 && tot_x_read_q != x_config.tot_x_read) && flgs_streamer_i.x_stream_source_flags.ready_start;
+    cntrl_streamer_o.w_stream_source_ctrl.req_start     = ~w_config_empty && flgs_streamer_i.w_stream_source_flags.ready_start;
+    cntrl_streamer_o.y_stream_source_ctrl.req_start     = ~y_config_empty && y_config.gemm_selection && flgs_streamer_i.y_stream_source_flags.ready_start;
+    cntrl_streamer_o.r_stream_source_ctrl.req_start     = '0;
+    cntrl_streamer_o.z_stream_sink_ctrl.req_start       = ~z_config_empty && flgs_streamer_i.z_stream_sink_flags.ready_start && ~flgs_streamer_i.z_stream_sink_flags.done; // we need the ~done here as this is asserted at the same time as the ready_start signal in sink modules
+    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = '0;
   end
 
   // FIXME
