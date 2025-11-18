@@ -156,7 +156,7 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
-  assign evt_o   = current == REDMULE_COMPUTING && next == REDMULE_FINISHED;
+  assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done;
   assign clear_o = clear || latch_clear || next == REDMULE_FINISHED;
   assign clear   = '0;
 
