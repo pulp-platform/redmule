@@ -125,11 +125,13 @@ flgs_red_t red_flags;
 redmule_config_t dec_config;
 logic            dec_config_valid;
 
+logic config_fifo_empty, config_fifo_full;
+
 tc_clk_gating i_acc_clock_gating (
-  .clk_i     ( clk_i                     ),
-  .en_i      ( dec_config_valid | busy_o ),
-  .test_en_i ( '0                        ),
-  .clk_o     ( clk_acc                   )
+  .clk_i     ( clk_i                                         ),
+  .en_i      ( dec_config_valid | config_fifo_empty | busy_o ),
+  .test_en_i ( '0                                            ),
+  .clk_o     ( clk_acc                                       )
 );
 
 /*--------------------------------------------------------------*/
@@ -566,6 +568,7 @@ redmule_memory_scheduler #(
 /*---------------------------------------------------------------*/
 
 logic tiler_busy;
+redmule_config_t dec_config_q;
 
 redmule_inst_decoder #(
   .InstFifoDepth         ( 4                     ),
@@ -578,25 +581,44 @@ redmule_inst_decoder #(
   .x_commit_t            ( x_commit_t            ),
   .x_result_t            ( x_result_t            )
 ) i_inst_decoder (
-  .clk_i              ( clk_i              ),
-  .rst_ni             ( rst_ni             ),
-  .clear_i            ( '0                 ),
-  .busy_i             ( tiler_busy         ),
-  .tiler_done_i       ( cfg_complete       ),
-  .config_valid_o     ( dec_config_valid   ),
-  .config_o           ( dec_config         ),
-  .x_issue_req_i      ( x_issue_req_i      ),
-  .x_issue_resp_o     ( x_issue_resp_o     ),
-  .x_issue_valid_i    ( x_issue_valid_i    ),
-  .x_issue_ready_o    ( x_issue_ready_o    ),
-  .x_register_i       ( x_register_i       ),
-  .x_register_valid_i ( x_register_valid_i ),
-  .x_register_ready_o ( x_register_ready_o ),
-  .x_commit_i         ( x_commit_i         ),
-  .x_commit_valid_i   ( x_commit_valid_i   ),
-  .x_result_o         ( x_result_o         ),
-  .x_result_valid_o   ( x_result_valid_o   ),
-  .x_result_ready_i   ( x_result_ready_i   )
+  .clk_i              ( clk_i                                  ),
+  .rst_ni             ( rst_ni                                 ),
+  .clear_i            ( '0                                     ),
+  .config_ready_i     ( ~config_fifo_full                      ),
+  .tiler_done_i       ( /*cfg_complete*/                       ),
+  .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+  .config_valid_o     ( dec_config_valid                       ),
+  .config_o           ( dec_config                             ),
+  .x_issue_req_i      ( x_issue_req_i                          ),
+  .x_issue_resp_o     ( x_issue_resp_o                         ),
+  .x_issue_valid_i    ( x_issue_valid_i                        ),
+  .x_issue_ready_o    ( x_issue_ready_o                        ),
+  .x_register_i       ( x_register_i                           ),
+  .x_register_valid_i ( x_register_valid_i                     ),
+  .x_register_ready_o ( x_register_ready_o                     ),
+  .x_commit_i         ( x_commit_i                             ),
+  .x_commit_valid_i   ( x_commit_valid_i                       ),
+  .x_result_o         ( x_result_o                             ),
+  .x_result_valid_o   ( x_result_valid_o                       ),
+  .x_result_ready_i   ( x_result_ready_i                       )
+);
+
+fifo_v3 #(
+  .FALL_THROUGH ( 0                ),
+  .DEPTH        ( 2                ),
+  .dtype        ( redmule_config_t )
+) i_config_fifo (
+  .clk_i      ( clk_acc           ),
+  .rst_ni     ( rst_ni            ),
+  .flush_i    ( clear             ),
+  .testmode_i ( '0                ),
+  .full_o     ( config_fifo_full  ),
+  .empty_o    ( config_fifo_empty ),
+  .usage_o    (                   ),
+  .data_i     ( dec_config        ),
+  .push_i     ( dec_config_valid  ),
+  .data_o     ( dec_config_q      ),
+  .pop_i      ( cfg_complete      )
 );
 
 /*---------------------------------------------------------------*/
@@ -613,25 +635,25 @@ redmule_ctrl        #(
   .Width             ( Width                   ),
   .NumPipeRegs       ( NumPipeRegs             )
 ) i_control          (
-  .clk_i             ( clk_acc                 ),
-  .rst_ni            ( rst_ni                  ),
-  .test_mode_i       ( test_mode_i             ),
-  .flgs_streamer_i   ( flgs_streamer           ),
-  .busy_o            ( busy_o                  ),
-  .tiler_busy_o      ( tiler_busy              ),
-  .clear_o           ( clear                   ),
-  .evt_o             ( evt_o                   ),
-  .config_i          ( dec_config              ),
-  .config_o          ( redmule_config          ),
-  .reg_enable_i      ( reg_enable              ),
-  .fifo_empty_i      ( z_fifo_empty            ),
-  .fifo_ready_i      ( ~z_fifo_full            ),
-  .start_cfg_i       ( dec_config_valid        ),
-  .cfg_complete_o    ( cfg_complete            ),
-  .w_loaded_i        ( flgs_scheduler.w_loaded ),
-  .flush_o           ( engine_flush            ),
-  .cntrl_scheduler_o ( cntrl_scheduler         ),
-  .cntrl_flags_o     ( cntrl_flags             )
+  .clk_i             ( clk_acc                           ),
+  .rst_ni            ( rst_ni                            ),
+  .test_mode_i       ( test_mode_i                       ),
+  .flgs_streamer_i   ( flgs_streamer                     ),
+  .busy_o            ( busy_o                            ),
+  .tiler_busy_o      ( tiler_busy                        ),
+  .clear_o           ( clear                             ),
+  .evt_o             ( evt_o                             ),
+  .config_i          ( dec_config_q                      ),
+  .config_o          ( redmule_config                    ),
+  .reg_enable_i      ( reg_enable                        ),
+  .fifo_empty_i      ( z_fifo_empty                      ),
+  .fifo_ready_i      ( ~z_fifo_full                      ),
+  .start_cfg_i       ( ~config_fifo_empty                ),
+  .cfg_complete_o    ( cfg_complete                      ),
+  .w_loaded_i        ( flgs_scheduler.w_loaded           ),
+  .flush_o           ( engine_flush                      ),
+  .cntrl_scheduler_o ( cntrl_scheduler                   ),
+  .cntrl_flags_o     ( cntrl_flags                       )
 );
 
 

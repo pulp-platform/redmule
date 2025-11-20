@@ -9,6 +9,7 @@ module redmule_inst_decoder
   import redmule_pkg::*;
 #(
   parameter  int unsigned InstFifoDepth         = 4,
+  parameter  int unsigned OpIdWidth             = 4,
   parameter  int unsigned XifIdWidth            = 4,
   parameter  int unsigned XifNumHarts           = 1,
   parameter  int unsigned XifIssueRegisterSplit = 0,
@@ -21,8 +22,9 @@ module redmule_inst_decoder
   input  logic            clk_i,
   input  logic            rst_ni,
   input  logic            clear_i,
-  input  logic            busy_i,
+  input  logic            config_ready_i,
   input  logic            tiler_done_i,
+  input  logic            op_done_i,
   output logic            config_valid_o,
   output redmule_config_t config_o,
   input  x_issue_req_t    x_issue_req_i,
@@ -48,6 +50,10 @@ module redmule_inst_decoder
   x_issue_req_t [XifNumHarts-1:0] cur_issue;
   x_register_t  [XifNumHarts-1:0] cur_register;
 
+  x_result_t                      x_result_d, x_result_q;
+
+  logic [XifNumHarts-1:0] [OpIdWidth-1:0] op_id_counter_in_q, op_id_counter_out_q;
+
   logic [HartIdWidth-1:0]                  rr_counter_d, rr_counter_q;
   logic [XifNumHarts-1:0][HartIdWidth-1:0] rr_priority;
   logic [HartIdWidth-1:0]                  winner;
@@ -57,7 +63,6 @@ module redmule_inst_decoder
   redmule_config_t [XifNumHarts-1:0] config_d, config_q;
 
   logic pop_enable;
-  logic busy_q;
 
   always_comb begin : legal_inst_assignment
     legal_inst = 1'b0;
@@ -69,18 +74,18 @@ module redmule_inst_decoder
   end
 
   assign x_issue_resp_o.accept        = legal_inst;
-  assign x_issue_resp_o.writeback     = '0; // We never perform writebacks
+  assign x_issue_resp_o.writeback     = x_issue_req_i.instr[6:0] == MARITH;
   assign x_issue_resp_o.register_read = 7;  // We always read 3 registers
 
-  assign x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i;
+  assign x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner];
   assign x_result_o.hartid = cur_issue[winner].hartid;
   assign x_result_o.id     = cur_issue[winner].id;
-  assign x_result_o.data   = '0;
-  assign x_result_o.rd     = '0;
-  assign x_result_o.we     = '0;
+  assign x_result_o.data   = op_id_counter_in_q[winner];
+  assign x_result_o.rd     = cur_issue[winner].instr[11:7];
+  assign x_result_o.we     = cur_issue[winner].instr[6:0] == MARITH;
 
   assign config_o = config_d[winner];
-  assign config_valid_o = ~busy_i && ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
+  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
 
   always_comb begin : x_issue_ready_assignment
     x_issue_ready_o = 1'b0;
@@ -108,7 +113,7 @@ module redmule_inst_decoder
     end else begin
       if (clear_i) begin
         rr_counter_q <= '0;
-      end else if (tiler_done_i/*~busy_i && ~config_valid_o && |(~issue_fifo_empty & ~register_fifo_empty)*/) begin
+      end else if (config_ready_i && config_valid_o) begin
         rr_counter_q <= rr_counter_d;
       end
     end
@@ -132,20 +137,52 @@ module redmule_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin : busy_delay
-    if(~rst_ni) begin
-      busy_q <= '0;
-    end else begin
-      if (clear_i) begin
-        busy_q <= '0;
+  fifo_v3 #(
+    .FALL_THROUGH ( 0                           ),
+    .DEPTH        ( InstFifoDepth * XifNumHarts ),
+    .DATA_WIDTH   ( HartIdWidth                 )
+  ) i_current_hartid_fifo (
+    .clk_i      ( clk_i                            ),
+    .rst_ni     ( rst_ni                           ),
+    .flush_i    ( clear_i                          ),
+    .testmode_i ( '0                               ),
+    .full_o     (                                  ),
+    .empty_o    (                                  ),
+    .usage_o    (                                  ),
+    .data_i     ( winner                           ),
+    .push_i     ( config_ready_i && config_valid_o ),
+    .data_o     ( current_hartid_q                 ),
+    .pop_i      ( op_done_i                        )
+  );
+
+  for (genvar i = 0; i < XifNumHarts; i++) begin : gen_op_id_counters
+    always_ff @(posedge clk_i or negedge rst_ni) begin : op_id_counter_in
+      if (~rst_ni) begin
+        op_id_counter_in_q[i] <= 0;
       end else begin
-        busy_q <= busy_i;
+        if (clear_i) begin
+          op_id_counter_in_q[i] <= 0;
+        end else if (winner == i && x_result_ready_i && x_result_valid_o && cur_issue[i].instr[6:0] == MARITH) begin
+          op_id_counter_in_q[i] <= op_id_counter_in_q[i] + 1;
+        end
+      end
+    end
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin : op_id_counter_out
+      if (~rst_ni) begin
+        op_id_counter_out_q[i] <= '1;
+      end else begin
+        if (clear_i) begin
+          op_id_counter_out_q[i] <= '1;
+        end else if (current_hartid_q == i && op_done_i) begin
+          op_id_counter_out_q[i] <= op_id_counter_out_q[i] + 1;
+        end
       end
     end
   end
 
   // Pop the fifos the first cycle the tiler is no longer busy if we detect a MARITH instruction
-  assign pop_enable = (cur_issue[winner].instr[6:0] == MARITH ? tiler_done_i : 1'b1);
+  assign pop_enable = (cur_issue[winner].instr[6:0] == MARITH ? config_ready_i && config_valid_o : 1'b1);
 
   for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
 
@@ -224,7 +261,7 @@ module redmule_inst_decoder
 
     assign fifo_flush   = cur_issue[i].id == kill_id_d && kill_id_valid_d && ~issue_fifo_empty[i];
 
-    assign issue_push   = x_issue_valid_i & legal_inst & x_commit_i.hartid == i;
+    assign issue_push   = x_issue_valid_i && legal_inst && ~issue_fifo_full[i] && x_commit_i.hartid == i;
     assign issue_pop    = winner == i && pop_enable && x_result_ready_i && ~issue_fifo_empty[i] && ~register_fifo_empty[i];
     assign register_pop = issue_pop;
 
@@ -304,9 +341,10 @@ module redmule_inst_decoder
           config_d[i].x_addr          = cur_register[i].rs[0][31:0];
           config_d[i].w_addr          = cur_register[i].rs[1][31:0];
           config_d[i].z_addr          = cur_register[i].rs[2][31:0];
+          // TODO: These are fixed for now
           config_d[i].gemm_ops        = GEMM;
-          config_d[i].gemm_input_fmt  = cur_issue[i].instr[9:7];
-          config_d[i].gemm_output_fmt = cur_issue[i].instr[9:7];
+          config_d[i].gemm_input_fmt  = redmule_pkg::Float16;
+          config_d[i].gemm_output_fmt = redmule_pkg::Float16;
         end
       endcase
     end
