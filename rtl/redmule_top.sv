@@ -27,6 +27,13 @@ module redmule_top
   parameter int unsigned  NumPipeRegs            = PIPE_REGS         , // Number of pipeline registers within each PE
   parameter pipe_config_t PipeConfig             = DISTRIBUTED       ,
   parameter int unsigned  BITW                   = fp_width(FpFormat),  // Number of bits for the given format
+  // Custom instrunctions
+  parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode          = 7'b0001011,
+  parameter logic [2:0]   McnfigFunct3          = 3'b000,
+  parameter logic [2:0]   MarithFunct3          = 3'b001,
+  parameter logic [1:0]   McnfigFunct2          = 2'b00,
+  parameter logic [1:0]   MarithFunct2          = 2'b00,
   // XIF parameters
   parameter int unsigned  XifNumHarts           = 1,
   parameter int unsigned  XifIdWidth            = 1,
@@ -572,6 +579,12 @@ redmule_config_t dec_config_q;
 
 redmule_inst_decoder #(
   .InstFifoDepth         ( 4                     ),
+  .McnfigOpCode          ( McnfigOpCode          ),
+  .MarithOpCode          ( MarithOpCode          ),
+  .McnfigFunct3          ( McnfigFunct3          ),
+  .MarithFunct3          ( MarithFunct3          ),
+  .McnfigFunct2          ( McnfigFunct2          ),
+  .MarithFunct2          ( MarithFunct2          ),
   .XifIdWidth            ( XifIdWidth            ),
   .XifNumHarts           ( XifNumHarts           ),
   .XifIssueRegisterSplit ( XifIssueRegisterSplit ),
@@ -585,7 +598,6 @@ redmule_inst_decoder #(
   .rst_ni             ( rst_ni                                 ),
   .clear_i            ( '0                                     ),
   .config_ready_i     ( ~config_fifo_full                      ),
-  .tiler_done_i       ( /*cfg_complete*/                       ),
   .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
   .config_valid_o     ( dec_config_valid                       ),
   .config_o           ( dec_config                             ),

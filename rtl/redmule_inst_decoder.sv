@@ -8,6 +8,12 @@
 module redmule_inst_decoder
   import redmule_pkg::*;
 #(
+  parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode          = 7'b0001011,
+  parameter logic [2:0]   McnfigFunct3          = 3'b000,
+  parameter logic [2:0]   MarithFunct3          = 3'b001,
+  parameter logic [1:0]   McnfigFunct2          = 2'b00,
+  parameter logic [1:0]   MarithFunct2          = 2'b00,
   parameter  int unsigned InstFifoDepth         = 4,
   parameter  int unsigned OpIdWidth             = 4,
   parameter  int unsigned XifIdWidth            = 4,
@@ -23,7 +29,6 @@ module redmule_inst_decoder
   input  logic            rst_ni,
   input  logic            clear_i,
   input  logic            config_ready_i,
-  input  logic            tiler_done_i,
   input  logic            op_done_i,
   output logic            config_valid_o,
   output redmule_config_t config_o,
@@ -42,6 +47,9 @@ module redmule_inst_decoder
 );
 
   localparam int unsigned HartIdWidth = XifNumHarts > 1 ? $clog2(XifNumHarts) : 1;
+
+  localparam logic [11:0] MCNFIG = {McnfigFunct2,McnfigFunct3,McnfigOpCode};
+  localparam logic [11:0] MARITH = {MarithFunct2,MarithFunct3,MarithOpCode};
 
   logic [XifNumHarts-1:0] issue_fifo_full,  register_fifo_full,
                           issue_fifo_empty, register_fifo_empty;
@@ -67,14 +75,14 @@ module redmule_inst_decoder
   always_comb begin : legal_inst_assignment
     legal_inst = 1'b0;
 
-    unique case (x_issue_req_i.instr[6:0])
+    unique case ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]})
       MCNFIG, MARITH: legal_inst = 1'b1;
       default: legal_inst = 1'b0;
     endcase
   end
 
   assign x_issue_resp_o.accept        = legal_inst;
-  assign x_issue_resp_o.writeback     = x_issue_req_i.instr[6:0] == MARITH;
+  assign x_issue_resp_o.writeback     = {x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]} == MARITH && x_issue_req_i.instr[11:7] != 0;
   assign x_issue_resp_o.register_read = 7;  // We always read 3 registers
 
   assign x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner];
@@ -82,10 +90,10 @@ module redmule_inst_decoder
   assign x_result_o.id     = cur_issue[winner].id;
   assign x_result_o.data   = op_id_counter_in_q[winner];
   assign x_result_o.rd     = cur_issue[winner].instr[11:7];
-  assign x_result_o.we     = cur_issue[winner].instr[6:0] == MARITH;
+  assign x_result_o.we     = {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH && cur_issue[winner].instr[11:7] != 0;
 
   assign config_o = config_d[winner];
-  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && cur_issue[winner].instr[6:0] == MARITH;
+  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH;
 
   always_comb begin : x_issue_ready_assignment
     x_issue_ready_o = 1'b0;
@@ -162,7 +170,7 @@ module redmule_inst_decoder
       end else begin
         if (clear_i) begin
           op_id_counter_in_q[i] <= 0;
-        end else if (winner == i && x_result_ready_i && x_result_valid_o && cur_issue[i].instr[6:0] == MARITH) begin
+        end else if (winner == i && x_result_ready_i && x_result_valid_o && {cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]} == MARITH) begin
           op_id_counter_in_q[i] <= op_id_counter_in_q[i] + 1;
         end
       end
@@ -182,11 +190,9 @@ module redmule_inst_decoder
   end
 
   // Pop the fifos the first cycle the tiler is no longer busy if we detect a MARITH instruction
-  assign pop_enable = (cur_issue[winner].instr[6:0] == MARITH ? config_ready_i && config_valid_o : 1'b1);
+  assign pop_enable = ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_i && config_valid_o : 1'b1);
 
   for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
-
-
     logic [XifIdWidth-1:0] commit_id_d, commit_id_q,
                            kill_id_d, kill_id_q;
 
@@ -327,7 +333,7 @@ module redmule_inst_decoder
     always_comb begin : config_assignment
       config_d[i] = config_q[i];
 
-      unique case (cur_issue[i].instr[6:0])
+      unique case ({cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]})
         MCNFIG: begin
           config_d[i].m_size          = cur_register[i].rs[0][15:0];
           config_d[i].n_size          = cur_register[i].rs[1][15:0];
