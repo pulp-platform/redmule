@@ -30,10 +30,13 @@ module redmule_top
   // Custom instrunctions
   parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
   parameter logic [6:0]   MarithOpCode          = 7'b0001011,
+  parameter logic [6:0]   MopcntOpCode          = 7'b0001011,
   parameter logic [2:0]   McnfigFunct3          = 3'b000,
   parameter logic [2:0]   MarithFunct3          = 3'b001,
+  parameter logic [2:0]   MopcntFunct3          = 3'b010,
   parameter logic [1:0]   McnfigFunct2          = 2'b00,
   parameter logic [1:0]   MarithFunct2          = 2'b00,
+  parameter logic [1:0]   MopcntFunct2          = 2'b00,
   // XIF parameters
   parameter int unsigned  XifNumHarts           = 1,
   parameter int unsigned  XifIdWidth            = 1,
@@ -135,10 +138,10 @@ logic            dec_config_valid;
 logic config_fifo_empty, config_fifo_full;
 
 tc_clk_gating i_acc_clock_gating (
-  .clk_i     ( clk_i                                         ),
-  .en_i      ( dec_config_valid | config_fifo_empty | busy_o ),
-  .test_en_i ( '0                                            ),
-  .clk_o     ( clk_acc                                       )
+  .clk_i     ( clk_i                                          ),
+  .en_i      ( dec_config_valid | ~config_fifo_empty | busy_o ),
+  .test_en_i ( '0                                             ),
+  .clk_o     ( clk_acc                                        )
 );
 
 /*--------------------------------------------------------------*/
@@ -581,10 +584,13 @@ redmule_inst_decoder #(
   .InstFifoDepth         ( 4                     ),
   .McnfigOpCode          ( McnfigOpCode          ),
   .MarithOpCode          ( MarithOpCode          ),
+  .MopcntOpCode          ( MopcntOpCode          ),
   .McnfigFunct3          ( McnfigFunct3          ),
   .MarithFunct3          ( MarithFunct3          ),
+  .MopcntFunct3          ( MopcntFunct3          ),
   .McnfigFunct2          ( McnfigFunct2          ),
   .MarithFunct2          ( MarithFunct2          ),
+  .MopcntFunct2          ( MopcntFunct2          ),
   .XifIdWidth            ( XifIdWidth            ),
   .XifNumHarts           ( XifNumHarts           ),
   .XifIssueRegisterSplit ( XifIssueRegisterSplit ),
@@ -622,7 +628,7 @@ fifo_v3 #(
 ) i_config_fifo (
   .clk_i      ( clk_acc           ),
   .rst_ni     ( rst_ni            ),
-  .flush_i    ( clear             ),
+  .flush_i    ( '0                ),
   .testmode_i ( '0                ),
   .full_o     ( config_fifo_full  ),
   .empty_o    ( config_fifo_empty ),

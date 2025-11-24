@@ -10,10 +10,13 @@ module redmule_inst_decoder
 #(
   parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
   parameter logic [6:0]   MarithOpCode          = 7'b0001011,
+  parameter logic [6:0]   MopcntOpCode          = 7'b0001011,
   parameter logic [2:0]   McnfigFunct3          = 3'b000,
   parameter logic [2:0]   MarithFunct3          = 3'b001,
+  parameter logic [2:0]   MopcntFunct3          = 3'b010,
   parameter logic [1:0]   McnfigFunct2          = 2'b00,
   parameter logic [1:0]   MarithFunct2          = 2'b00,
+  parameter logic [1:0]   MopcntFunct2          = 2'b00,
   parameter  int unsigned InstFifoDepth         = 4,
   parameter  int unsigned OpIdWidth             = 4,
   parameter  int unsigned XifIdWidth            = 4,
@@ -50,6 +53,7 @@ module redmule_inst_decoder
 
   localparam logic [11:0] MCNFIG = {McnfigFunct2,McnfigFunct3,McnfigOpCode};
   localparam logic [11:0] MARITH = {MarithFunct2,MarithFunct3,MarithOpCode};
+  localparam logic [11:0] MOPCNT = {MopcntFunct2,MopcntFunct3,MopcntOpCode};
 
   logic [XifNumHarts-1:0] issue_fifo_full,  register_fifo_full,
                           issue_fifo_empty, register_fifo_empty;
@@ -76,21 +80,60 @@ module redmule_inst_decoder
     legal_inst = 1'b0;
 
     unique case ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]})
-      MCNFIG, MARITH: legal_inst = 1'b1;
+      MCNFIG, MARITH, MOPCNT: legal_inst = 1'b1;
       default: legal_inst = 1'b0;
     endcase
   end
 
-  assign x_issue_resp_o.accept        = legal_inst;
-  assign x_issue_resp_o.writeback     = {x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]} == MARITH && x_issue_req_i.instr[11:7] != 0;
-  assign x_issue_resp_o.register_read = 7;  // We always read 3 registers
+  always_comb begin : x_issue_resp_assignment
+    x_issue_resp_o.accept = legal_inst;
 
-  assign x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner];
-  assign x_result_o.hartid = cur_issue[winner].hartid;
-  assign x_result_o.id     = cur_issue[winner].id;
-  assign x_result_o.data   = op_id_counter_in_q[winner];
-  assign x_result_o.rd     = cur_issue[winner].instr[11:7];
-  assign x_result_o.we     = {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH && cur_issue[winner].instr[11:7] != 0;
+    unique case ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]})
+      MCNFIG: begin
+        x_issue_resp_o.writeback     = 'b0;
+        x_issue_resp_o.register_read = 'b011;
+      end
+      MARITH: begin
+        x_issue_resp_o.writeback     = x_issue_req_i.instr[11:7] != 0;
+        x_issue_resp_o.register_read = 'b111;
+      end
+      MOPCNT: begin
+        x_issue_resp_o.writeback     = x_issue_req_i.instr[11:7] != 0;
+        x_issue_resp_o.register_read = 'b0;
+      end
+      default: begin
+        x_issue_resp_o.writeback     = 'b0;
+        x_issue_resp_o.register_read = 'b0;
+      end
+    endcase
+  end
+
+
+  always_comb begin : x_result_assignment
+    x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner];
+    x_result_o.hartid = cur_issue[winner].hartid;
+    x_result_o.id     = cur_issue[winner].id;
+    x_result_o.rd     = cur_issue[winner].instr[11:7];
+
+    unique case ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]})
+      MCNFIG: begin
+        x_result_o.we   = 'b0;
+        x_result_o.data = 'b0;
+      end
+      MARITH: begin
+        x_result_o.we   = cur_issue[winner].instr[11:7] != 0;
+        x_result_o.data = op_id_counter_in_q[winner];
+      end
+      MOPCNT: begin
+        x_result_o.we   = cur_issue[winner].instr[11:7] != 0;
+        x_result_o.data = op_id_counter_out_q[winner];
+      end
+      default: begin
+        x_result_o.we   = 'b0;
+        x_result_o.data = 'b0;
+      end
+    endcase
+  end
 
   assign config_o = config_d[winner];
   assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH;
@@ -352,6 +395,7 @@ module redmule_inst_decoder
           config_d[i].gemm_input_fmt  = redmule_pkg::Float16;
           config_d[i].gemm_output_fmt = redmule_pkg::Float16;
         end
+        default: config_d[i] = config_q[i];
       endcase
     end
   end
