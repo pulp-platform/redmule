@@ -31,13 +31,8 @@ module redmule_streamer
   hwpe_stream_intf_stream.source w_stream_o,
   // Engine Y input + HS signals (output for the streamer)
   hwpe_stream_intf_stream.source y_stream_o,
-
-  hwpe_stream_intf_stream.source r_stream_o,
-
   // Engine Z output + HS signals (intput for the streamer)
   hwpe_stream_intf_stream.sink   z_stream_i,
-
-  hwpe_stream_intf_stream.sink   r_stream_i,
 
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
@@ -192,32 +187,6 @@ hci_core_intf #(
 hci_core_intf #( .DW ( DW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
 
-hci_core_intf #(
-`ifndef SYNTHESIS
-  .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
-  .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
-`endif
-  .DW ( DW ),
-  .UW ( UW )
-) r_sink_fifo_d ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) r_sink_fifo_q ( .clk ( clk_i ) );
-
-hci_core_sink         #(
-  .MISALIGNED_ACCESSES ( REALIGN                      ),
-  .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_r_stream_sink        (
-  .clk_i               ( clk_i                       ),
-  .rst_ni              ( rst_ni                      ),
-  .test_mode_i         ( test_mode_i                 ),
-  .clear_i             ( clear_i                     ),
-  .enable_i            ( enable_i                    ),
-  .tcdm                ( r_sink_fifo_d               ),
-  .stream              ( r_stream_i                  ),
-  .ctrl_i              ( ctrl_i.r_stream_sink_ctrl   ),
-  .flags_o             ( flags_o.r_stream_sink_flags )
-);
-
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 
@@ -275,20 +244,6 @@ hci_core_fifo #(
 // Assigning the store FIFO output to the store side of the y/z multiplexer.
 hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_tcdm[NumStreamSources]) );
 
-hci_core_fifo #(
-  .FIFO_DEPTH                      ( 2                          ),
-  .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_r_store_fifo (
-  .clk_i          ( clk_i    ),
-  .rst_ni         ( rst_ni   ),
-  .clear_i        ( clear_i  ),
-  .flags_o        (          ),
-  .tcdm_target    ( r_sink_fifo_d ),
-  .tcdm_initiator ( r_sink_fifo_q )
-);
-
-hci_core_assign i_r_store_assign ( .tcdm_target (r_sink_fifo_q), .tcdm_initiator (virt_tcdm[NumStreamSources+1]) );
-
 /**************************************** Load Channel ****************************************/
 /* The load channel of the streamer connects the incoming TCDM interface to three different   *
  * stream interfaces: X stream (ID: 0), W stream (ID: 1), and Y stream (ID: 2). The load side *
@@ -344,7 +299,6 @@ hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
 assign source_ctrl[XsourceStreamId]      = ctrl_i.x_stream_source_ctrl;
 assign source_ctrl[WsourceStreamId]      = ctrl_i.w_stream_source_ctrl;
 assign source_ctrl[YsourceStreamId]      = ctrl_i.y_stream_source_ctrl;
-assign source_ctrl[RsourceStreamId]      = ctrl_i.r_stream_source_ctrl;
 
 for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
@@ -432,7 +386,6 @@ end
 assign flags_o.x_stream_source_flags = source_flags[XsourceStreamId];
 assign flags_o.w_stream_source_flags = source_flags[WsourceStreamId];
 assign flags_o.y_stream_source_flags = source_flags[YsourceStreamId];
-assign flags_o.r_stream_source_flags = source_flags[RsourceStreamId];
 
 // Assign resulting streams.
 hwpe_stream_assign i_xstream_assign ( .push_i( out_stream[XsourceStreamId] ) ,
@@ -443,8 +396,5 @@ hwpe_stream_assign i_wstream_assign ( .push_i( out_stream[WsourceStreamId] ) ,
 
 hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
                                       .pop_o ( y_stream_o                  ) );
-
-hwpe_stream_assign i_rstream_assign ( .push_i( out_stream[RsourceStreamId] ) ,
-                                      .pop_o ( r_stream_o                  ) );
 
 endmodule : redmule_streamer

@@ -43,7 +43,6 @@ module redmule_scheduler
   input  x_buffer_flgs_t                  flgs_x_buffer_i   ,
   input  w_buffer_flgs_t                  flgs_w_buffer_i   ,
   input  z_buffer_flgs_t                  flgs_z_buffer_i   ,
-  input  flgs_red_t                       flgs_red_i        ,
 
   input  flgs_engine_t                    flgs_engine_i     ,
   input  cntrl_scheduler_t                cntrl_scheduler_i ,
@@ -669,8 +668,7 @@ module redmule_scheduler
                           ~check_w_valid  && check_w_valid_en     ||
                           ~check_y_loaded && check_y_loaded_en
                         ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
-                          || current_state == WAIT && ~check_x_full && check_x_full_en
-                          || z_wait_counter_q == PIPE_REGS && ~flgs_red_i.is_initialized;
+                          || current_state == WAIT && ~check_x_full && check_x_full_en;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register
     if(~rst_ni) begin

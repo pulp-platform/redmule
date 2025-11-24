@@ -58,10 +58,6 @@ module redmule_mux
       winner_d = YsourceStreamId;
     end else if (in_req[NumStreamSources]) begin   // Z
       winner_d = NumStreamSources;
-    end else if (in_req[RsourceStreamId]) begin    // R Source
-      winner_d = RsourceStreamId;
-    end else if (in_req[NumStreamSources+1]) begin // R Sink
-      winner_d = NumStreamSources+1;
     end
   end
 

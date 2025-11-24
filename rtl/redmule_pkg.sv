@@ -36,52 +36,11 @@ package redmule_pkg;
   parameter int unsigned ECC_N_CHUNK             = DATA_W / ECC_CHUNK_SIZE;
   parameter int unsigned LATCH_BUFFERS           = 0;
 
-  // Register File mapping
-  /**********************
-  ** Slave RF indexing **
-  **********************/
-  parameter int unsigned X_ADDR = 0; // 0x00 /* These do not change between slave and final */
-  parameter int unsigned W_ADDR = 1; // 0x04 /* These do not change between slave and final */
-  parameter int unsigned Z_ADDR = 2; // 0x08 /* These do not change between slave and final */
-  parameter int unsigned MCFIG0 = 3; // 0x0C --> [31:16] -> K size, [15: 0] -> M size
-  parameter int unsigned MCFIG1 = 4; // 0x10 --> [31: 0] -> N Size
-  // Matrix arithmetic config register
-  // [20:20] -> Send X stream
-  // [19:19] -> Receive X stream
-  // [18:18] -> Send W stream
-  // [17:17] -> Receive W stream
-  // [16:16] -> Reduction initialization
-  // [15:14] -> Reduction operation
-  // [12:10] -> Operation selection
-  // [ 9: 7] -> Input/Output format
-  parameter int unsigned MACFG = 5; // 0x14
-  // Reduction initialization values addr
-  parameter int unsigned R_ADDR_R = 6; // 0x18
-
-  parameter bit[6:0] MCNFIG = 7'b0001011; // 0x0B
-  parameter bit[6:0] MARITH = 7'b0101011; // 0x2B
-  parameter bit[6:0] RVCSR  = 7'b1110011; // 0x73 -> RISC-V CSR instruction opcode
-
-  /* The CSRs below are not really present in the current RedMulE version. The following
-     enum is here to allow future development where it might be useful to write the
-     configuration registers through standard `csrw` instructions coming from the core.
-     The CSRs values are chosen following the custom read/write already available in the
-     RISC-V specifications. */
-  typedef enum logic[11:0] {
-    CSR_REDMULE_X_ADDR = 12'h800,
-    CSR_REDMULE_W_ADDR = 12'h801,
-    CSR_REDMULE_Z_ADDR = 12'h802,
-    CSR_REDMULE_MCFIG0 = 12'h803,
-    CSR_REDMULE_MCFIG1 = 12'h804,
-    CSR_REDMULE_MACFG  = 12'h805
-  } redmule_csr_num_e;
-
-  parameter int unsigned NumStreamSources     = 4; // X, W, Y, R
+  parameter int unsigned NumStreamSources     = 3; // X, W, Y
 
   parameter int unsigned XsourceStreamId      = 0;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
-  parameter int unsigned RsourceStreamId      = 3;
 
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
@@ -106,9 +65,7 @@ package redmule_pkg;
     hci_package::hci_streamer_flags_t x_stream_source_flags;
     hci_package::hci_streamer_flags_t w_stream_source_flags;
     hci_package::hci_streamer_flags_t y_stream_source_flags;
-    hci_package::hci_streamer_flags_t r_stream_source_flags;
     hci_package::hci_streamer_flags_t z_stream_sink_flags;
-    hci_package::hci_streamer_flags_t r_stream_sink_flags;
   } flgs_streamer_t;
 
   typedef struct packed {
@@ -214,21 +171,6 @@ package redmule_pkg;
     logic idle;
   } cntrl_flags_t;
 
-  typedef enum logic [1:0] { RED_NONE, MAX, SUM } red_op_t;
-
-  typedef struct packed {
-    logic [15:0]  row_len;
-    red_op_t      op;
-    logic         load;
-    logic         enable;
-    logic         ready;
-  } cntrl_red_t;
-
-
-  typedef struct packed {
-    logic is_initialized;
-  } flgs_red_t;
-
   typedef enum logic [2:0] { MATMUL=3'h0, GEMM=3'h1, ADDMAX=3'h2, ADDMIN=3'h3, MULMAX=3'h4, MULMIN=3'h5, MAXMIN=3'h6, MINMAX=3'h7 } gemm_op_e;
   typedef enum logic [1:0] { Float8=2'h0, Float16=2'h1, Float8Alt=2'h2, Float16Alt=2'h3 } gemm_fmt_e;
   typedef enum logic       { RNE=1'h0, RTZ=1'h1 } rnd_mode_e;
@@ -273,8 +215,6 @@ package redmule_pkg;
     fpu_fmt_e computing_format;
     logic        gemm_selection;
     logic [31:0] r_addr;
-    logic        red_init;
-    red_op_t     red_op;
     logic        send_w;
     logic        receive_w;
     logic        send_x;
@@ -314,24 +254,5 @@ package redmule_pkg;
     logic valid;
     logic [31:0] data;
   } core_default_data_rsp_t;
-
-  typedef struct packed {
-    logic req;
-    logic wen;
-    logic [DATA_W/8-1:0] be;
-    logic signed [DATA_W/32-1:0][31:0]boffs;
-    logic [31:0] add;
-    logic [DATA_W-1:0] data;
-    logic lrdy;
-    logic user;
-  } redmule_default_data_req_t;
-
-  typedef struct packed {
-    logic gnt;
-    logic r_valid;
-    logic [DATA_W-1:0] r_data;
-    logic r_opc;
-    logic r_user;
-  } redmule_default_data_rsp_t;
 
 endpackage

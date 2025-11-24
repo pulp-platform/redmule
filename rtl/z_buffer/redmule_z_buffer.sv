@@ -64,7 +64,7 @@ redmule_z_buffer_scm #(
   .col_write_addr_i ( w_index                   ),
   .row_wdata_i      ( z_buffer_i                ),
   .col_wdata_i      ( y_buffer_i                ),
-  .col_read_en_i    (  store_en && ctrl_i.ready ),
+  .col_read_en_i    ( store_en && ctrl_i.ready  ),
   .row_read_en_i    ( ctrl_i.y_push_enable      ),
   .col_read_addr_i  ( store_shift_d             ),
   .row_read_addr_i  ( d_index                   ),

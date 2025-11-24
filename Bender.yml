@@ -46,7 +46,6 @@ sources:
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
     - rtl/redmule_memory_scheduler.sv
-    - rtl/redmule_reduction_unit.sv
     - rtl/redmule_mux.sv
     - rtl/redmule_inst_decoder.sv
 

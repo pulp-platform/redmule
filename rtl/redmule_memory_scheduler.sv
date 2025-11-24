@@ -268,35 +268,6 @@ module redmule_memory_scheduler
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d2_len = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
-
-
-    // FIXME
-    // Here we initialize the streamer source signals
-    // for the R stream source
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.base_addr = config_i.r_addr;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.tot_len = config_i.n_size/W;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_len = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d1_len = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d1_stride = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d2_len = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.d3_stride = '0;
-    cntrl_streamer_o.r_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
-
-    // FIXME
-    // Here we initialize the streamer source signals
-    // for the R stream sink
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.base_addr = config_i.r_addr;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.tot_len = config_i.n_size/W;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_len = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d0_stride = W*ELW/8;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d1_len = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d1_stride = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d2_stride = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d2_len = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.d3_stride = '0;
-    cntrl_streamer_o.r_stream_sink_ctrl.addressgen_ctrl.dim_enable_1h = 3'b000;
   end
 
   assign start_x_streamer = (~x_config_empty && ~x_config_full && ~x_done_o) || x_config_full;
@@ -305,9 +276,7 @@ module redmule_memory_scheduler
     cntrl_streamer_o.x_stream_source_ctrl.req_start     = (start_x_streamer || tot_x_read_q != '0 && tot_x_read_q != x_config.tot_x_read) && flgs_streamer_i.x_stream_source_flags.ready_start;
     cntrl_streamer_o.w_stream_source_ctrl.req_start     = ~w_config_empty && flgs_streamer_i.w_stream_source_flags.ready_start;
     cntrl_streamer_o.y_stream_source_ctrl.req_start     = ~y_config_empty && y_config.gemm_selection && flgs_streamer_i.y_stream_source_flags.ready_start;
-    cntrl_streamer_o.r_stream_source_ctrl.req_start     = '0;
     cntrl_streamer_o.z_stream_sink_ctrl.req_start       = ~z_config_empty && flgs_streamer_i.z_stream_sink_flags.ready_start && ~flgs_streamer_i.z_stream_sink_flags.done; // we need the ~done here as this is asserted at the same time as the ready_start signal in sink modules
-    cntrl_streamer_o.r_stream_sink_ctrl.req_start       = '0;
   end
 
   // FIXME

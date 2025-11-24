@@ -45,7 +45,7 @@ module redmule_ctrl
   output cntrl_flags_t            cntrl_flags_o
 );
 
-  logic        clear, latch_clear;
+  logic        latch_clear;
   logic        tiler_setback, tiler_valid;
 
   typedef enum logic [2:0] {
@@ -63,7 +63,7 @@ module redmule_ctrl
   redmule_tiler  i_cfg_tiler (
     .clk_i       ( clk_i          ),
     .rst_ni      ( rst_ni         ),
-    .clear_i     ( clear          ),
+    .clear_i     ( '0             ),
     .setback_i   ( tiler_setback  ),
     .start_cfg_i ( start_cfg_i    ),
     .valid_o     ( tiler_valid    ),
@@ -83,10 +83,7 @@ module redmule_ctrl
     if(~rst_ni) begin
        current <= REDMULE_LATCH_RST;
     end else begin
-      if (clear)
-        current <= REDMULE_IDLE;
-      else
-        current <= next;
+      current <= next;
     end
   end
 
@@ -95,7 +92,7 @@ module redmule_ctrl
     if (~rst_ni) begin
       slave_start <= 1'b0;
     end else begin
-      if (clear || tiler_setback)
+      if (tiler_setback)
         slave_start <= 1'b0;
       else if (start_cfg_i)
         slave_start <= 1'b1;
@@ -142,7 +139,7 @@ module redmule_ctrl
         end
       end
       REDMULE_COMPUTING: begin
-        if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i && ((redmule_config.red_op == RED_NONE) | flgs_streamer_i.r_stream_sink_flags.ready_start)) begin
+        if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i) begin
           next = REDMULE_FINISHED;
         end
       end
@@ -157,7 +154,6 @@ module redmule_ctrl
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done;
-  assign clear_o = clear || latch_clear || next == REDMULE_FINISHED;
-  assign clear   = '0;
+  assign clear_o = latch_clear;
 
 endmodule : redmule_ctrl

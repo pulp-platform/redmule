@@ -130,8 +130,6 @@ redmule_config_t redmule_config;
 flags_fifo_t   w_fifo_flgs, z_fifo_flgs;
 cntrl_flags_t  cntrl_flags;
 
-flgs_red_t red_flags;
-
 redmule_config_t dec_config;
 logic            dec_config_valid;
 
@@ -164,17 +162,9 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .c
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_acc ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_acc ) );
 
-// R streaming interface + R FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_init_d         ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_init_fifo      ( .clk( clk_acc ) );
-
 // Z streaming interface + Z FIFO interface
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_acc ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_acc ) );
-
-// R streaming interface + R FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_out_q          ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) red_out_fifo       ( .clk( clk_acc ) );
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -191,10 +181,8 @@ redmule_streamer #(
   .x_stream_o      ( x_stream_str    ),
   .w_stream_o      ( w_stream_str    ),
   .y_stream_o      ( y_buffer_d      ),
-  .r_stream_o      ( red_init_d      ),
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo   ),
-  .r_stream_i      ( red_out_fifo    ),
   // Master TCDM interface ports for the memory side
   .tcdm            ( tcdm            ),
   .ctrl_i          ( cntrl_streamer  ),
@@ -299,18 +287,6 @@ hwpe_stream_fifo #(
 
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DATAW_ALIGN   ),
-  .FIFO_DEPTH     ( 2             )
-) i_red_init_fifo (
-  .clk_i          ( clk_acc       ),
-  .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
-  .flags_o        (               ),
-  .push_i         ( red_init_d    ),
-  .pop_o          ( red_init_fifo )
-);
-
-hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
   .FIFO_DEPTH     ( 4             )
 ) i_y_buffer_fifo (
   .clk_i          ( clk_acc       ),
@@ -331,18 +307,6 @@ hwpe_stream_fifo #(
   .flags_o        ( z_fifo_flgs   ),
   .push_i         ( z_buffer_q    ),
   .pop_o          ( z_buffer_fifo )
-);
-
-hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
-  .FIFO_DEPTH     ( 2             )
-) i_red_out_fifo (
-  .clk_i          ( clk_acc       ),
-  .rst_ni         ( rst_ni        ),
-  .clear_i        ( clear         ),
-  .flags_o        (               ),
-  .push_i         ( red_out_q     ),
-  .pop_o          ( red_out_fifo  )
 );
 
 // Valid/Ready assignment
@@ -407,41 +371,6 @@ redmule_z_buffer #(
   .z_buffer_o    ( z_buffer_q.data    ),
   .z_strb_o      ( z_buffer_q.strb    )
 );
-
-// REDUCTION UNIT //
-
-cntrl_red_t red_ctrl;
-
-assign red_ctrl.row_len = redmule_config.k_size;
-assign red_ctrl.op      = redmule_config.red_op;
-assign red_ctrl.load    = redmule_config.red_init;
-assign red_ctrl.enable  = busy_o;
-assign red_ctrl.ready   = red_out_q.ready;
-
-assign red_init_fifo.ready = ~red_flags.is_initialized;
-
-redmule_reduction_unit #(
-  .Width    ( Width    ),
-  .Height   ( Height   ),
-  .FpFormat ( FpFormat ),
-  .MaxLat   ( 0        ),
-  .SumLat   ( 1        )
-) i_red_unit (
-  .clk_i        ( clk_acc                             ),
-  .rst_ni       ( rst_ni                              ),
-  .clear_i      ( '0                                  ),
-  .ctrl_i       ( red_ctrl                            ),
-  .valid_i      ( z_buffer_ctrl.fill                  ),
-  .data_i       ( z_buffer_d                          ),
-  .init_i       ( red_init_fifo.data [Width*BITW-1:0] ),
-  .init_valid_i ( red_init_fifo.valid                 ),
-  .red_o        ( red_out_q.data [Width*BITW-1:0]     ),
-  .red_valid_o  ( red_out_q.valid                     ),
-  .flags_o      ( red_flags                           )
-);
-
-assign red_out_q.data [(PIPE_REGS+1)*Width*BITW-1:Width*BITW] = '0;
-assign red_out_q.strb = 2 ** (DW/8 / (NumPipeRegs+1)) - 1;
 
 /*---------------------------------------------------------------*/
 /* |                          Engine                           | */
@@ -699,7 +628,6 @@ redmule_scheduler #(
   .flgs_w_buffer_i     ( w_buffer_flgs             ),
   .flgs_z_buffer_i     ( z_buffer_flgs             ),
   .flgs_engine_i       ( flgs_engine               ),
-  .flgs_red_i          ( red_flags                 ),
   .cntrl_scheduler_i   ( cntrl_scheduler           ),
   .reg_enable_o        ( reg_enable                ),
   .cntrl_engine_o      ( cntrl_engine              ),
