@@ -154,6 +154,6 @@ module redmule_ctrl
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done;
-  assign clear_o = latch_clear;
+  assign clear_o = latch_clear || current == REDMULE_FINISHED;
 
 endmodule : redmule_ctrl
