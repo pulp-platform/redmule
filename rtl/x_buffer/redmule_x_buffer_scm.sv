@@ -12,7 +12,7 @@ module redmule_x_buffer_scm
   parameter int unsigned WIDTH       = 1 ,
   parameter int unsigned HEIGHT      = 2 ,
   parameter int unsigned N_OUTPUTS   = 1 ,
-  parameter int unsigned USE_LATCHES = LATCH_BUFFERS
+  parameter int unsigned USE_LATCHES = 0
 ) (
   input  logic                                           clk_i        ,
   input  logic                                           rst_ni       ,

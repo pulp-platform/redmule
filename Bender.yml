@@ -49,16 +49,6 @@ sources:
     - rtl/redmule_mux.sv
     - rtl/redmule_inst_decoder.sv
 
-    - target: redmule_test_hwpe
-      files:
-        - rtl/redmule_wrap.sv
-
-    - target: redmule_complex
-      files:
-        - rtl/redmule_inst_decoder.sv
-        - rtl/redmule_complex.sv
-        - rtl/redmule_complex_wrap.sv
-
     - target: any(redmule_test_complex, redmule_test_hwpe)
       files:
         - target/sim/src/tb_dummy_memory.sv

@@ -15,9 +15,12 @@ module redmule_streamer
   import hci_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter  int unsigned DW      = 288   ,
-  parameter  int unsigned AW      = ADDR_W,
-  localparam int unsigned REALIGN = 0     ,
+  parameter  int unsigned           DataW        = MaxDataW,
+  parameter  int unsigned           FpFormat     = FP16    ,
+  parameter  int unsigned           EccChunkSize = 32      ,
+  localparam int unsigned           REALIGN      = 0       ,
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input logic                    clk_i,
@@ -47,7 +50,7 @@ localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
 // this localparam is reused for all internal, non-ecc HCI interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
-  DW:  DW,
+  DW:  DataW,
   AW:  DEFAULT_AW,
   BW:  DEFAULT_BW,
   UW:  UW,
@@ -58,7 +61,7 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
 
 // this localparam is reused for the  internal ecc HCI interface
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ecc_ldst_tcdm) = '{
-  DW:  DW,
+  DW:  DataW,
   AW:  DEFAULT_AW,
   BW:  DEFAULT_BW,
   UW:  UW,
@@ -74,7 +77,7 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) ldst_tcdm ( .clk ( clk_i ) );
 
@@ -83,7 +86,7 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
 
@@ -92,16 +95,16 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
-  logic [ECC_N_CHUNK-1:0] data_single_err, data_multi_err;
-  logic                   meta_single_err, meta_multi_err;
+  logic [DataW/EccChunkSize-1:0] data_single_err, data_multi_err;
+  logic                          meta_single_err, meta_multi_err;
 
   hci_ecc_enc #(
-    .DW ( DW ),
+    .DW ( DataW ),
     .`HCI_SIZE_PARAM(tcdm_target)    ( `HCI_SIZE_PARAM(ldst_tcdm)     ),
     .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ecc_ldst_tcdm) )
   ) i_ecc_enc (
@@ -124,7 +127,7 @@ hci_core_intf #(
   .WAIVE_RQ3_ASSERT  ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) virt_tcdm [0:NumStreamSources+1] ( .clk ( clk_i ) );
 
@@ -158,7 +161,7 @@ hci_core_r_valid_filter #(
  * side (virt_tcdm[NumStreamSources]) of the LD/ST multiplexer.                         */
 
 // Sink module that turns the incoming Z stream into TCDM.
-hci_core_intf #( .DW ( DW ),
+hci_core_intf #( .DW ( DataW ),
                 .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
 hci_core_sink         #(
   .MISALIGNED_ACCESSES ( REALIGN                      ),
@@ -181,10 +184,10 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) z_fifo_d ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DW ),
+hci_core_intf #( .DW ( DataW ),
                  .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
 
 logic cast;
@@ -194,9 +197,10 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 // This unit uses only the data bus of the TCDM interface. The other buses
 // are assigned manually.
 redmule_castout #(
+  .DataW         ( DataW        ),
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
-  .SrcFormat     ( FPFORMAT     )
+  .SrcFormat     ( FpFormat     )
 ) i_store_cast   (
   .clk_i                                     ,
   .rst_ni                                    ,
@@ -267,7 +271,7 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
@@ -277,7 +281,7 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW )
 ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
@@ -287,10 +291,10 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DW ),
+  .DW ( DataW ),
   .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [0:NumStreamSources-1] ( .clk( clk_i ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) out_stream [0:NumStreamSources-1] ( .clk( clk_i ) );
 
 hci_package::hci_streamer_ctrl_t        [NumStreamSources-1:0] source_ctrl;
 hci_package::hci_streamer_flags_t       [NumStreamSources-1:0] source_flags;
@@ -323,9 +327,10 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   // This unit uses only the data bus of the TCDM interface. The other buses
   // are assigned manually.
   redmule_castin #(
+    .DataW        ( DataW        ),
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
-    .DstFormat    ( FPFORMAT     )
+    .DstFormat    ( FpFormat     )
   ) i_load_cast   (
     .clk_i                                     ,
     .rst_ni                                    ,

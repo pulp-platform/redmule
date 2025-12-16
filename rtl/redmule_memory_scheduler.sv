@@ -10,11 +10,11 @@ module redmule_memory_scheduler
   import redmule_pkg::*;
   import hwpe_ctrl_package::*;
 #(
-  parameter int unsigned   DW   = DATAW,
-  parameter int unsigned   W    = ARRAY_WIDTH,
-  parameter int unsigned   H    = ARRAY_HEIGHT,
-  parameter int unsigned   ELW  = BITW,
-  localparam int unsigned  D    = TOT_DEPTH
+  parameter int unsigned   DW   = MaxDataW,
+  parameter int unsigned   W    = MaxDim,
+  parameter int unsigned   H    = MaxDim,
+  parameter int unsigned   ELW  = 16,
+  localparam int unsigned  D    = DW/ELW
 ) (
   input  logic                   clk_i            ,
   input  logic                   rst_ni           ,
@@ -30,7 +30,7 @@ module redmule_memory_scheduler
   output logic                   x_done_o         ,
   output cntrl_streamer_t        cntrl_streamer_o
 );
-  localparam int unsigned JMP = NumByte*(DATA_W/MemDw);
+  localparam int unsigned JMP = DW/8;
 
   logic [31:0]        x_cols_offs_d, x_cols_offs_q;
   logic [31:0]        x_rows_offs_d, x_rows_offs_q;

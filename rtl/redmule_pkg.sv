@@ -11,30 +11,10 @@ import hci_package::*;
 import hwpe_stream_package::*;
 
 package redmule_pkg;
-
-  parameter int unsigned            DATA_W       = 128; // TCDM port dimension (in bits)
-  parameter int unsigned            MemDw        = 32;
-  parameter int unsigned            NumByte      = MemDw/8;
-  parameter int unsigned            ADDR_W       = hci_package::DEFAULT_AW;
-  parameter int unsigned            DATAW        = DATA_W;
-  parameter int unsigned            REDMULE_REGS = 7;
-  parameter int unsigned            N_CONTEXT    = 2;
-  parameter fpnew_pkg::fp_format_e  FPFORMAT     = fpnew_pkg::FP16;
-  parameter int unsigned            BITW         = fpnew_pkg::fp_width(FPFORMAT);
-  parameter int unsigned            ARRAY_HEIGHT = 4;
-  parameter int unsigned            PIPE_REGS    = 1;
-  parameter int unsigned            ARRAY_WIDTH  = ARRAY_HEIGHT*PIPE_REGS; // Superior limit, smaller values are allowed.
-  parameter int unsigned            TOT_DEPTH    = DATAW/BITW;
-  parameter int unsigned            DEPTH        = TOT_DEPTH/ARRAY_HEIGHT;
-  parameter int unsigned            STRB         = DATA_W/8;
-  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101;
-  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000;
-  parameter fpnew_pkg::operation_e  CAST_OP      = fpnew_pkg::F2F;
-  parameter int unsigned MIN_FMT                 = fpnew_pkg::min_fp_width(FpFmtConfig);
-  parameter int unsigned DW_CUT                  = DATA_W - ARRAY_HEIGHT*(PIPE_REGS + 1)*MIN_FMT;
-  parameter int unsigned ECC_CHUNK_SIZE          = 32;
-  parameter int unsigned ECC_N_CHUNK             = DATA_W / ECC_CHUNK_SIZE;
-  parameter int unsigned LATCH_BUFFERS           = 0;
+  parameter int unsigned MaxDim               = 32;
+  parameter int unsigned MaxPipeRegs          = 4;
+  parameter int unsigned MaxDepth             = MaxDim * MaxPipeRegs;
+  parameter int unsigned MaxDataW             = MaxDepth * 16;
 
   parameter int unsigned NumStreamSources     = 3; // X, W, Y
 
@@ -69,14 +49,14 @@ package redmule_pkg;
   } flgs_streamer_t;
 
   typedef struct packed {
-    logic                         h_shift;
-    logic                         load;
-    logic                         pad_setup;
-    logic [$clog2(ARRAY_WIDTH):0] width;
-    logic [$clog2(TOT_DEPTH):0]   height;
-    logic [$clog2(TOT_DEPTH):0]   slots;
-    logic                         rst_w_index;
-    logic                         last_x;
+    logic                        h_shift;
+    logic                        load;
+    logic                        pad_setup;
+    logic [$clog2(MaxDim)-1:0]   width;
+    logic [$clog2(MaxDepth)-1:0] height;
+    logic [$clog2(MaxDepth)-1:0] slots;
+    logic                        rst_w_index;
+    logic                        last_x;
   } x_buffer_ctrl_t;
 
   typedef struct packed {
@@ -85,28 +65,28 @@ package redmule_pkg;
   } x_buffer_flgs_t;
 
   typedef struct packed {
-    logic                          shift;
-    logic                          load;
-    logic [$clog2(TOT_DEPTH):0]    width;
-    logic [$clog2(ARRAY_HEIGHT):0] height;
-    logic [ARRAY_HEIGHT-1:0]       zero_set;
+    logic                        shift;
+    logic                        load;
+    logic [$clog2(MaxDepth)-1:0] width;
+    logic [$clog2(MaxDim)-1:0]   height;
+    logic [MaxDim-1:0]           zero_set;
   } w_buffer_ctrl_t;
 
   typedef struct packed {
-    logic [ARRAY_HEIGHT-1:0] empty;
-    logic                    w_ready;
+    logic [MaxDim-1:0] empty;
+    logic              w_ready;
   } w_buffer_flgs_t;
 
   typedef struct packed {
-    logic                         y_push_enable;
-    logic                         fill;
-    logic                         ready;
-    logic                         y_valid;
-    logic                         first_load;
-    logic [$clog2(ARRAY_WIDTH):0] y_width;
-    logic [$clog2(TOT_DEPTH):0]   y_height;
-    logic [$clog2(ARRAY_WIDTH):0] z_width;
-    logic [$clog2(TOT_DEPTH):0]   z_height;
+    logic        y_push_enable;
+    logic        fill;
+    logic        ready;
+    logic        y_valid;
+    logic        first_load;
+    logic [$clog2(MaxDim)-1:0]   y_width;
+    logic [$clog2(MaxDepth)-1:0] y_height;
+    logic [$clog2(MaxDim)-1:0]   z_width;
+    logic [$clog2(MaxDepth)-1:0] z_height;
   } z_buffer_ctrl_t;
 
   typedef struct packed {
@@ -131,17 +111,17 @@ package redmule_pkg;
     logic                         flush;
     logic                         out_ready;
     logic                         accumulate;
-    logic       [ARRAY_WIDTH-1:0] row_clk_gate_en;
+    logic [MaxDim-1:0]            row_clk_gate_en;
   } cntrl_engine_t;
 
   typedef struct packed {
-    logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] in_ready;
-    fpnew_pkg::status_t    [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] status;
-    logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] extension_bit;
-    fpnew_pkg::classmask_e [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] class_mask;
-    logic [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0]                  is_mask;
-    logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] out_valid;
-    logic                  [ARRAY_WIDTH-1:0][ARRAY_HEIGHT-1:0] busy;
+    logic                  [MaxDim-1:0][MaxDim-1:0] in_ready;
+    fpnew_pkg::status_t    [MaxDim-1:0][MaxDim-1:0] status;
+    logic                  [MaxDim-1:0][MaxDim-1:0] extension_bit;
+    fpnew_pkg::classmask_e [MaxDim-1:0][MaxDim-1:0] class_mask;
+    logic                  [MaxDim-1:0][MaxDim-1:0] is_mask;
+    logic                  [MaxDim-1:0][MaxDim-1:0] out_valid;
+    logic                  [MaxDim-1:0][MaxDim-1:0] busy;
   } flgs_engine_t;
 
   typedef struct packed {
@@ -155,16 +135,16 @@ package redmule_pkg;
   } cntrl_scheduler_t;
 
   typedef struct packed {
-    logic            y_push_enable;
-    logic            x_ready;
-    logic            w_ready;
-    logic            y_ready;
-    logic            z_valid;
-    logic            x_full;
-    logic            w_loaded;
-    logic            w_shift;
-    logic            stored;
-    logic [STRB-1:0] z_strb;
+    logic                  y_push_enable;
+    logic                  x_ready;
+    logic                  w_ready;
+    logic                  y_ready;
+    logic                  z_valid;
+    logic                  x_full;
+    logic                  w_loaded;
+    logic                  w_shift;
+    logic                  stored;
+    logic [MaxDataW/8-1:0] z_strb;
   } flgs_scheduler_t;
 
   typedef struct packed {
@@ -220,39 +200,5 @@ package redmule_pkg;
     logic        send_x;
     logic        receive_x;
   } redmule_config_t;
-
-  typedef enum {
-    CV32P ,
-    CV32X ,
-    Ibex  ,
-    CVA6
-  } core_type_e;
-
-  // Default buses
-  localparam int unsigned ID = 10;
-  typedef struct packed {
-    logic        req;
-    logic [31:0] addr;
-  } core_default_inst_req_t;
-
-  typedef struct packed {
-    logic        gnt;
-    logic        valid;
-    logic [31:0] data;
-  } core_default_inst_rsp_t;
-
-  typedef struct packed {
-    logic req;
-    logic we;
-    logic [3:0] be;
-    logic [31:0] addr;
-    logic [31:0] data;
-  } core_default_data_req_t;
-
-  typedef struct packed {
-    logic gnt;
-    logic valid;
-    logic [31:0] data;
-  } core_default_data_rsp_t;
 
 endpackage

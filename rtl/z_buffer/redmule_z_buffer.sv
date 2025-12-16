@@ -10,12 +10,13 @@ module redmule_z_buffer
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
-  parameter int unsigned           DW       = 288,
-  parameter fpnew_pkg::fp_format_e FpFormat = fpnew_pkg::FP16,
-  parameter int unsigned           Width    = ARRAY_WIDTH,   // Number of parallel index
-  localparam int unsigned          BITW     = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
-  localparam int unsigned          W        = Width,
-  localparam int unsigned          D        = DW/BITW
+  parameter int unsigned           DataW      = MaxDataW,
+  parameter fpnew_pkg::fp_format_e FpFormat   = fpnew_pkg::FP16,
+  parameter int unsigned           Width      = MaxDim,   // Number of parallel index
+  parameter bit                    UseLatches = 0,
+  localparam int unsigned          BITW       = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+  localparam int unsigned          W          = Width,
+  localparam int unsigned          D          = DataW/BITW
 )(
   input  logic                             clk_i       ,
   input  logic                             rst_ni      ,
@@ -23,10 +24,10 @@ module redmule_z_buffer
   input  logic                             reg_enable_i,
   input  z_buffer_ctrl_t                   ctrl_i      ,
   input  logic           [W-1:0][BITW-1:0] z_buffer_i  ,
-  input  logic                    [DW-1:0] y_buffer_i  ,
-  output logic                    [DW-1:0] z_buffer_o  ,
+  input  logic                 [DataW-1:0] y_buffer_i  ,
+  output logic                 [DataW-1:0] z_buffer_o  ,
   output logic           [W-1:0][BITW-1:0] y_buffer_o  ,
-  output logic                  [DW/8-1:0] z_strb_o    ,
+  output logic               [DataW/8-1:0] z_strb_o    ,
   output z_buffer_flgs_t                   flags_o
 );
 
@@ -47,13 +48,14 @@ logic [$clog2(W)-1:0] store_shift_d, store_shift_q, w_index;
 
 logic load_en, store_en;
 
-logic [$clog2(TOT_DEPTH):0] z_height_tmp;
-logic [$clog2(TOT_DEPTH)-1:0] z_height;
+logic [$clog2(D):0] z_height_tmp;
+logic [$clog2(D)-1:0] z_height;
 
 redmule_z_buffer_scm #(
-  .WORD_SIZE ( BITW ),
-  .ROWS      ( D    ),
-  .COLS      ( W    )
+  .WORD_SIZE   ( BITW ),
+  .ROWS        ( D    ),
+  .COLS        ( W    ),
+  .USE_LATCHES ( )
 ) i_z_buf (
   .clk_i            ( clk_i                     ),
   .rst_ni           ( rst_ni                    ),
@@ -220,7 +222,7 @@ always_comb begin : reset_depth_counter
 end
 
 assign z_height_tmp = ctrl_i.z_height - 'd1;
-assign z_height = z_height_tmp[$clog2(TOT_DEPTH)-1:0];
+assign z_height = z_height_tmp[$clog2(D)-1:0];
 
 always_comb begin : z_strb_assignment
   z_strb_o = '0;

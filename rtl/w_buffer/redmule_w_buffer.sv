@@ -10,13 +10,14 @@ module redmule_w_buffer
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
-  parameter int unsigned  DW        = 288               ,
-  parameter fp_format_e   FpFormat  = FP16              ,
-  parameter int unsigned  Height    = ARRAY_HEIGHT      , // Number of PEs per row
-  parameter int unsigned  N_REGS    = PIPE_REGS         , // Number of registers per PE
-  localparam int unsigned BITW      = fp_width(FpFormat), // Number of bits for the given format
-  localparam int unsigned H         = Height            ,
-  localparam int unsigned D         = DW/BITW
+  parameter int unsigned  DataW      = MaxDataW          ,
+  parameter fp_format_e   FpFormat   = FP16              ,
+  parameter int unsigned  Height     = MaxDim            , // Number of PEs per row
+  parameter int unsigned  N_REGS     = MaxPipeRegs-1     , // Number of registers per PE
+  parameter bit           UseLatches = 0                 ,
+  localparam int unsigned BITW       = fp_width(FpFormat), // Number of bits for the given format
+  localparam int unsigned H          = Height            ,
+  localparam int unsigned D          = DataW/BITW
 )(
   input  logic                             clk_i      ,
   input  logic                             rst_ni     ,
@@ -24,7 +25,7 @@ module redmule_w_buffer
   input  w_buffer_ctrl_t                   ctrl_i     ,
   output w_buffer_flgs_t                   flags_o    ,
   output logic           [H-1:0][BITW-1:0] w_buffer_o ,
-  input  logic                    [DW-1:0] w_buffer_i
+  input  logic                 [DataW-1:0] w_buffer_i
 );
 
 localparam int unsigned C         = (D+N_REGS)/(N_REGS+1);
@@ -60,10 +61,11 @@ assign buf_write_en   = ctrl_i.load;
 assign buf_write_addr = w_row;
 
 redmule_w_buffer_scm #(
-  .WORD_SIZE ( BITW     ),
-  .ROWS      ( H        ),
-  .COLS      ( C        ),
-  .ELMS      ( N_REGS+1 )
+  .WORD_SIZE   ( BITW       ),
+  .ROWS        ( H          ),
+  .COLS        ( C          ),
+  .ELMS        ( N_REGS+1   ),
+  .USE_LATCHES ( UseLatches )
 ) i_w_buf (
   .clk_i            ( clk_i           ),
   .rst_ni           ( rst_ni          ),

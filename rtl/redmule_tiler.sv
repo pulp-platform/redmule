@@ -10,7 +10,14 @@
 module redmule_tiler
   import redmule_pkg::*;
   import hwpe_ctrl_package::*;
-(
+#(
+  parameter int unsigned DataW = 0,
+  parameter int unsigned Height = MaxDim,
+  parameter int unsigned Width = MaxDim,
+  parameter int unsigned PipeRegs = MaxPipeRegs-1,
+  parameter int unsigned FpWidth = 16,
+  parameter int unsigned AddrWidth = 32
+) (
   input  logic              clk_i      ,
   input  logic              rst_ni     ,
   input  logic              clear_i    ,
@@ -66,24 +73,24 @@ assign config_d.send_x          = config_i.send_x;
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
 logic [15:0] x_cols_iter_nolftovr;
-assign x_rows_iter_nolftovr = config_d.m_size/ARRAY_WIDTH;
-assign x_cols_iter_nolftovr = config_d.n_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
+assign x_rows_iter_nolftovr = config_d.m_size/Width;
+assign x_cols_iter_nolftovr = config_d.n_size/(Height*(PipeRegs + 1));
 
 // Calculating the number of iterations along the two dimensions of the W matrix
 logic [15:0] w_cols_iter_nolftovr;
 logic [15:0] w_rows_iter_lftovr,
              w_rows_iter_nolftovr;
-assign w_cols_iter_nolftovr = config_d.k_size/(ARRAY_HEIGHT*(PIPE_REGS + 1));
-assign w_rows_iter_lftovr = w_rows_iter_nolftovr + ARRAY_HEIGHT - config_d.w_rows_lftovr;
+assign w_cols_iter_nolftovr = config_d.k_size/(Height*(PipeRegs + 1));
+assign w_rows_iter_lftovr = w_rows_iter_nolftovr + Height - config_d.w_rows_lftovr;
 assign w_rows_iter_nolftovr = config_d.n_size;
 
 // Calculating the residuals along the input dimensions
-assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*ARRAY_WIDTH);
-assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(ARRAY_HEIGHT*(PIPE_REGS + 1)));
+assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*Width);
+assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculating the residuals along the weight dimensions
-assign config_d.w_rows_lftovr = config_d.n_size - (ARRAY_HEIGHT*(config_d.n_size/ARRAY_HEIGHT));
-assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(ARRAY_HEIGHT*(PIPE_REGS + 1)));
+assign config_d.w_rows_lftovr = config_d.n_size - (Height*(config_d.n_size/Height));
+assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculate w_cols, x_cols, x_rows iterations
 assign config_d.w_cols_iter = config_d.w_cols_lftovr != '0 ? w_cols_iter_nolftovr + 1 : w_cols_iter_nolftovr;
@@ -187,15 +194,11 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
-// Calculate x_buffer_slots
 logic [31:0] buffer_slots;
-//assign buffer_slots = config_d.x_cols_lftovr/(DATAW/(ARRAY_HEIGHT*BITW));
-//assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % (DATAW/(ARRAY_HEIGHT*BITW)) != '0) ? buffer_slots + 1 :
-//                                                                                                buffer_slots) * (DATAW/(ARRAY_HEIGHT*BITW));
 
-assign buffer_slots = config_d.x_cols_lftovr/ARRAY_HEIGHT;
-assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % ARRAY_HEIGHT != '0) ? buffer_slots + 1 :
-                                                                                                buffer_slots) * ARRAY_HEIGHT;
+assign buffer_slots = config_d.x_cols_lftovr/Height;
+assign config_d.x_buffer_slots = ((config_d.x_cols_lftovr % Height != '0) ? buffer_slots + 1 :
+                                                                                                buffer_slots) * Height;
 
 // Calculating the number of total stores
 assign config_d.tot_stores = x_rows_by_w_cols_iter_q[15:0];
@@ -235,13 +238,13 @@ assign config_d.computing_format = config_d.gemm_output_fmt == Float16    ? FPU_
                                                                             FPU_FP8ALT;
 assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
 
-assign config_d.x_d1_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);
-assign config_d.x_rows_offs = ARRAY_WIDTH*config_d.x_d1_stride;
+assign config_d.x_d1_stride = ((4*FpWidth)/AddrWidth)*(((DataW/FpWidth)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);
+assign config_d.x_rows_offs = Width*config_d.x_d1_stride;
 assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter_q[31:0];
-assign config_d.w_d0_stride = ((NumByte*BITW)/ADDR_W)*(((DATAW/BITW)*w_cols_iter_nolftovr) + config_d.w_cols_lftovr);
-assign config_d.yz_tot_len  = ARRAY_WIDTH*x_rows_by_w_cols_iter_q[15:0];
+assign config_d.w_d0_stride = ((4*FpWidth)/AddrWidth)*(((DataW/FpWidth)*w_cols_iter_nolftovr) + config_d.w_cols_lftovr);
+assign config_d.yz_tot_len  = Width*x_rows_by_w_cols_iter_q[15:0];
 assign config_d.yz_d0_stride = config_d.w_d0_stride;
-assign config_d.yz_d2_stride = ARRAY_WIDTH*config_d.w_d0_stride;
+assign config_d.yz_d2_stride = Width*config_d.w_d0_stride;
 assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter_q[31:0];
 assign config_d.x_tot_len    = '0; // not used
 

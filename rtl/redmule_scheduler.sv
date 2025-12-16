@@ -14,10 +14,12 @@ module redmule_scheduler
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter  int unsigned Height      = ARRAY_HEIGHT  ,
-  parameter  int unsigned Width       = ARRAY_WIDTH   ,
-  parameter  int unsigned NumPipeRegs = PIPE_REGS     ,
-  localparam int unsigned D           = TOT_DEPTH     ,
+  parameter  int unsigned DataW       = MaxDataW      ,
+  parameter  int unsigned FpWidth     = 16            ,
+  parameter  int unsigned Height      = MaxDim        ,
+  parameter  int unsigned Width       = MaxDim        ,
+  parameter  int unsigned NumPipeRegs = MaxPipeRegs-1 ,
+  localparam int unsigned D           = DataW/FpWidth ,
   localparam int unsigned H           = Height        ,
   localparam int unsigned W           = Width
 )(
@@ -350,7 +352,7 @@ module redmule_scheduler
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == w_config.x_rows_iter-1;
 
-  assign cntrl_w_buffer_o.height = w_rows_iter_q >= w_config.w_rows_iter-(PIPE_REGS+1) && w_config.w_rows_lftovr != '0 ? w_config.w_rows_lftovr : H;
+  assign cntrl_w_buffer_o.height = w_rows_iter_q >= w_config.w_rows_iter-(NumPipeRegs+1) && w_config.w_rows_lftovr != '0 ? w_config.w_rows_lftovr : H;
   assign cntrl_w_buffer_o.width  = w_cols_iter_q == w_config.w_cols_iter-1 && w_config.w_cols_lftovr != '0 ? w_config.w_cols_lftovr : D;
 
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine && ~w_done;
@@ -377,7 +379,7 @@ module redmule_scheduler
 
   logic                           y_cols_iter_en, y_rows_iter_en;
 
-  logic [$clog2(PIPE_REGS+1)-1:0] z_wait_counter_d, z_wait_counter_q;
+  logic [$clog2(NumPipeRegs+1)-1:0] z_wait_counter_d, z_wait_counter_q;
   logic [$clog2(D)-1:0]           z_avail_counter_d, z_avail_counter_q,
                                   y_push_counter_d, y_push_counter_q;
 
@@ -460,8 +462,8 @@ module redmule_scheduler
     end
   end
 
-  assign z_wait_counter_d = z_wait_counter_q == PIPE_REGS ? '0 : z_wait_counter_q + 1;
-  assign z_wait_clr       = z_wait_en && ~stall_engine && z_wait_counter_q == PIPE_REGS;
+  assign z_wait_counter_d = z_wait_counter_q == NumPipeRegs ? '0 : z_wait_counter_q + 1;
+  assign z_wait_clr       = z_wait_en && ~stall_engine && z_wait_counter_q == NumPipeRegs;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_avail_enable_register
     if(~rst_ni) begin
@@ -496,7 +498,7 @@ module redmule_scheduler
     end else begin
       if (clear_i || cntrl_scheduler_i.rst || y_push_clr) begin
         y_push_en <= '0;
-      end else if (z_wait_en && ~stall_engine && z_wait_counter_q == PIPE_REGS-1 || start_computation) begin
+      end else if (z_wait_en && ~stall_engine && z_wait_counter_q == NumPipeRegs-1 || start_computation) begin
         y_push_en <= '1;
       end
     end
@@ -659,7 +661,7 @@ module redmule_scheduler
   // Check if the new Y rows are loaded and ready to be pushed
   // Only enable this check when the results of an iteration are available
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
-  assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
+  assign check_y_loaded_en = z_wait_counter_q == NumPipeRegs && ~w_done;
 
   /******************************
    *           FLAGS            *
@@ -667,7 +669,7 @@ module redmule_scheduler
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid  && check_w_valid_en     ||
                           ~check_y_loaded && check_y_loaded_en
-                        ) || z_wait_counter_q == PIPE_REGS && flgs_z_buffer_i.z_priority
+                        ) || z_wait_counter_q == NumPipeRegs && flgs_z_buffer_i.z_priority
                           || current_state == WAIT && ~check_x_full && check_x_full_en;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register

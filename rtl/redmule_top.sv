@@ -14,19 +14,16 @@ module redmule_top
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter int unsigned  ID_WIDTH               = 8                 ,
-  parameter int unsigned  N_CORES                = 8                 ,
-  parameter int unsigned  DW                     = DATA_W            , // TCDM port dimension (in bits)
-  parameter int unsigned  UW                     = 1                 ,
-  parameter int unsigned  SysInstWidth           = 32                ,
-  parameter int unsigned  SysDataWidth           = 32                ,
-  parameter int unsigned  NumContext             = N_CONTEXT         , // Number of sequential jobs for the slave device
-  parameter fp_format_e   FpFormat               = FPFORMAT          , // Data format (default is FP16)
-  parameter int unsigned  Height                 = ARRAY_HEIGHT      , // Number of PEs within a row
-  parameter int unsigned  Width                  = ARRAY_WIDTH       , // Number of parallel rows
-  parameter int unsigned  NumPipeRegs            = PIPE_REGS         , // Number of pipeline registers within each PE
-  parameter pipe_config_t PipeConfig             = DISTRIBUTED       ,
-  parameter int unsigned  BITW                   = fp_width(FpFormat),  // Number of bits for the given format
+  parameter int unsigned  DataW                  = MaxDataW, // TCDM port dimension (in bits)
+  parameter fp_format_e   FpFormat               = FP16, // Data format (default is FP16)
+  parameter int unsigned  Height                 = MaxDim, // Number of PEs within a row
+  parameter int unsigned  Width                  = MaxDim, // Number of parallel rows
+  parameter int unsigned  NumPipeRegs            = MaxPipeRegs-1, // Number of pipeline registers within each PE
+  parameter pipe_config_t PipeConfig             = DISTRIBUTED,
+  parameter int unsigned  EccChunkSize           = 32,
+  parameter bit           LatchBuffers           = 0,
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
   // Custom instrunctions
   parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
   parameter logic [6:0]   MarithOpCode          = 7'b0001011,
@@ -42,11 +39,11 @@ module redmule_top
   parameter int unsigned  XifIdWidth            = 1,
   parameter int unsigned  XifIssueRegisterSplit = 0,
   // XIF types
-  parameter type         x_issue_req_t  = logic,
-  parameter type         x_issue_resp_t = logic,
-  parameter type         x_register_t   = logic,
-  parameter type         x_commit_t     = logic,
-  parameter type         x_result_t     = logic,
+  parameter type          x_issue_req_t  = logic,
+  parameter type          x_issue_resp_t = logic,
+  parameter type          x_register_t   = logic,
+  parameter type          x_commit_t     = logic,
+  parameter type          x_result_t     = logic,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input  logic                    clk_i      ,
@@ -79,7 +76,8 @@ module redmule_top
   hci_core_intf.initiator tcdm
 );
 
-localparam int unsigned DATAW_ALIGN = DATAW;
+localparam int unsigned FpWidth = fp_width(FpFormat);
+localparam int unsigned Depth   = DataW/FpWidth;
 
 logic                       clk_acc;
 
@@ -97,7 +95,7 @@ logic                       cfg_complete;
 logic [31:0]                x_cols_offs,
                             x_rows_offs;
 logic [$clog2(Width):0]     x_rows_lftover;
-logic [$clog2(TOT_DEPTH):0] w_cols_lftovr,
+logic [$clog2(Depth):0]     w_cols_lftovr,
                             y_cols_lftovr;
 logic [$clog2(Height):0]    w_rows_lftovr;
 logic [$clog2(Width):0]     y_rows_lftovr;
@@ -149,26 +147,30 @@ tc_clk_gating i_acc_clock_gating (
 // Implementation of the incoming and outgoing streaming interfaces (one for each kind of data)
 
 // X streaming interface + X FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_stream_str       ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_d         ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) x_buffer_fifo      ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) x_stream_str       ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) x_buffer_d         ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) x_buffer_fifo      ( .clk( clk_acc ) );
 
 // W streaming interface + W FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_stream_str       ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_d         ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) w_buffer_fifo      ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) w_stream_str       ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) w_buffer_d         ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) w_buffer_fifo      ( .clk( clk_acc ) );
 
 // Y streaming interface + Y FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_d         ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) y_buffer_fifo      ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) y_buffer_d         ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) y_buffer_fifo      ( .clk( clk_acc ) );
 
 // Z streaming interface + Z FIFO interface
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_q         ( .clk( clk_acc ) );
-hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW_ALIGN ) ) z_buffer_fifo      ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_q         ( .clk( clk_acc ) );
+hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( clk_acc ) );
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DW             ( DW                           ),
+  .DataW          ( DataW        ),
+  .EccChunkSize   ( EccChunkSize ),
+  .FpFormat       ( FpFormat     ),
+  .FpFmtConfig    ( FpFmtConfig  ),
+  .IntFmtConfig   ( IntFmtConfig ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i           ( clk_acc         ),
@@ -262,7 +264,7 @@ assign x_stream_o.data  = (x_send) ? x_buffer_d.data : '0;
 assign x_stream_o.strb  = (x_send) ? x_buffer_d.strb : '0;
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DataW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_x_buffer_fifo (
   .clk_i          ( clk_acc       ),
@@ -274,7 +276,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DataW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_w_buffer_fifo (
   .clk_i          ( clk_acc       ),
@@ -286,7 +288,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DataW         ),
   .FIFO_DEPTH     ( 4             )
 ) i_y_buffer_fifo (
   .clk_i          ( clk_acc       ),
@@ -298,7 +300,7 @@ hwpe_stream_fifo #(
 );
 
 hwpe_stream_fifo #(
-  .DATA_WIDTH     ( DATAW_ALIGN   ),
+  .DATA_WIDTH     ( DataW         ),
   .FIFO_DEPTH     ( 2             )
 ) i_z_buffer_fifo (
   .clk_i          ( clk_acc       ),
@@ -321,28 +323,30 @@ assign z_buffer_q.valid        = z_buffer_flgs.z_valid;
 /* |                          Buffers                           | */
 /*----------------------------------------------------------------*/
 
-logic [Width-1:0][Height-1:0][BITW-1:0] x_buffer_q;
+logic [Width-1:0][Height-1:0][FpWidth-1:0] x_buffer_q;
 redmule_x_buffer #(
-  .DW         ( DATAW_ALIGN         ),
-  .FpFormat   ( FpFormat            ),
-  .Height     ( Height              ),
-  .Width      ( Width               )
+  .DataW      ( DataW        ),
+  .FpFormat   ( FpFormat     ),
+  .Height     ( Height       ),
+  .Width      ( Width        ),
+  .UseLatches ( LatchBuffers )
 ) i_x_buffer  (
-  .clk_i             ( clk_acc            ),
-  .rst_ni            ( rst_ni             ),
-  .clear_i           ( clear              ),
-  .ctrl_i            ( x_buffer_ctrl      ),
-  .flags_o           ( x_buffer_flgs      ),
-  .x_buffer_o        ( x_buffer_q         ),
-  .x_buffer_i        ( x_buffer_fifo.data )
+  .clk_i      ( clk_acc            ),
+  .rst_ni     ( rst_ni             ),
+  .clear_i    ( clear              ),
+  .ctrl_i     ( x_buffer_ctrl      ),
+  .flags_o    ( x_buffer_flgs      ),
+  .x_buffer_o ( x_buffer_q         ),
+  .x_buffer_i ( x_buffer_fifo.data )
 );
 
-logic [Height-1:0][BITW-1:0]   w_buffer_q;
+logic [Height-1:0][FpWidth-1:0]   w_buffer_q;
 
 redmule_w_buffer #(
-  .DW          ( DATAW_ALIGN ),
-  .FpFormat    ( FpFormat    ),
-  .Height      ( Height      )
+  .DataW       ( DataW        ),
+  .FpFormat    ( FpFormat     ),
+  .Height      ( Height       ),
+  .UseLatches  ( LatchBuffers )
 ) i_w_buffer   (
   .clk_i       ( clk_acc            ),
   .rst_ni      ( rst_ni             ),
@@ -353,11 +357,12 @@ redmule_w_buffer #(
   .w_buffer_i  ( w_buffer_fifo.data )
 );
 
-logic [Width-1:0][BITW-1:0] z_buffer_d, y_bias_q;
+logic [Width-1:0][FpWidth-1:0] z_buffer_d, y_bias_q;
 redmule_z_buffer #(
-  .DW            ( DATAW_ALIGN        ),
-  .FpFormat      ( FpFormat           ),
-  .Width         ( Width              )
+  .DataW         ( DataW        ),
+  .FpFormat      ( FpFormat     ),
+  .Width         ( Width        ),
+  .UseLatches    ( LatchBuffers )
 ) i_z_buffer     (
   .clk_i         ( clk_acc            ),
   .rst_ni        ( rst_ni             ),
@@ -483,9 +488,9 @@ assign z_priority = z_buffer_flgs.z_priority & !z_fifo_flgs.empty;
 logic z_fifo_empty, z_fifo_full;
 
 redmule_memory_scheduler #(
-  .DW ( DATAW_ALIGN ),
-  .W  ( Width       ),
-  .H  ( Height      )
+  .DW ( DataW  ),
+  .W  ( Width  ),
+  .H  ( Height )
 ) i_memory_scheduler (
   .clk_i             ( clk_acc         ),
   .rst_ni            ( rst_ni          ),
@@ -572,15 +577,12 @@ fifo_v3 #(
 /* |                        Controller                         | */
 /*---------------------------------------------------------------*/
 
-redmule_ctrl        #(
-  .N_CORES           ( N_CORES                 ),
-  .IO_REGS           ( REDMULE_REGS            ),
-  .ID_WIDTH          ( ID_WIDTH                ),
-  .N_CONTEXT         ( NumContext              ),
-  .SysDataWidth      ( SysDataWidth            ),
-  .Height            ( Height                  ),
-  .Width             ( Width                   ),
-  .NumPipeRegs       ( NumPipeRegs             )
+redmule_ctrl #(
+  .DataW    ( DataW       ),
+  .Height   ( Height      ),
+  .Width    ( Width       ),
+  .PipeRegs ( NumPipeRegs ),
+  .FpWidth  ( FpWidth     )
 ) i_control          (
   .clk_i             ( clk_acc                           ),
   .rst_ni            ( rst_ni                            ),
@@ -608,9 +610,11 @@ redmule_ctrl        #(
 /* |                        Local FSM                          | */
 /*---------------------------------------------------------------*/
 redmule_scheduler #(
-  .Height      ( Height         ),
-  .Width       ( Width          ),
-  .NumPipeRegs ( NumPipeRegs    )
+  .DataW       ( DataW       ),
+  .FpWidth     ( FpWidth     ),
+  .Height      ( Height      ),
+  .Width       ( Width       ),
+  .NumPipeRegs ( NumPipeRegs )
 ) i_scheduler (
   .clk_i               ( clk_acc             ),
   .rst_ni              ( rst_ni              ),

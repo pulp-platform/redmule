@@ -5,18 +5,18 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
-import fpnew_pkg::*;
-import hci_package::*;
-import redmule_pkg::*;
-
-module redmule_castin #(
-  parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = FpFmtConfig,
-  parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = IntFmtConfig,
-  parameter fpnew_pkg::fp_format_e   DstFormat    = FPFORMAT,
-  parameter fpnew_pkg::operation_e   Operation    = CAST_OP,
+module redmule_castin
+  import fpnew_pkg::*;
+  import hci_package::*;
+  import redmule_pkg::*;
+#(
+  parameter fpnew_pkg::fmt_logic_t   FpFmtConfig  = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t  IntFmtConfig = 4'b1000,
+  parameter fpnew_pkg::fp_format_e   DstFormat    = FP16,
+  parameter fpnew_pkg::operation_e   Operation    = F2F,
+  parameter int unsigned             DataW        = MaxDataW,
   parameter logic Pipe                            = 1'b0    ,
   localparam int unsigned BW = hci_package::DEFAULT_BW      ,
-  localparam int unsigned OW = ADDR_W                       ,
   localparam int unsigned UW = hci_package::DEFAULT_UW      ,
   localparam int unsigned WIDTH = fpnew_pkg::maximum(fpnew_pkg::max_fp_width(FpFmtConfig),
                                                      fpnew_pkg::max_int_width(IntFmtConfig))
@@ -25,23 +25,25 @@ module redmule_castin #(
   input  logic                   rst_ni   ,
   input  logic                   clear_i  ,
   input  logic                   cast_i   ,
-  input  logic [DATA_W-1:0]      src_i    ,
+  input  logic [DataW-1:0]       src_i    ,
   input  fpnew_pkg::fp_format_e  src_fmt_i,
-  output logic [DATA_W-1:0]      dst_o
+  output logic [DataW-1:0]       dst_o
 );
 
-localparam int unsigned NUM_CAST = DATA_W/BITW;
+localparam int unsigned NUM_CAST = DataW/fp_width(DstFormat);
 localparam int unsigned NARRBITW = fpnew_pkg::fp_width(fpnew_pkg::FP8);
 // localparam int unsigned ZEROBITS = WIDTH - NARRBITW;
-localparam int unsigned ZEROBITS = MIN_FMT;
+localparam int unsigned ZEROBITS = fpnew_pkg::min_fp_width(FpFmtConfig);
+localparam int unsigned MIN_FMT  = fpnew_pkg::min_fp_width(FpFmtConfig);
 localparam fpnew_pkg::int_format_e INT_SRC = fpnew_pkg::INT8;
+localparam int unsigned DW_RATIO = fp_width(DstFormat)/min_fp_width(FpFmtConfig);
 
-logic [DATA_W-1:0] src_int;
+logic [DataW-1:0] src_int;
 
-assign src_int[DATA_W-DW_CUT-1:0] = src_i[DATA_W-DW_CUT-1:0];
-assign src_int[DATA_W-1:DATA_W-DW_CUT] = '0;
+assign src_int[DataW/DW_RATIO-1:0] = src_i[DataW/DW_RATIO-1:0];
+assign src_int[DataW-1:DataW/DW_RATIO] = '0;
 
-logic [DATA_W-1:0] dst_int;
+logic [DataW-1:0] dst_int;
 logic [NUM_CAST-1:0][WIDTH-1:0] result ,
                                 operand;
 

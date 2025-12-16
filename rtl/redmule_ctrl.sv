@@ -11,15 +11,11 @@ import redmule_pkg::*;
 module redmule_ctrl
   import hwpe_ctrl_package::*;
 #(
-  parameter  int unsigned N_CORES       = 8                      ,
-  parameter  int unsigned IO_REGS       = REDMULE_REGS           ,
-  parameter  int unsigned ID_WIDTH      = 8                      ,
-  parameter  int unsigned SysDataWidth  = 32                     ,
-  parameter  int unsigned N_CONTEXT     = 2                      ,
-  parameter  int unsigned Height        = 4                      ,
-  parameter  int unsigned Width         = 8                      ,
-  parameter  int unsigned NumPipeRegs   = 3                      ,
-  localparam int unsigned TILE          = (NumPipeRegs +1)*Height
+  parameter int unsigned DataW = 0,
+  parameter int unsigned Height = MaxDim,
+  parameter int unsigned Width = MaxDim,
+  parameter int unsigned PipeRegs = MaxPipeRegs-1,
+  parameter int unsigned FpWidth = 16
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -60,7 +56,13 @@ module redmule_ctrl
 
   redmule_config_t redmule_config;
 
-  redmule_tiler  i_cfg_tiler (
+  redmule_tiler #(
+    .DataW    ( DataW    ),
+    .Height   ( Height   ),
+    .Width    ( Width    ),
+    .PipeRegs ( PipeRegs ),
+    .FpWidth  ( FpWidth  )
+  ) i_cfg_tiler (
     .clk_i       ( clk_i          ),
     .rst_ni      ( rst_ni         ),
     .clear_i     ( '0             ),

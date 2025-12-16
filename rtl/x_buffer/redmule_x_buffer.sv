@@ -10,25 +10,26 @@ module redmule_x_buffer
   import fpnew_pkg::*;
   import redmule_pkg::*;
 #(
-parameter int unsigned           DW        = 288,
-parameter fpnew_pkg::fp_format_e FpFormat  = fpnew_pkg::FP16,
-parameter int unsigned           Height    = ARRAY_HEIGHT,  // Number of PEs per row
-parameter int unsigned           Width     = ARRAY_WIDTH,   // Number of parallel index
-localparam int unsigned          BITW      = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
-localparam int unsigned          H         = Height,
-localparam int unsigned          W         = Width,
-localparam int unsigned          D         = DW/(H*BITW),
-localparam int unsigned          HALF_D    = D/2,
-localparam int unsigned          TOT_DEPTH = H*D
+parameter int unsigned           DataW      = MaxDataW,
+parameter fpnew_pkg::fp_format_e FpFormat   = fpnew_pkg::FP16,
+parameter int unsigned           Height     = MaxDim,  // Number of PEs per row
+parameter int unsigned           Width      = MaxDim,  // Number of parallel index
+parameter bit                    UseLatches = 0,
+localparam int unsigned          FpWidth    = fpnew_pkg::fp_width(FpFormat), // Number of bits for the given format
+localparam int unsigned          H          = Height,
+localparam int unsigned          W          = Width
 )(
-  input  logic                                               clk_i            ,
-  input  logic                                               rst_ni           ,
-  input  logic                                               clear_i          ,
-  input  x_buffer_ctrl_t                                     ctrl_i           ,
-  output x_buffer_flgs_t                                     flags_o          ,
-  output logic                      [W-1:0][H-1:0][BITW-1:0] x_buffer_o       ,
-  input  logic                                      [DW-1:0] x_buffer_i
+  input  logic                                       clk_i      ,
+  input  logic                                       rst_ni     ,
+  input  logic                                       clear_i    ,
+  input  x_buffer_ctrl_t                             ctrl_i     ,
+  output x_buffer_flgs_t                             flags_o    ,
+  output logic           [W-1:0][H-1:0][FpWidth-1:0] x_buffer_o ,
+  input  logic                           [DataW-1:0] x_buffer_i
 );
+
+localparam int unsigned D         = DataW/(H*FpWidth);
+localparam int unsigned TOT_DEPTH = H*D;
 
 typedef enum logic [2:0] {
   PRELOAD,
@@ -41,8 +42,8 @@ typedef enum logic [2:0] {
 
 logic [$clog2(W):0]             w_index_d, w_index_q;
 logic [$clog2(H)-1:0]           h_index_r, h_index_w;
-logic [W-1:0][BITW-1:0]         x_pad_q;
-logic [H-1:0][W-1:0][BITW-1:0]  x_buffer_q;
+logic [W-1:0][FpWidth-1:0]         x_pad_q;
+logic [H-1:0][W-1:0][FpWidth-1:0]  x_buffer_q;
 
 logic [$clog2(TOT_DEPTH)-1:0]   pad_r_addr_d, pad_r_addr_q;
 logic                           buf_r_addr, buf_w_addr;
@@ -91,9 +92,10 @@ assign pad_read_en   = buf_write_en || ctrl_i.pad_setup;
 assign pad_read_addr = ctrl_i.pad_setup ? '0 : pad_r_addr_d;
 
 redmule_x_pad_scm #(
-  .WORD_SIZE ( BITW      ),
-  .ROWS      ( W         ),
-  .COLS      ( TOT_DEPTH )
+  .WORD_SIZE   ( FpWidth    ),
+  .ROWS        ( W          ),
+  .COLS        ( TOT_DEPTH  ),
+  .USE_LATCHES ( UseLatches )
 ) i_x_pad (
   .clk_i        ( clk_i                     ),
   .rst_ni       ( rst_ni                    ),
@@ -112,10 +114,11 @@ assign buf_write_en = (current_state == FAST_FILL && ~refilling ||
                       current_state == FILL && ctrl_i.h_shift);
 
 redmule_x_buffer_scm #(
-  .WORD_SIZE ( BITW ),
-  .WIDTH     ( W    ),
-  .HEIGHT    ( 2    ),
-  .N_OUTPUTS ( H    )
+  .WORD_SIZE   ( FpWidth    ),
+  .WIDTH       ( W          ),
+  .HEIGHT      ( 2          ),
+  .N_OUTPUTS   ( H          ),
+  .USE_LATCHES ( UseLatches )
 ) i_x_buf (
   .clk_i        ( clk_i                                        ),
   .rst_ni       ( rst_ni                                       ),

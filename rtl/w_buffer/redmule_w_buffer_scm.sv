@@ -12,7 +12,7 @@ module redmule_w_buffer_scm
   parameter int unsigned ROWS        = 1 ,
   parameter int unsigned COLS        = 1 ,
   parameter int unsigned ELMS        = 1 ,
-  parameter int unsigned USE_LATCHES = LATCH_BUFFERS
+  parameter int unsigned USE_LATCHES = 0
 ) (
   input  logic                                                        clk_i            ,
   input  logic                                                        rst_ni           ,
