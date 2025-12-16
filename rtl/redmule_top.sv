@@ -346,6 +346,7 @@ redmule_w_buffer #(
   .DataW       ( DataW        ),
   .FpFormat    ( FpFormat     ),
   .Height      ( Height       ),
+  .NumRegs     ( NumPipeRegs  ),
   .UseLatches  ( LatchBuffers )
 ) i_w_buffer   (
   .clk_i       ( clk_acc            ),

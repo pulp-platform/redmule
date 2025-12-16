@@ -13,7 +13,7 @@ module redmule_w_buffer
   parameter int unsigned  DataW      = MaxDataW          ,
   parameter fp_format_e   FpFormat   = FP16              ,
   parameter int unsigned  Height     = MaxDim            , // Number of PEs per row
-  parameter int unsigned  N_REGS     = MaxPipeRegs-1     , // Number of registers per PE
+  parameter int unsigned  NumRegs    = MaxPipeRegs-1     , // Number of registers per PE
   parameter bit           UseLatches = 0                 ,
   localparam int unsigned BITW       = fp_width(FpFormat), // Number of bits for the given format
   localparam int unsigned H          = Height            ,
@@ -28,9 +28,9 @@ module redmule_w_buffer
   input  logic                 [DataW-1:0] w_buffer_i
 );
 
-localparam int unsigned C         = (D+N_REGS)/(N_REGS+1);
-localparam int unsigned EL_ADDR_W = $clog2(N_REGS+1);
-localparam int unsigned EL_DATA_W = (N_REGS+1)*BITW;
+localparam int unsigned C         = (D+NumRegs)/(NumRegs+1);
+localparam int unsigned EL_ADDR_W = $clog2(NumRegs+1);
+localparam int unsigned EL_DATA_W = (NumRegs+1)*BITW;
 
 logic [$clog2(H):0]            w_row;
 
@@ -51,7 +51,7 @@ logic gidx_present;
 logic                 buf_write_en;
 logic [$clog2(H)-1:0] buf_write_addr;
 
-logic [H-1:0][$clog2(N_REGS+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
+logic [H-1:0][$clog2(NumRegs+1)+$clog2(C)+$clog2(H)-1:0] buf_read_addr;
 
 for (genvar d = 0; d < D; d++) begin : gen_zero_padding
   assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
@@ -64,7 +64,7 @@ redmule_w_buffer_scm #(
   .WORD_SIZE   ( BITW       ),
   .ROWS        ( H          ),
   .COLS        ( C          ),
-  .ELMS        ( N_REGS+1   ),
+  .ELMS        ( NumRegs+1   ),
   .USE_LATCHES ( UseLatches )
 ) i_w_buf (
   .clk_i            ( clk_i           ),
@@ -122,8 +122,8 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : section_counter
   end
 end
 
-assign el_addr_d  = (el_addr_q == N_REGS) ? '0 : el_addr_q + 1;
-assign col_addr_d = (el_addr_q == N_REGS) ? (col_addr_q == (C-1) ? '0 : col_addr_q + 1) : col_addr_q;
+assign el_addr_d  = (el_addr_q == NumRegs) ? '0 : el_addr_q + 1;
+assign col_addr_d = (el_addr_q == NumRegs) ? (col_addr_q == (C-1) ? '0 : col_addr_q + 1) : col_addr_q;
 
 // Counter to track the number of shifts per row
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
