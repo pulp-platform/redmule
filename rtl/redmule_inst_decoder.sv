@@ -91,7 +91,7 @@ module redmule_inst_decoder
     unique case ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]})
       MCNFIG: begin
         x_issue_resp_o.writeback     = 'b0;
-        x_issue_resp_o.register_read = 'b011;
+        x_issue_resp_o.register_read = 'b111;
       end
       MARITH: begin
         x_issue_resp_o.writeback     = x_issue_req_i.instr[11:7] != 0;
@@ -385,6 +385,7 @@ module redmule_inst_decoder
           config_d[i].send_x          = cur_register[i].rs[1][17];
           config_d[i].receive_w       = cur_register[i].rs[1][18];
           config_d[i].send_w          = cur_register[i].rs[1][19];
+          config_d[i].y_offs          = cur_register[i].rs[2][31:0];
         end
         MARITH: begin
           config_d[i].x_addr          = cur_register[i].rs[0][31:0];

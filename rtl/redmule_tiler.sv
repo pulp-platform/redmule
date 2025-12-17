@@ -70,6 +70,9 @@ assign config_d.send_w          = config_i.send_w;
 assign config_d.receive_x       = config_i.receive_x;
 assign config_d.send_x          = config_i.send_x;
 
+assign config_d.y_offs          = config_i.y_offs;
+assign config_d.y_addr          = config_i.z_addr + config_i.y_offs;
+
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
 logic [15:0] x_cols_iter_nolftovr;
