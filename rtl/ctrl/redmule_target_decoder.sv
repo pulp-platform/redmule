@@ -17,8 +17,8 @@ module redmule_target_decoder
 )(
   input  logic                clk_i,
   input  logic                rst_ni,
-  input  logic                clear_i | target_clear_o,
-  output logic                regif_clear_o,
+  input  logic                clear_i,
+  output logic                target_clear_o,
   input  logic                config_ready_i,
   input  logic                op_done_i,
   output logic                config_valid_o,
