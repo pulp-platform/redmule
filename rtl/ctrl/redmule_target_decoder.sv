@@ -13,18 +13,18 @@ module redmule_target_decoder
   import redmule_pkg::*;
   import redmule_regif_pkg::*;
 #(
-  parameter  int unsigned InstFifoDepth         = 4,
   parameter  int unsigned OpIdWidth             = 4
 )(
   input  logic                clk_i,
   input  logic                rst_ni,
-  input  logic                clear_i,
+  input  logic                clear_i | target_clear_o,
+  output logic                regif_clear_o,
   input  logic                config_ready_i,
   input  logic                op_done_i,
   output logic                config_valid_o,
   output redmule_config_t     config_o,
-  // periph slave port
-  hwpe_ctrl_intf_periph.slave periph
+  // target port
+  hwpe_ctrl_intf_target.slave target
 );
 
   // target signals
@@ -64,8 +64,8 @@ module redmule_target_decoder
   ) i_target (
     .clk_i                ( clk_i              ),
     .rst_ni               ( rst_ni             ),
-    .clear_o              ( clear_o            ),
-    .target               ( periph             ),
+    .clear_o              ( regif_clear_o      ),
+    .target               ( target             ),
     .job_trigger_o        ( job_trigger        ),
     .job_done_i           ( job_done           ),
     .job_status_i         ( job_status         ),
@@ -117,7 +117,7 @@ module redmule_target_decoder
     if(~rst_ni) begin
       config_valid_q <= '0;
     end else begin
-      if(clear_i) begin // TODO: connect target-generated clear as well! 
+      if(clear_i | target_clear_o) begin // TODO: connect target-generated clear as well! 
         config_valid_q <= '0;
       end
       else if(job_trigger) begin
@@ -134,7 +134,7 @@ module redmule_target_decoder
     if(~rst_ni) begin
       job_status <= '0;
     end else begin
-      if(clear_i) begin // TODO: connect target-generated clear as well! 
+      if(clear_i | target_clear_o) begin // TODO: connect target-generated clear as well! 
         job_status <= '0;
       end
       else if((config_valid_q | job_trigger) & config_ready_i) begin
@@ -173,7 +173,7 @@ module redmule_target_decoder
     if (~rst_ni) begin
       op_id_counter_in_q <= 0;
     end else begin
-      if (clear_i) begin
+      if (clear_i | target_clear_o) begin
         op_id_counter_in_q <= 0;
       end else if (job_trigger) begin
         op_id_counter_in_q <= op_id_counter_in_q + 1;
@@ -188,7 +188,7 @@ module redmule_target_decoder
     if (~rst_ni) begin
       op_id_counter_out_q <= '1;
     end else begin
-      if (clear_i) begin
+      if (clear_i | target_clear_o) begin
         op_id_counter_out_q <= '1;
       end else if (op_done_i) begin
         op_id_counter_out_q <= op_id_counter_out_q + 1;

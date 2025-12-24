@@ -22,6 +22,8 @@ package redmule_pkg;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
 
+  typedef enum logic { HWPE_TARGET, XIF } ctrl_intf_e;
+  
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
 
