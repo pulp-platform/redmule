@@ -64,7 +64,7 @@ module redmule_target_decoder
   ) i_target (
     .clk_i                ( clk_i              ),
     .rst_ni               ( rst_ni             ),
-    .clear_o              ( regif_clear_o      ),
+    .clear_o              ( target_clear_o     ),
     .target               ( target             ),
     .job_trigger_o        ( job_trigger        ),
     .job_done_i           ( job_done           ),
