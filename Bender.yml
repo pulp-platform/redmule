@@ -48,6 +48,9 @@ sources:
     - rtl/redmule_memory_scheduler.sv
     - rtl/redmule_mux.sv
     - rtl/redmule_inst_decoder.sv
+    - rtl/ctrl/regif/redmule_regif_pkg.sv
+    - rtl/ctrl/regif/redmule_regif.sv
+    - rtl/ctrl/redmule_target_decoder.sv
 
     - target: any(redmule_test_complex, redmule_test_hwpe)
       files:
