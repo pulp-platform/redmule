@@ -13,7 +13,7 @@ module redmule_target_decoder
   import redmule_pkg::*;
   import redmule_regif_pkg::*;
 #(
-  parameter  int unsigned OpIdWidth             = 4
+  parameter  int unsigned OpIdWidth = 4
 )(
   input  logic                clk_i,
   input  logic                rst_ni,

@@ -31,14 +31,14 @@ enum gemm_op_e {
 
 // Enumeration for floating-point formats (aligned with redmule_pkg::gemm_fmt_e)
 enum gemm_fmt_e {
-    Float8     = 2'h0 { name = "Float8";     desc = "FP8 format"; };
-    Float16    = 2'h1 { name = "Float16";    desc = "FP16 format"; };
-    Float8Alt  = 2'h2 { name = "Float8Alt";  desc = "FP8 alternative format"; };
-    Float16Alt = 2'h3 { name = "Float16Alt"; desc = "FP16 alternative format"; };
+    Float8     = 2'h0 { name = "Float8";     desc = "FP8 format (E4M3)"; };
+    Float16    = 2'h1 { name = "Float16";    desc = "FP16 format (IEEE)"; };
+    Float8Alt  = 2'h2 { name = "Float8Alt";  desc = "FP8 alternative format (E5M2)"; };
+    Float16Alt = 2'h3 { name = "Float16Alt"; desc = "FP16 alternative format (BF16)"; };
 };
 
 addrmap redmule_regif {
-    name = "NEureka register interface";
+    name = "RedMulE register interface";
     desc = "Control register map for RedMulE, including mandatory control/status registers and job-dependent configuration registers.";
     // Mandatory COMMIT_TRIGGER register. Not to be updated inside HWPEs.
     reg hwpe_commit_trigger {
