@@ -50,6 +50,7 @@ module redmule_target_decoder
   logic [OpIdWidth-1:0] target_obi_rid;
 
   redmule_regif__in_t  hwif_in;
+  redmule_regif__in_t  hwif_in_target;
   redmule_regif__out_t hwif_out;
 
   /* HWPE controller target port */
@@ -84,7 +85,7 @@ module redmule_target_decoder
     .target_obi_rdata_i   ( target_obi_rdata   ),
     .target_obi_err_i     ( target_obi_err     ),
     .target_obi_rid_i     ( target_obi_rid     ),
-    .hwif_in              ( hwif_in            ),
+    .hwif_in              ( hwif_in_target    ),
     .hwif_out             ( hwif_out           )
   );
 
@@ -195,6 +196,12 @@ module redmule_target_decoder
       end
     end
   end
-  assign hwif_in.hwpe_job_dep.mopcnt.op_id_cnt.next = op_id_counter_out_q;
+
+  // Combine hwif_in from hwpe_ctrl_target with RedMulE-specific fields
+  always_comb
+  begin
+    hwif_in = hwif_in_target;
+    hwif_in.hwpe_job_dep.mopcnt.op_id_cnt.next = op_id_counter_out_q;
+  end
 
 endmodule: redmule_target_decoder
