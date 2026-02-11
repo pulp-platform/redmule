@@ -24,7 +24,7 @@ module redmule_target_decoder
   output logic                config_valid_o,
   output redmule_config_t     config_o,
   // target port
-  hwpe_ctrl_intf_target.slave target
+  hwpe_ctrl_intf_periph.slave target
 );
 
   // target signals
@@ -42,12 +42,12 @@ module redmule_target_decoder
   logic                 target_obi_we;
   logic [3:0]           target_obi_be;
   logic [31:0]          target_obi_wdata;
-  logic [ID_WIDTH-1:0]  target_obi_aid;
+  logic [OpIdWidth-1:0] target_obi_aid;
   logic                 target_obi_rvalid;
   logic                 target_obi_rready;
   logic [31:0]          target_obi_rdata;
   logic                 target_obi_err;
-  logic [ID_WIDTH-1:0]  target_obi_rid;
+  logic [OpIdWidth-1:0] target_obi_rid;
 
   redmule_regif__in_t  hwif_in;
   redmule_regif__out_t hwif_out;
@@ -55,7 +55,7 @@ module redmule_target_decoder
   /* HWPE controller target port */
   hwpe_ctrl_target #(
     .NB_CONTEXT            ( 2                                         ),
-    .ID_WIDTH              ( ID                                        ),
+    .ID_WIDTH              ( OpIdWidth                                 ),
     .ADDR_WIDTH            ( 10                                        ),
     .hwpe_ctrl_regif_in_t  ( redmule_regif__in_t                       ),
     .hwpe_ctrl_regif_out_t ( redmule_regif__out_t                      ),
@@ -90,7 +90,7 @@ module redmule_target_decoder
 
   /* RedMulE SystemRDL-generated register interface */
   redmule_regif #(
-    .ID_WIDTH ( ID_WIDTH )
+    .ID_WIDTH ( OpIdWidth )
   ) i_regif (
     .clk          ( clk_i             ),
     .arst_n       ( rst_ni            ),
@@ -158,9 +158,9 @@ module redmule_target_decoder
   assign config_o.x_addr          = hwif_out.hwpe_job_dep.marith0.x_addr.value;
   assign config_o.w_addr          = hwif_out.hwpe_job_dep.marith1.w_addr.value;
   assign config_o.z_addr          = hwif_out.hwpe_job_dep.marith2.z_addr.value;
-  assign config_o.gemm_ops        = redmule_gemm_ops_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_ops.value);
-  assign config_o.gemm_input_fmt  = redmule_gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_input_fmt.value);
-  assign config_o.gemm_output_fmt = redmule_gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_output_fmt.value);
+  assign config_o.gemm_ops        = gemm_op_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_ops.value);
+  assign config_o.gemm_input_fmt  = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_input_fmt.value);
+  assign config_o.gemm_output_fmt = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_output_fmt.value);
 
   // Operation ID counter:
   // op_id_counter_in_q:  Increments when operations are issued (tags for tracking)

@@ -25,7 +25,7 @@ module redmule_top
   parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
   // Choose interface
-  parameter ctrl_intf_e   CtrlIntfConfig        = XIF;
+  parameter ctrl_intf_e   CtrlIntfConfig        = XIF,
   // Custom instructions
   parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
   parameter logic [6:0]   MarithOpCode          = 7'b0001011,
@@ -80,7 +80,7 @@ module redmule_top
   // TCDM master ports for the memory side
   hci_core_intf.initiator tcdm,
   // HWPE-ctrl target port (unused if CtrlIntfConfig = XIF)
-  hwpe_ctrl_intf_target.slave target
+  hwpe_ctrl_intf_periph.slave target
 );
 
 localparam int unsigned FpWidth = fp_width(FpFormat);
