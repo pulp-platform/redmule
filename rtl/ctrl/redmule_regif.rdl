@@ -261,8 +261,8 @@ addrmap redmule_regif {
     };
 
     // HWPE control address map. Update inside HWPEs
-    hwpe_ctrl_mandatory hwpe_ctrl      @ 0x00;
-    hwpe_ctrl_job_dep   hwpe_job_dep   @ 0x20;
-    hwpe_ctrl_job_indep hwpe_job_indep @ 0x40;
+    hwpe_ctrl_mandatory hwpe_ctrl    @ 0x00;
+    hwpe_ctrl_job_dep   hwpe_job_dep @ 0x20;
+    hwpe_ctrl_job_indep hwpe_job_indep;
 
 };
