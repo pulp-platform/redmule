@@ -5,7 +5,7 @@ package redmule_regif_pkg;
 
     localparam REDMULE_REGIF_DATA_WIDTH = 32;
     localparam REDMULE_REGIF_MIN_ADDR_WIDTH = 32;
-    localparam REDMULE_REGIF_SIZE = 'h40;
+    localparam REDMULE_REGIF_SIZE = 'h44;
 
     typedef struct packed {
         logic [31:0] next;

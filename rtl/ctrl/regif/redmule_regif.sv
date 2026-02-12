@@ -173,7 +173,7 @@ module redmule_regif #(
         decoded_reg_strb.hwpe_job_dep.marith1 = cpuif_req_masked & (cpuif_addr == 32'h30);
         decoded_reg_strb.hwpe_job_dep.marith2 = cpuif_req_masked & (cpuif_addr == 32'h34);
         decoded_reg_strb.hwpe_job_dep.mopcnt = cpuif_req_masked & (cpuif_addr == 32'h38) & !cpuif_req_is_wr;
-        decoded_reg_strb.hwpe_job_indep.reserved = cpuif_req_masked & (cpuif_addr == 32'h3c) & !cpuif_req_is_wr;
+        decoded_reg_strb.hwpe_job_indep.reserved = cpuif_req_masked & (cpuif_addr == 32'h40) & !cpuif_req_is_wr;
         decoded_err = (~is_valid_addr | is_invalid_rw) & decoded_req;
     end
 
