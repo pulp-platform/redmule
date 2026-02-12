@@ -571,7 +571,7 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
   assign target.r_valid = '0;
   assign target.r_id = '0;
 end
-else begin
+else begin : mm_ctrl_intf_gen
   redmule_target_decoder i_target_decoder (
     .clk_i              ( clk_i                                  ),
     .rst_ni             ( rst_ni                                 ),

@@ -29,7 +29,7 @@ module redmule_target_decoder
 
   // target signals
   logic                                     job_trigger;
-  logic                                     job_done, job_done_q;
+  logic                                     job_done;
   logic [31:0]                              job_status;
   redmule_regif__hwpe_ctrl_job_indep__out_t job_indep_regs;
   logic                                     job_dep_regs_valid;
@@ -57,7 +57,7 @@ module redmule_target_decoder
   hwpe_ctrl_target #(
     .NB_CONTEXT            ( 2                                         ),
     .ID_WIDTH              ( OpIdWidth                                 ),
-    .ADDR_WIDTH            ( 10                                        ),
+    .ADDR_WIDTH            ( 8                                         ),
     .hwpe_ctrl_regif_in_t  ( redmule_regif__in_t                       ),
     .hwpe_ctrl_regif_out_t ( redmule_regif__out_t                      ),
     .hwpe_ctrl_job_indep_t ( redmule_regif__hwpe_ctrl_job_indep__out_t ),
@@ -112,24 +112,7 @@ module redmule_target_decoder
   );
 
   assign job_done = op_done_i;
-
-  logic config_valid_q;
-  always_ff @(posedge clk_i or negedge rst_ni) begin : config_valid_ff
-    if(~rst_ni) begin
-      config_valid_q <= '0;
-    end else begin
-      if(clear_i | target_clear_o) begin // TODO: connect target-generated clear as well! 
-        config_valid_q <= '0;
-      end
-      else if(job_trigger) begin
-        config_valid_q <= 1'b1;
-      end
-      else if(op_done_i) begin
-        config_valid_q <= '0;
-      end
-    end
-  end
-  assign config_valid_o = config_valid_q;
+  assign config_valid_o = job_trigger;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : job_status_trigger
     if(~rst_ni) begin
@@ -138,7 +121,7 @@ module redmule_target_decoder
       if(clear_i | target_clear_o) begin // TODO: connect target-generated clear as well! 
         job_status <= '0;
       end
-      else if((config_valid_q | job_trigger) & config_ready_i) begin
+      else if(job_trigger & config_ready_i) begin
         job_status <= 32'h1;
       end
       else if(op_done_i) begin
