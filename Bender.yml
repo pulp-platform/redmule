@@ -16,8 +16,8 @@ dependencies:
   cv32e40x          : { git: "https://github.com/pulp-platform/cv32e40x.git"          , rev: "redmule-v1.0"                           }
   ibex              : { git: "https://github.com/pulp-platform/ibex.git"              , rev: pulpissimo-v6.1.2                        }
   hwpe-stream       : { git: "https://github.com/pulp-platform/hwpe-stream.git"       , version: 1.9.2                                }
-  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , rev: 7d64db39f1f1e4b7032bcd6e3cbfed8201e13005 } # branch: fc/rdl
-  hci               : { git: "https://github.com/pulp-platform/hci.git"               , rev: 4acc35cb2ec7692df57f2dfa73c6a76cc9eb5a28 } # branch: fc/magia
+  hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.0.0                                } 
+  hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.3.0                                } 
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
   common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
