@@ -40,7 +40,7 @@ f = open(args.file_name, "w")
 # Test Matrices
 X = torch.rand(m_size, n_size)
 W = torch.rand(n_size, k_size)
-Y = torch.rand(m_size, k_size)
+Y = torch.zeros(m_size, k_size)
 Z = torch.rand(m_size, k_size)
 
 print("\nInput Data: ")
@@ -119,16 +119,6 @@ for i in range(n_size):
     f_w.write("\n")
 f_w.close()
 
-f_y = open(''+txt_path+'/y_input.txt', "w")
-for i in range(m_size):
-    for j in range (k_size):
-        y_bin = bin(np.float16(Y[i][j]).view('H'))[2:].zfill(16)
-        y_hex = hex(int(y_bin, 2))[2:]
-        f_y.write(y_hex)
-        f_y.write(' ')
-    f_y.write("\n")
-f_y.close()
-
 f_z = open(''+txt_path+'/z_output.txt', "w")
 for i in range(m_size):
     for j in range (k_size):
@@ -188,21 +178,6 @@ for i in range(n_size):
 f_w.write("};")
 f_w.close()
 
-f_y = open(''+inc_path+'/y_input.h', "w")
-f_y.write(''+header+'')
-f_y.write('uint16_t y_inp ['+y_dim+'] = {\n')
-for i in range(m_size):
-    for j in range (k_size):
-        y_bin = bin(np.float16(Y[i][j]).view('H'))[2:].zfill(16)
-        y_hex = hex(int(y_bin, 2))[2:]
-        if (i == m_size - 1 and j == k_size - 1):
-          f_y.write('0x'+y_hex+' ')
-        else:
-          f_y.write('0x'+y_hex+', ')
-    f_y.write("\n")
-f_y.write("};")
-f_y.close()
-
 f_z = open(''+inc_path+'/z_output.h', "w")
 f_z.write(''+header+'')
 f_z.write('uint16_t z_oup ['+z_dim+'] = {\n')
@@ -229,7 +204,7 @@ f_d.write('#define K_SIZE  '+out_cols+'\n' )
 f_d.write('#define SRC_FMT FP16\n'         )
 f_d.write('#define DST_FMT FP16\n'         )
 f_d.write('#define FPFORMAT 16\n'          )
-f_d.write('uint8_t gemm_ops = GEMM; \n'    )
+f_d.write('uint8_t gemm_ops = MATMUL; \n'  )
 f_d.write('\n#endif\n'                     )
 f_d.close()
 

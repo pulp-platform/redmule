@@ -385,6 +385,7 @@ module redmule_inst_decoder
           config_d[i].send_x          = cur_register[i].rs[1][17];
           config_d[i].receive_w       = cur_register[i].rs[1][18];
           config_d[i].send_w          = cur_register[i].rs[1][19];
+          config_d[i].gemm_ops        = cur_register[i].rs[1][20] ? MATMUL : GEMM;
           config_d[i].y_offs          = cur_register[i].rs[2][31:0];
         end
         MARITH: begin
@@ -392,7 +393,6 @@ module redmule_inst_decoder
           config_d[i].w_addr          = cur_register[i].rs[1][31:0];
           config_d[i].z_addr          = cur_register[i].rs[2][31:0];
           // TODO: These are fixed for now
-          config_d[i].gemm_ops        = GEMM;
           config_d[i].gemm_input_fmt  = redmule_pkg::Float16;
           config_d[i].gemm_output_fmt = redmule_pkg::Float16;
         end

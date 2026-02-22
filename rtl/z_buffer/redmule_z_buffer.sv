@@ -39,6 +39,8 @@ typedef enum logic [1:0] {
 
 redmule_z_state_e current_state, next_state;
 
+logic [W-1:0][BITW-1:0] y_buffer_q;
+
 logic rst_fill   ,
       rst_w_load ,
       rst_d_count;
@@ -71,10 +73,12 @@ redmule_z_buffer_scm #(
   .col_read_addr_i  ( store_shift_d             ),
   .row_read_addr_i  ( d_index                   ),
   .col_rdata_o      ( z_buffer_o                ),
-  .row_rdata_o      ( y_buffer_o                )
+  .row_rdata_o      ( y_buffer_q                )
 );
 
-assign flags_o.y_ready = load_en && ctrl_i.y_valid;
+assign y_buffer_o = ctrl_i.mask_y ? y_buffer_q : '0;
+
+assign flags_o.y_ready = load_en && ctrl_i.y_valid && ctrl_i.is_biased;
 assign flags_o.z_valid = store_en && ctrl_i.ready;
 assign flags_o.z_priority = store_en;
 

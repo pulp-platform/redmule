@@ -42,6 +42,7 @@ package redmule_pkg;
   } cntrl_streamer_t;
 
   typedef struct packed {
+    logic                             store_fifo_empty;
     hci_package::hci_streamer_flags_t x_stream_source_flags;
     hci_package::hci_streamer_flags_t w_stream_source_flags;
     hci_package::hci_streamer_flags_t y_stream_source_flags;
@@ -83,6 +84,8 @@ package redmule_pkg;
     logic        ready;
     logic        y_valid;
     logic        first_load;
+    logic        is_biased;
+    logic        mask_y;
     logic [$clog2(MaxDim)-1:0]   y_width;
     logic [$clog2(MaxDepth)-1:0] y_height;
     logic [$clog2(MaxDim)-1:0]   z_width;

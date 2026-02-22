@@ -232,18 +232,22 @@ assign z_fifo_d.r_eready     = zstream2cast.r_eready;
 assign z_fifo_d.ecc          = zstream2cast.ecc;
 assign zstream2cast.r_ecc    = z_fifo_d.r_ecc;
 
+flags_fifo_t store_fifo_flags;
+
 // HCI store fifo.
 hci_core_fifo #(
   .FIFO_DEPTH                      ( 2                          ),
   .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_store_fifo (
-  .clk_i          ( clk_i    ),
-  .rst_ni         ( rst_ni   ),
-  .clear_i        ( clear_i  ),
-  .flags_o        (          ),
-  .tcdm_target    ( z_fifo_d ),
-  .tcdm_initiator ( z_fifo_q )
+  .clk_i          ( clk_i            ),
+  .rst_ni         ( rst_ni           ),
+  .clear_i        ( clear_i          ),
+  .flags_o        ( store_fifo_flags ),
+  .tcdm_target    ( z_fifo_d         ),
+  .tcdm_initiator ( z_fifo_q         )
 );
+
+assign flags_o.store_fifo_empty = store_fifo_flags.empty;
 
 // Assigning the store FIFO output to the store side of the y/z multiplexer.
 hci_core_assign i_store_assign ( .tcdm_target (z_fifo_q), .tcdm_initiator (virt_tcdm[NumStreamSources]) );

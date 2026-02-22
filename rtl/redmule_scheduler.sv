@@ -57,7 +57,13 @@ module redmule_scheduler
   output x_buffer_ctrl_t                  cntrl_x_buffer_o   ,
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
-  output flgs_scheduler_t                 flgs_scheduler_o
+  output flgs_scheduler_t                 flgs_scheduler_o   ,
+
+  /*********************************************************/
+  /*                   Synchronization                     */
+  /*********************************************************/
+  output logic                            sync_o            ,
+  input  logic                            sync_i
 );
 
   typedef enum logic [1:0] {
@@ -374,6 +380,9 @@ module redmule_scheduler
   redmule_config_t y_config;
   logic            y_config_empty, y_config_full;
 
+  redmule_config_t y_config_fast;
+  logic            y_config_fast_empty, y_config_fast_full;
+
   logic [15:0]                    y_cols_iter_d, y_cols_iter_q,
                                   y_rows_iter_d, y_rows_iter_q;
 
@@ -382,6 +391,10 @@ module redmule_scheduler
   logic [$clog2(NumPipeRegs+1)-1:0] z_wait_counter_d, z_wait_counter_q;
   logic [$clog2(D)-1:0]           z_avail_counter_d, z_avail_counter_q,
                                   y_push_counter_d, y_push_counter_q;
+
+  logic [15:0]                    y_loads_cnt_d, y_loads_cnt_q;
+
+  logic                           y_pushed_q;
 
   logic                           z_wait_en, z_wait_clr,
                                   z_avail_en, z_avail_clr,
@@ -405,8 +418,52 @@ module redmule_scheduler
     .data_i     ( config_i                                                  ),
     .push_i     ( config_valid_i                                            ),
     .data_o     ( y_config                                                  ),
-    .pop_i      ( y_rows_iter_d == y_config.x_rows_iter-1 && y_rows_iter_en ) // CHECKME!!
+    .pop_i      ( y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en )
   );
+
+  fifo_v3 #(
+    .FALL_THROUGH (0),
+    .DEPTH (2),
+    .dtype (redmule_config_t)
+  ) i_y_config_fast_fifo (
+    .clk_i      ( clk_i                                                                      ),
+    .rst_ni     ( rst_ni                                                                     ),
+    .flush_i    ( clear                                                                      ),
+    .testmode_i ( '0                                                                         ),
+    .full_o     ( y_config_fast_full                                                         ),
+    .empty_o    ( y_config_fast_empty                                                        ),
+    .usage_o    (                                                                            ),
+    .data_i     ( config_i                                                                   ),
+    .push_i     ( config_valid_i                                                             ),
+    .data_o     ( y_config_fast                                                              ),
+    .pop_i      ( y_loads_cnt_q == y_config_fast.tot_stores-1 && y_pushed_q && ~stall_engine )
+  );
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
+    if(~rst_ni) begin
+      y_pushed_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst || y_pushed_q && ~stall_engine) begin
+        y_pushed_q <= '0;
+      end else if (flgs_z_buffer_i.y_pushed) begin
+        y_pushed_q <= 1'b1;
+      end
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : y_loads_counter
+    if(~rst_ni) begin
+      y_loads_cnt_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        y_loads_cnt_q <= '0;
+      end else if (y_pushed_q && ~stall_engine) begin
+        y_loads_cnt_q <= y_loads_cnt_d;
+      end
+    end
+  end
+
+  assign y_loads_cnt_d = y_loads_cnt_q < y_config_fast.tot_stores-1 ? y_loads_cnt_q + 1 : '0;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_columns_iteration
     if(~rst_ni) begin
@@ -519,8 +576,8 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config.w_rows_iter-1 && y_config.w_rows_lftovr != '0 ? y_config.w_rows_lftovr : W;
-  assign y_height = y_cols_iter_q == y_config.w_cols_iter-1 && y_config.w_cols_lftovr != '0 ? y_config.w_cols_lftovr : D;
+  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
     if(~rst_ni) begin
@@ -547,10 +604,12 @@ module redmule_scheduler
   end
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
-  assign cntrl_z_buffer_o.y_valid       = y_valid_i;
+  assign cntrl_z_buffer_o.y_valid       = y_valid_i && y_config_fast.gemm_selection;
   assign cntrl_z_buffer_o.y_push_enable = y_push_en && ~stall_engine;
   assign cntrl_z_buffer_o.fill          = z_avail_en && reg_enable_o;
   assign cntrl_z_buffer_o.first_load    = y_cols_iter_q == '0 && y_rows_iter_q == '0;
+  assign cntrl_z_buffer_o.is_biased     = y_config_fast.gemm_selection;
+  assign cntrl_z_buffer_o.mask_y        = y_config_fast.gemm_selection;
 
   assign cntrl_z_buffer_o.y_width       = y_width;
   assign cntrl_z_buffer_o.y_height      = y_height;
@@ -661,7 +720,7 @@ module redmule_scheduler
   // Check if the new Y rows are loaded and ready to be pushed
   // Only enable this check when the results of an iteration are available
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
-  assign check_y_loaded_en = z_wait_counter_q == NumPipeRegs && ~w_done;
+  assign check_y_loaded_en = z_wait_counter_q == NumPipeRegs && ~w_done && y_config_fast.gemm_selection;
 
   /******************************
    *           FLAGS            *
@@ -728,6 +787,14 @@ module redmule_scheduler
   assign start_computation = first_load && next_state == LOAD_W && ~stall_engine;
 
   /*********************************
+   *        Synchronization        *
+   *********************************/
+  logic is_tandem;
+
+  assign is_tandem = y_config.send_w || y_config.send_x || y_config.receive_w || y_config.receive_x;
+  assign sync_o    = current_state == PRELOAD && (y_config.gemm_selection ? flgs_x_buffer_i.full && flgs_z_buffer_i.loaded : flgs_x_buffer_i.full);
+
+  /*********************************
    *            FSM                *
    *********************************/
 
@@ -754,12 +821,12 @@ module redmule_scheduler
 
       // Wait for the X and Y buffers to be full
       PRELOAD: begin
-        if (config_i.gemm_selection) begin
-          if (flgs_x_buffer_i.full && flgs_z_buffer_i.loaded) begin
+        if (y_config.gemm_selection) begin
+          if (flgs_x_buffer_i.full && flgs_z_buffer_i.loaded && (~is_tandem || sync_i)) begin
             next_state = LOAD_W;
           end
         end else begin // The Y matrix is not required
-          if (flgs_x_buffer_i.full) begin
+          if (flgs_x_buffer_i.full && (~is_tandem || sync_i)) begin
             next_state = LOAD_W;
           end
         end

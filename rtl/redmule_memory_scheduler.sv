@@ -52,6 +52,11 @@ module redmule_memory_scheduler
 
   logic            start_x_streamer;
 
+  logic            store_empty_rise;
+  logic            store_empty_rise_cnt;
+
+  logic            y_fifo_pop;
+
   assign x_done_o = tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done;
 
   fifo_v3 #(
@@ -95,17 +100,17 @@ module redmule_memory_scheduler
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_y_config_fifo (
-    .clk_i      ( clk_i                                      ),
-    .rst_ni     ( rst_ni                                     ),
-    .flush_i    ( clear_i | cntrl_scheduler_i.rst            ),
-    .testmode_i ( '0                                         ),
-    .full_o     ( y_config_full                              ),
-    .empty_o    ( y_config_empty                             ),
-    .usage_o    (                                            ),
-    .data_i     ( config_i                                   ),
-    .push_i     ( config_valid_i                             ),
-    .data_o     ( y_config                                   ),
-    .pop_i      ( flgs_streamer_i.y_stream_source_flags.done )
+    .clk_i      ( clk_i                                                                                                           ),
+    .rst_ni     ( rst_ni                                                                                                          ),
+    .flush_i    ( clear_i | cntrl_scheduler_i.rst                                                                                 ),
+    .testmode_i ( '0                                                                                                              ),
+    .full_o     ( y_config_full                                                                                                   ),
+    .empty_o    ( y_config_empty                                                                                                  ),
+    .usage_o    (                                                                                                                 ),
+    .data_i     ( config_i                                                                                                        ),
+    .push_i     ( config_valid_i                                                                                                  ),
+    .data_o     ( y_config                                                                                                        ),
+    .pop_i      ( y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : store_empty_rise_cnt && store_empty_rise ) // In case of a MATMUL followed by a GEMM, load Y only after the first 2 Z chunks have been completely stored
   );
 
   fifo_v3 #(
@@ -125,6 +130,28 @@ module redmule_memory_scheduler
     .data_o     ( z_config                                 ),
     .pop_i      ( flgs_streamer_i.z_stream_sink_flags.done )
   );
+
+  edge_detect i_store_fifo_empty_edge_detector (
+    .clk_i  ( clk_i                            ),
+    .rst_ni ( rst_ni                           ),
+    .d_i    ( flgs_streamer_i.store_fifo_empty ),
+    .re_o   ( store_empty_rise                 ),
+    .fe_o   (                                  )
+  );
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (~rst_ni) begin
+      store_empty_rise_cnt <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst || flgs_streamer_i.y_stream_source_flags.done) begin
+        store_empty_rise_cnt <= '0;
+      end else if (store_empty_rise && ~y_config_empty) begin
+        store_empty_rise_cnt <= 1'b1;
+      end
+    end
+  end
+
+  assign y_fifo_pop = y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : (store_empty_rise_cnt && store_empty_rise) || (store_empty_rise && flgs_streamer_i.z_stream_sink_flags.ready_start);
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;

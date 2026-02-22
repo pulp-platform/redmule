@@ -72,6 +72,9 @@ module redmule_top
   output x_result_t     x_result_o,
   output logic          x_result_valid_o,
   input  logic          x_result_ready_i,
+  // Synchronization ports
+  output logic          sync_o,
+  input  logic          sync_i,
   // TCDM master ports for the memory side
   hci_core_intf.initiator tcdm
 );
@@ -301,7 +304,7 @@ hwpe_stream_fifo #(
 
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DataW         ),
-  .FIFO_DEPTH     ( 2             )
+  .FIFO_DEPTH     ( 4             )
 ) i_z_buffer_fifo (
   .clk_i          ( clk_acc       ),
   .rst_ni         ( rst_ni        ),
@@ -639,7 +642,9 @@ redmule_scheduler #(
   .cntrl_x_buffer_o    ( x_buffer_ctrl       ),
   .cntrl_w_buffer_o    ( w_buffer_ctrl       ),
   .cntrl_z_buffer_o    ( z_buffer_ctrl       ),
-  .flgs_scheduler_o    ( flgs_scheduler      )
+  .flgs_scheduler_o    ( flgs_scheduler      ),
+  .sync_i,
+  .sync_o
 );
 
 endmodule : redmule_top
