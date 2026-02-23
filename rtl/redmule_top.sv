@@ -14,32 +14,33 @@ module redmule_top
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter int unsigned  DataW                  = MaxDataW, // TCDM port dimension (in bits)
-  parameter fp_format_e   FpFormat               = FP16, // Data format (default is FP16)
-  parameter int unsigned  Height                 = MaxDim, // Number of PEs within a row
-  parameter int unsigned  Width                  = MaxDim, // Number of parallel rows
-  parameter int unsigned  NumPipeRegs            = MaxPipeRegs-1, // Number of pipeline registers within each PE
-  parameter pipe_config_t PipeConfig             = DISTRIBUTED,
-  parameter int unsigned  EccChunkSize           = 32,
-  parameter bit           LatchBuffers           = 0,
-  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
-  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
+  parameter int unsigned  DataW                   = MaxDataW, // TCDM port dimension (in bits)
+  parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault, // set to 1 to support misaligned accesses on TCDM
+  parameter fp_format_e   FpFormat                = FP16, // Data format (default is FP16)
+  parameter int unsigned  Height                  = MaxDim, // Number of PEs within a row
+  parameter int unsigned  Width                   = MaxDim, // Number of parallel rows
+  parameter int unsigned  NumPipeRegs             = MaxPipeRegs-1, // Number of pipeline registers within each PE
+  parameter pipe_config_t PipeConfig              = DISTRIBUTED,
+  parameter int unsigned  EccChunkSize            = 32,
+  parameter bit           LatchBuffers            = 0,
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig   = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig  = 4'b1000,
   // Choose interface
-  parameter ctrl_intf_e   CtrlIntfConfig        = XIF,
+  parameter ctrl_intf_e   CtrlIntfConfig          = XIF,
   // Custom instructions
-  parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
-  parameter logic [6:0]   MarithOpCode          = 7'b0001011,
-  parameter logic [6:0]   MopcntOpCode          = 7'b0001011,
-  parameter logic [2:0]   McnfigFunct3          = 3'b000,
-  parameter logic [2:0]   MarithFunct3          = 3'b001,
-  parameter logic [2:0]   MopcntFunct3          = 3'b010,
-  parameter logic [1:0]   McnfigFunct2          = 2'b00,
-  parameter logic [1:0]   MarithFunct2          = 2'b00,
-  parameter logic [1:0]   MopcntFunct2          = 2'b00,
+  parameter logic [6:0]   McnfigOpCode            = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode            = 7'b0001011,
+  parameter logic [6:0]   MopcntOpCode            = 7'b0001011,
+  parameter logic [2:0]   McnfigFunct3            = 3'b000,
+  parameter logic [2:0]   MarithFunct3            = 3'b001,
+  parameter logic [2:0]   MopcntFunct3            = 3'b010,
+  parameter logic [1:0]   McnfigFunct2            = 2'b00,
+  parameter logic [1:0]   MarithFunct2            = 2'b00,
+  parameter logic [1:0]   MopcntFunct2            = 2'b00,
   // XIF parameters
-  parameter int unsigned  XifNumHarts           = 1,
-  parameter int unsigned  XifIdWidth            = 1,
-  parameter int unsigned  XifIssueRegisterSplit = 0,
+  parameter int unsigned  XifNumHarts             = 1,
+  parameter int unsigned  XifIdWidth              = 1,
+  parameter int unsigned  XifIssueRegisterSplit   = 0,
   // XIF types
   parameter type          x_issue_req_t  = logic,
   parameter type          x_issue_resp_t = logic,
@@ -174,11 +175,12 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( cl
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DataW          ( DataW        ),
-  .EccChunkSize   ( EccChunkSize ),
-  .FpFormat       ( FpFormat     ),
-  .FpFmtConfig    ( FpFmtConfig  ),
-  .IntFmtConfig   ( IntFmtConfig ),
+  .DataW                   ( DataW                   ),
+  .MisalignedAccessSupport ( MisalignedAccessSupport ),
+  .EccChunkSize            ( EccChunkSize            ),
+  .FpFormat                ( FpFormat                ),
+  .FpFmtConfig             ( FpFmtConfig             ),
+  .IntFmtConfig            ( IntFmtConfig            ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i           ( clk_acc         ),

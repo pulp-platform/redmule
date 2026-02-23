@@ -16,9 +16,9 @@ module redmule_streamer
   import hwpe_stream_package::*;
 #(
   parameter  int unsigned           DataW        = MaxDataW,
+  parameter  int unsigned           MisalignedAccessSupport = MisalignedAccessSupportDefault,
   parameter  int unsigned           FpFormat     = FP16    ,
   parameter  int unsigned           EccChunkSize = 32      ,
-  localparam int unsigned           REALIGN      = 0       ,
   parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
@@ -45,29 +45,17 @@ module redmule_streamer
   output flgs_streamer_t         flags_o
 );
 
-localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
-// this localparam is reused for all internal, non-ecc HCI interfaces
+// Non-ECC variant of tcdm size params, used for all internal (non-ECC) interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
-  DW:  DataW,
-  AW:  DEFAULT_AW,
-  BW:  DEFAULT_BW,
-  UW:  UW,
-  IW:  DEFAULT_IW,
+  DW:  `HCI_SIZE_GET_DW(tcdm),
+  AW:  `HCI_SIZE_GET_AW(tcdm),
+  BW:  `HCI_SIZE_GET_BW(tcdm),
+  UW:  `HCI_SIZE_GET_UW(tcdm),
+  IW:  `HCI_SIZE_GET_IW(tcdm),
   EW:  DEFAULT_EW,
-  EHW: DEFAULT_EHW
-};
-
-// this localparam is reused for the  internal ecc HCI interface
-localparam hci_size_parameter_t `HCI_SIZE_PARAM(ecc_ldst_tcdm) = '{
-  DW:  DataW,
-  AW:  DEFAULT_AW,
-  BW:  DEFAULT_BW,
-  UW:  UW,
-  IW:  DEFAULT_IW,
-  EW:  EW,
-  EHW: DEFAULT_EHW
+  EHW: `HCI_SIZE_GET_EHW(tcdm)
 };
 
 // Here the dynamic mux for virtual_tcdm interfaces
@@ -77,8 +65,13 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) ldst_tcdm ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -86,8 +79,13 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -95,18 +93,23 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
-  logic [DataW/EccChunkSize-1:0] data_single_err, data_multi_err;
+  logic [`HCI_SIZE_GET_DW(tcdm)/EccChunkSize-1:0] data_single_err, data_multi_err;
   logic                          meta_single_err, meta_multi_err;
 
   hci_ecc_enc #(
-    .DW ( DataW ),
-    .`HCI_SIZE_PARAM(tcdm_target)    ( `HCI_SIZE_PARAM(ldst_tcdm)     ),
-    .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ecc_ldst_tcdm) )
+    .DW ( `HCI_SIZE_GET_DW(tcdm) ),
+    .`HCI_SIZE_PARAM(tcdm_target)    ( `HCI_SIZE_PARAM(ldst_tcdm) ),
+    .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(tcdm)      )
   ) i_ecc_enc (
     .r_data_single_err_o ( data_single_err ),
     .r_data_multi_err_o  ( data_multi_err  ),
@@ -127,8 +130,13 @@ hci_core_intf #(
   .WAIVE_RQ3_ASSERT  ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) virt_tcdm [0:NumStreamSources+1] ( .clk ( clk_i ) );
 
 redmule_mux #(
@@ -161,10 +169,9 @@ hci_core_r_valid_filter #(
  * side (virt_tcdm[NumStreamSources]) of the LD/ST multiplexer.                         */
 
 // Sink module that turns the incoming Z stream into TCDM.
-hci_core_intf #( .DW ( DataW ),
-                .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
+`HCI_INTF_EXPLICIT_PARAM(zstream2cast, clk_i, `HCI_SIZE_PARAM(ldst_tcdm));
 hci_core_sink         #(
-  .MISALIGNED_ACCESSES ( REALIGN                      ),
+  .MISALIGNED_ACCESSES ( MisalignedAccessSupport ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_stream_sink        (
   .clk_i               ( clk_i                       ),
@@ -184,11 +191,15 @@ hci_core_intf #(
   .WAIVE_RSP3_ASSERT ( 1'b1 ), // waive RSP-3 on memory-side of HCI FIFO
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) z_fifo_d ( .clk ( clk_i ) );
-hci_core_intf #( .DW ( DataW ),
-                 .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
+`HCI_INTF_EXPLICIT_PARAM(z_fifo_q, clk_i, `HCI_SIZE_PARAM(ldst_tcdm));
 
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
@@ -236,7 +247,7 @@ flags_fifo_t store_fifo_flags;
 
 // HCI store fifo.
 hci_core_fifo #(
-  .FIFO_DEPTH                      ( 2                          ),
+  .FIFO_DEPTH                      ( 2                     ),
   .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_store_fifo (
   .clk_i          ( clk_i            ),
@@ -275,8 +286,13 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -285,8 +301,13 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DataW ),
-  .UW ( UW )
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -295,8 +316,14 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
-  .DW ( DataW ),
-  .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
+  .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+  .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+  .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+  .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+  .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+  .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) out_stream [0:NumStreamSources-1] ( .clk( clk_i ) );
 
@@ -376,7 +403,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   end
 
   hci_core_source       #(
-    .MISALIGNED_ACCESSES   ( REALIGN                    ),
+    .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
     .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
   ) i_stream_source      (
     .clk_i               ( clk_i           ),
@@ -405,5 +432,14 @@ hwpe_stream_assign i_wstream_assign ( .push_i( out_stream[WsourceStreamId] ) ,
 
 hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
                                       .pop_o ( y_stream_o                  ) );
+
+`ifndef SYNTHESIS
+`ifndef VERILATOR
+`ifndef VCS
+initial
+  tcdm_size_check_dw : assert(`HCI_SIZE_PARAM(tcdm).DW == ((MisalignedAccessSupport == 1) ? (DataW + 32) : DataW));
+`endif
+`endif
+`endif
 
 endmodule : redmule_streamer

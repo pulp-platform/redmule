@@ -273,4 +273,13 @@ end
 
 assign config_o = config_q;
 
+`ifndef SYNTHESIS
+`ifndef VERILATOR
+`ifndef VCS
+initial
+  dataw : assert(DataW == Height*(PipeRegs+1)*16);
+`endif
+`endif
+`endif
+
 endmodule: redmule_tiler
