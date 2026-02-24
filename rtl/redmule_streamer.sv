@@ -436,8 +436,9 @@ hwpe_stream_assign i_ystream_assign ( .push_i( out_stream[YsourceStreamId] ) ,
 `ifndef SYNTHESIS
 `ifndef VERILATOR
 `ifndef VCS
-initial
+initial begin
   tcdm_size_check_dw : assert(`HCI_SIZE_PARAM(tcdm).DW == ((MisalignedAccessSupport == 1) ? (DataW + 32) : DataW));
+end
 `endif
 `endif
 `endif
