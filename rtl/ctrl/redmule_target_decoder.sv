@@ -134,7 +134,7 @@ module redmule_target_decoder
   assign config_o.m_size          = hwif_out.hwpe_job_dep.mcnfig0.m_size.value;
   assign config_o.n_size          = hwif_out.hwpe_job_dep.mcnfig1.n_size.value;
   assign config_o.k_size          = hwif_out.hwpe_job_dep.mcnfig0.k_size.value;
-  assign config_o.receive_x       = hwif_out.hwpe_job_dep.mcnfig1.send_x.value;
+  assign config_o.receive_x       = hwif_out.hwpe_job_dep.mcnfig1.receive_x.value;
   assign config_o.send_x          = hwif_out.hwpe_job_dep.mcnfig1.send_x.value;
   assign config_o.receive_w       = hwif_out.hwpe_job_dep.mcnfig1.receive_w.value;
   assign config_o.send_w          = hwif_out.hwpe_job_dep.mcnfig1.send_w.value;
