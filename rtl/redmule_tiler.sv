@@ -276,8 +276,9 @@ assign config_o = config_q;
 `ifndef SYNTHESIS
 `ifndef VERILATOR
 `ifndef VCS
-initial
-  dataw : assert(DataW == Height*(PipeRegs+1)*16);
+initial begin
+  dataw: assert (DataW == Height*(PipeRegs+1)*16);
+end
 `endif
 `endif
 `endif
