@@ -456,21 +456,23 @@ module redmule_inst_decoder
 
       unique case ({cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]})
         MCNFIG: begin
-          config_d[i].m_size          = cur_register[i].rs[0][15:0];
-          config_d[i].n_size          = cur_register[i].rs[1][15:0];
-          config_d[i].k_size          = cur_register[i].rs[0][31:16];
-          config_d[i].receive_x       = cur_register[i].rs[1][16];
-          config_d[i].send_x          = cur_register[i].rs[1][17];
-          config_d[i].receive_w       = cur_register[i].rs[1][18];
-          config_d[i].send_w          = cur_register[i].rs[1][19];
+          // Matrix configuration: extract dimensions and data flow control from rs1, rs2, rs3
+          config_d[i].m_size          = cur_register[i].rs[0][15:0];   // M dimension (rows of X/Z)
+          config_d[i].n_size          = cur_register[i].rs[1][15:0];   // N dimension (cols of W/Z)
+          config_d[i].k_size          = cur_register[i].rs[0][31:16];  // K dimension (cols of X, rows of W)
+          config_d[i].receive_x       = cur_register[i].rs[1][16];     // Receive X from external stream
+          config_d[i].send_x          = cur_register[i].rs[1][17];     // Broadcast X to external stream
+          config_d[i].receive_w       = cur_register[i].rs[1][18];     // Receive W from external stream
+          config_d[i].send_w          = cur_register[i].rs[1][19];     // Broadcast W to external stream
           config_d[i].gemm_ops        = cur_register[i].rs[1][20] ? MATMUL : GEMM;
-          config_d[i].y_offs          = cur_register[i].rs[2][31:0];
+          config_d[i].y_offs          = cur_register[i].rs[2][31:0];   // Y buffer offset for bias addition
         end
         MARITH: begin
-          config_d[i].x_addr          = cur_register[i].rs[0][31:0];
-          config_d[i].w_addr          = cur_register[i].rs[1][31:0];
-          config_d[i].z_addr          = cur_register[i].rs[2][31:0];
-          // TODO: These are fixed for now
+          // Matrix arithmetic: extract memory addresses from rs1, rs2, rs3
+          config_d[i].x_addr          = cur_register[i].rs[0][31:0];   // X matrix base address
+          config_d[i].w_addr          = cur_register[i].rs[1][31:0];   // W matrix base address
+          config_d[i].z_addr          = cur_register[i].rs[2][31:0];   // Z matrix base address (output)
+          // TODO: These operation parameters are fixed for now, could be made configurable
           config_d[i].gemm_input_fmt  = redmule_pkg::Float16;
           config_d[i].gemm_output_fmt = redmule_pkg::Float16;
         end
