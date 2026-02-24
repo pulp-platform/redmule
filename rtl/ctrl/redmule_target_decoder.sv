@@ -118,7 +118,7 @@ module redmule_target_decoder
     if(~rst_ni) begin
       job_status <= '0;
     end else begin
-      if(clear_i | target_clear_o) begin // TODO: connect target-generated clear as well! 
+      if(clear_i | target_clear_o) begin // Clear job status on external or target-generated clear.
         job_status <= '0;
       end
       else if(job_trigger & config_ready_i) begin
