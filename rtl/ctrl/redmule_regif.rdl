@@ -175,7 +175,7 @@ addrmap redmule_regif {
         } send_w[19:19] = 0;
         field {
             name = "receive_w";
-            desc = "Receive W to external stream.";
+            desc = "Receive W from external stream.";
             hw = r;
             sw = rw;
         } receive_w[18:18] = 0;
