@@ -137,17 +137,19 @@ hci_core_intf #(
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
   .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
-) virt_tcdm [0:NumStreamSources+1] ( .clk ( clk_i ) );
+) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 
-redmule_mux #(
-  .NB_CHAN   (NumStreamSources+2),
+hci_core_mux_ooo #(
+  .NB_CHAN              ( NumStreamSources+1         ),
   .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_mux (
-  .clk_i      ( clk_i                 ),
-  .rst_ni     ( rst_ni                ),
-  .clear_i    ( clear_i               ),
-  .in         ( virt_tcdm             ),
-  .out        ( ldst_tcdm_pre_r_valid )
+  .clk_i            ( clk_i              ),
+  .rst_ni           ( rst_ni             ),
+  .clear_i          ( clear_i            ),
+  .priority_force_i ( '0                 ),
+  .priority_i       ( '0                 ),
+  .in               ( virt_tcdm          ),
+  .out              ( ldst_tcdm_pre_r_valid )
 );
 
 hci_core_r_valid_filter #(
@@ -158,7 +160,18 @@ hci_core_r_valid_filter #(
     .clear_i        (  clear_i               ),
     .enable_i       (  1'b1                  ),
     .tcdm_target    (  ldst_tcdm_pre_r_valid ),
-    .tcdm_initiator (  ldst_tcdm             )
+    .tcdm_initiator (  ldst_tcdm_pre_r_id    )
+);
+
+hci_core_r_id_filter #(
+  .`HCI_SIZE_PARAM(tcdm_target)   (   `HCI_SIZE_PARAM(ldst_tcdm) )
+) i_load_r_id_filter (
+  .clk_i          ( clk_i                 ),
+  .rst_ni         ( rst_ni                ),
+  .clear_i        ( clear_i               ),
+  .enable_i       ( 1'b1                  ),
+  .tcdm_target    ( ldst_tcdm_pre_r_id    ),
+  .tcdm_initiator ( ldst_tcdm             )
 );
 
 /************************************ Store Channel *************************************/

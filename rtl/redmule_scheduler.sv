@@ -106,7 +106,7 @@ module redmule_scheduler
   ) i_x_config_fifo (
     .clk_i      ( clk_i          ),
     .rst_ni     ( rst_ni         ),
-    .flush_i    ( clear          ),
+    .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
     .full_o     ( x_config_full  ),
     .empty_o    ( x_config_empty ),
@@ -274,7 +274,7 @@ module redmule_scheduler
   ) i_w_config_fifo (
     .clk_i      ( clk_i          ),
     .rst_ni     ( rst_ni         ),
-    .flush_i    ( clear          ),
+    .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
     .full_o     ( w_config_full  ),
     .empty_o    ( w_config_empty ),
@@ -410,7 +410,7 @@ module redmule_scheduler
   ) i_y_config_fifo (
     .clk_i      ( clk_i                                                     ),
     .rst_ni     ( rst_ni                                                    ),
-    .flush_i    ( clear                                                     ),
+    .flush_i    ( clear_i                                                   ),
     .testmode_i ( '0                                                        ),
     .full_o     ( y_config_full                                             ),
     .empty_o    ( y_config_empty                                            ),
@@ -428,7 +428,7 @@ module redmule_scheduler
   ) i_y_config_fast_fifo (
     .clk_i      ( clk_i                                                                      ),
     .rst_ni     ( rst_ni                                                                     ),
-    .flush_i    ( clear                                                                      ),
+    .flush_i    ( clear_i                                                                    ),
     .testmode_i ( '0                                                                         ),
     .full_o     ( y_config_fast_full                                                         ),
     .empty_o    ( y_config_fast_empty                                                        ),
