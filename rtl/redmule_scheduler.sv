@@ -403,40 +403,44 @@ module redmule_scheduler
   logic [$clog2(W):0]             y_width, z_width;
   logic [$clog2(D):0]             y_height, z_height;
 
+  logic y_config_pop;
+  assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
   fifo_v3 #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_y_config_fifo (
-    .clk_i      ( clk_i                                                     ),
-    .rst_ni     ( rst_ni                                                    ),
-    .flush_i    ( clear_i                                                   ),
-    .testmode_i ( '0                                                        ),
-    .full_o     ( y_config_full                                             ),
-    .empty_o    ( y_config_empty                                            ),
-    .usage_o    (                                                           ),
-    .data_i     ( config_i                                                  ),
-    .push_i     ( config_valid_i                                            ),
-    .data_o     ( y_config                                                  ),
-    .pop_i      ( y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en )
+    .clk_i      ( clk_i          ),
+    .rst_ni     ( rst_ni         ),
+    .flush_i    ( clear_i        ),
+    .testmode_i ( '0             ),
+    .full_o     ( y_config_full  ),
+    .empty_o    ( y_config_empty ),
+    .usage_o    (                ),
+    .data_i     ( config_i       ),
+    .push_i     ( config_valid_i ),
+    .data_o     ( y_config       ),
+    .pop_i      ( y_config_pop   )
   );
 
+  logic y_config_fast_pop;
+  assign y_config_fast_pop = y_loads_cnt_q == y_config_fast.tot_stores-1 && y_pushed_q && ~y_config_fast_empty && ~stall_engine;
   fifo_v3 #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_y_config_fast_fifo (
-    .clk_i      ( clk_i                                                                      ),
-    .rst_ni     ( rst_ni                                                                     ),
-    .flush_i    ( clear_i                                                                    ),
-    .testmode_i ( '0                                                                         ),
-    .full_o     ( y_config_fast_full                                                         ),
-    .empty_o    ( y_config_fast_empty                                                        ),
-    .usage_o    (                                                                            ),
-    .data_i     ( config_i                                                                   ),
-    .push_i     ( config_valid_i                                                             ),
-    .data_o     ( y_config_fast                                                              ),
-    .pop_i      ( y_loads_cnt_q == y_config_fast.tot_stores-1 && y_pushed_q && ~stall_engine )
+    .clk_i      ( clk_i               ),
+    .rst_ni     ( rst_ni              ),
+    .flush_i    ( clear_i             ),
+    .testmode_i ( '0                  ),
+    .full_o     ( y_config_fast_full  ),
+    .empty_o    ( y_config_fast_empty ),
+    .usage_o    (                     ),
+    .data_i     ( config_i            ),
+    .push_i     ( config_valid_i      ),
+    .data_o     ( y_config_fast       ),
+    .pop_i      ( y_config_fast_pop   )
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
