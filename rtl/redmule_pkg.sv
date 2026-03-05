@@ -15,6 +15,7 @@ package redmule_pkg;
   parameter int unsigned MaxPipeRegs          = 4;
   parameter int unsigned MaxDepth             = MaxDim * MaxPipeRegs;
   parameter int unsigned MaxDataW             = MaxDepth * 16;
+  parameter int unsigned MisalignedAccessSupportDefault = 0; // default to 0 for compatibility with Snitch
 
   parameter int unsigned NumStreamSources     = 3; // X, W, Y
 
@@ -22,6 +23,8 @@ package redmule_pkg;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
 
+  typedef enum logic { HWPE_TARGET, XIF } ctrl_intf_e;
+  
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
   typedef enum logic { LOAD, STORE }          ld_st_sel_e;
 

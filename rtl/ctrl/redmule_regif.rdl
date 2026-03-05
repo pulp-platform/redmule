@@ -1,0 +1,268 @@
+/*
+ * redmule_regif.rdl
+ * Francesco Conti <f.conti@unibo.it>
+ *
+ * Copyright (C) 2025 ETH Zurich, University of Bologna
+ * Copyright and related rights are licensed under the Solderpad Hardware
+ * License, Version 0.51 (the "License"); you may not use this file except in
+ * compliance with the License.  You may obtain a copy of the License at
+ * http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+ * or agreed to in writing, software, hardware and materials distributed under
+ * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+ /*
+  * This file contains the address map for RedMulE, expressed in SystemRDL.
+  */
+
+// Enumeration for GEMM operation types (aligned with redmule_pkg::gemm_op_e)
+enum gemm_op_e {
+    MATMUL = 3'h0 { name = "MATMUL"; desc = "Matrix multiplication"; };
+    GEMM   = 3'h1 { name = "GEMM";   desc = "General matrix multiply"; };
+    ADDMAX = 3'h2 { name = "ADDMAX"; desc = "Addition with maximum"; };
+    ADDMIN = 3'h3 { name = "ADDMIN"; desc = "Addition with minimum"; };
+    MULMAX = 3'h4 { name = "MULMAX"; desc = "Multiplication with maximum"; };
+    MULMIN = 3'h5 { name = "MULMIN"; desc = "Multiplication with minimum"; };
+    MAXMIN = 3'h6 { name = "MAXMIN"; desc = "Maximum with minimum"; };
+    MINMAX = 3'h7 { name = "MINMAX"; desc = "Minimum with maximum"; };
+};
+
+// Enumeration for floating-point formats (aligned with redmule_pkg::gemm_fmt_e)
+enum gemm_fmt_e {
+    Float8     = 2'h0 { name = "Float8";     desc = "FP8 format (E4M3)"; };
+    Float16    = 2'h1 { name = "Float16";    desc = "FP16 format (IEEE)"; };
+    Float8Alt  = 2'h2 { name = "Float8Alt";  desc = "FP8 alternative format (E5M2)"; };
+    Float16Alt = 2'h3 { name = "Float16Alt"; desc = "FP16 alternative format (BF16)"; };
+};
+
+addrmap redmule_regif {
+    name = "RedMulE register interface";
+    desc = "Control register map for RedMulE, including mandatory control/status registers and job-dependent configuration registers.";
+    // Mandatory COMMIT_TRIGGER register. Not to be updated inside HWPEs.
+    reg hwpe_commit_trigger {
+        field {
+            name = "reserved";
+            desc = "Reserved.";
+            hw = r;
+            sw = r;
+        } r0[31:2] = 0;
+        field {
+            name = "commit_trigger";
+            desc = "Write 0 to commit job & start execution, unlock controller; write `0x1` value to commit job & unlock controller without starting execution, which will be started when the next job is committed and triggered; write `0x2` value to trigger the current job queue without committing any new job.";
+            hw = r;
+            sw = w;
+            swacc = true;
+        } commit_trigger[1:0] = 0;
+    };
+    // Mandatory ACQUIRE register. Not to be updated inside HWPEs.
+    reg hwpe_acquire {
+        field {
+            name = "acquire";
+            desc = "On read starts a job offload, locks controller. Returns job ID.";
+            hw = w;
+            sw = r;
+            swacc = true;
+        } acquire[31:0] = 0;
+    };
+    // Mandatory RESERVED register. Not to be updated inside HWPEs.
+    reg hwpe_reserved {
+        field {
+            name = "reserved";
+            desc = "Reserved.";
+            hw = r;
+            sw = r;
+        } reserved[31:0] = 0;
+    };
+    // Mandatory STATUS register. Not to be updated inside HWPEs.
+    reg hwpe_status {
+        field {
+            name = "status";
+            desc = "Status of currently running job.";
+            hw = w;
+            sw = r;
+        } status0[31:0] = 0;
+    };
+    // Mandatory RUNNING_JOB register. Not to be updated inside HWPEs.
+    reg hwpe_running_job {
+        field {
+            name = "reserved";
+            desc = "Reserved.";
+            hw = r;
+            sw = r;
+        } r0[31:8] = 0;
+        field {
+            name = "running_job";
+            desc = "Returns ID of currently running job if any job is running; otherwise, of the last job that has been run.";
+            hw = w;
+            sw = r;
+        } running_job[7:0] = 0;
+    };
+    // Mandatory SOFT_CLEAR register. Not to be updated inside HWPEs.
+    reg hwpe_soft_clear {
+        field {
+            name = "reserved";
+            desc = "Reserved.";
+            hw = r;
+            sw = r;
+        } r0[31:2] = 0;
+        field {
+            name = "soft_clear";
+            desc = "Write `0x0` to clear the full status of the accelerator IP, including the register file; write `0x1` to clear the status of the accelerator IP, except for the register file; write `0x2` to clear only the register file.";
+            hw = r;
+            sw = w;
+            swacc = true;
+        } soft_clear[1:0] = 0;
+    };
+
+    // "mandatory" set of HWPE registers (CONTROL regs). Not to be updated inside HWPEs.
+    regfile hwpe_ctrl_mandatory {
+        hwpe_commit_trigger commit_trigger @ 0x00;
+        hwpe_acquire        acquire        @ 0x04;
+        hwpe_reserved       reserved0      @ 0x08;
+        hwpe_status         status         @ 0x0c;
+        hwpe_running_job    running_job    @ 0x10;
+        hwpe_soft_clear     soft_clear     @ 0x14;
+        hwpe_reserved       reserved1      @ 0x18;
+        hwpe_reserved       reserved2      @ 0x1c;
+    };
+
+    // RedMulE job-dependent registers
+    reg mcnfig0 {
+        name = "MCNFIG0";
+        field {
+            name = "k_size";
+            desc = "K dimension (cols of X, rows of W).";
+            hw = r;
+            sw = rw;
+        } k_size[31:16] = 0;
+        field {
+            name = "m_size";
+            desc = "M dimension (rows of X/Z).";
+            hw = r;
+            sw = rw;
+        } m_size[15:0] = 0;
+    };
+    reg mcnfig1 {
+        name = "MCNFIG1";
+        field { // TODO: this register is not aligned with the current XIF interface
+            name = "gemm_output_fmt";
+            desc = "Output format.";
+            hw = r;
+            sw = rw;
+            encode = gemm_fmt_e;
+        } gemm_output_fmt[26:25] = 0;
+        field { // TODO: this register is not aligned with the current XIF interface
+            name = "gemm_input_fmt";
+            desc = "Input format.";
+            hw = r;
+            sw = rw;
+            encode = gemm_fmt_e;
+        } gemm_input_fmt[24:23] = 0;
+        field { // TODO: this register is not aligned with the current XIF interface
+            name = "gemm_ops";
+            desc = "Operation type.";
+            hw = r;
+            sw = rw;
+            encode = gemm_op_e;
+        } gemm_ops[22:20] = 0;
+        field {
+            name = "send_w";
+            desc = "Broadcast W to external stream.";
+            hw = r;
+            sw = rw;
+        } send_w[19:19] = 0;
+        field {
+            name = "receive_w";
+            desc = "Receive W from external stream.";
+            hw = r;
+            sw = rw;
+        } receive_w[18:18] = 0;
+        field {
+            name = "send_x";
+            desc = "Broadcast X to external stream.";
+            hw = r;
+            sw = rw;
+        } send_x[17:17] = 0;
+        field {
+            name = "receive_x";
+            desc = "Receive X from external stream.";
+            hw = r;
+            sw = rw;
+        } receive_x[16:16] = 0;
+        field {
+            name = "n_size";
+            desc = "N dimension (cols of W/Z).";
+            hw = r;
+            sw = rw;
+        } n_size[15:0] = 0;
+    };
+    reg mcnfig2 {
+        name = "MCNFIG2";
+        field {
+            name = "y_offs";
+            desc = "Y buffer offset for bias addition.";
+            hw = r;
+            sw = rw;
+        } y_offs[31:0] = 0;
+    };
+    reg marith0 {
+        name = "MARITH0";
+        field {
+            name = "x_addr";
+            desc = "X matrix base address.";
+            hw = r;
+            sw = rw;
+        } x_addr[31:0] = 0;
+    };
+    reg marith1 {
+        name = "MARITH1";
+        field {
+            name = "w_addr";
+            desc = "W matrix base address.";
+            hw = r;
+            sw = rw;
+        } w_addr[31:0] = 0;
+    };
+    reg marith2 {
+        name = "MARITH2";
+        field {
+            name = "z_addr";
+            desc = "Z matrix base address.";
+            hw = r;
+            sw = rw;
+        } z_addr[31:0] = 0;
+    };
+    reg mopcnt {
+        name = "MOPCNT";
+        field {
+            name = "op_id_cnt";
+            desc = "Operations complete.";
+            hw = w;
+            sw = r;
+        } op_id_cnt[31:0] = 0;
+    };
+
+    // no "job-independent" registers in NEUREKA
+    regfile hwpe_ctrl_job_indep {
+        hwpe_reserved reserved;
+    };
+
+    // "job-dependent" set of HWPE registers. Update inside HWPEs.
+    regfile hwpe_ctrl_job_dep {
+        mcnfig0 mcnfig0 @ 0x00;
+        mcnfig1 mcnfig1 @ 0x04;
+        mcnfig2 mcnfig2 @ 0x08;
+        marith0 marith0 @ 0x0c;
+        marith1 marith1 @ 0x10;
+        marith2 marith2 @ 0x14;
+        mopcnt  mopcnt  @ 0x18;
+    };
+
+    // HWPE control address map. Update inside HWPEs
+    hwpe_ctrl_mandatory hwpe_ctrl    @ 0x00;
+    hwpe_ctrl_job_dep   hwpe_job_dep @ 0x20;
+    hwpe_ctrl_job_indep hwpe_job_indep;
+
+};

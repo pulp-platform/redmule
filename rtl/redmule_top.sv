@@ -14,30 +14,33 @@ module redmule_top
   import hwpe_ctrl_package::*;
   import hwpe_stream_package::*;
 #(
-  parameter int unsigned  DataW                  = MaxDataW, // TCDM port dimension (in bits)
-  parameter fp_format_e   FpFormat               = FP16, // Data format (default is FP16)
-  parameter int unsigned  Height                 = MaxDim, // Number of PEs within a row
-  parameter int unsigned  Width                  = MaxDim, // Number of parallel rows
-  parameter int unsigned  NumPipeRegs            = MaxPipeRegs-1, // Number of pipeline registers within each PE
-  parameter pipe_config_t PipeConfig             = DISTRIBUTED,
-  parameter int unsigned  EccChunkSize           = 32,
-  parameter bit           LatchBuffers           = 0,
-  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
-  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
-  // Custom instrunctions
-  parameter logic [6:0]   McnfigOpCode          = 7'b0001011,
-  parameter logic [6:0]   MarithOpCode          = 7'b0001011,
-  parameter logic [6:0]   MopcntOpCode          = 7'b0001011,
-  parameter logic [2:0]   McnfigFunct3          = 3'b000,
-  parameter logic [2:0]   MarithFunct3          = 3'b001,
-  parameter logic [2:0]   MopcntFunct3          = 3'b010,
-  parameter logic [1:0]   McnfigFunct2          = 2'b00,
-  parameter logic [1:0]   MarithFunct2          = 2'b00,
-  parameter logic [1:0]   MopcntFunct2          = 2'b00,
+  parameter int unsigned  DataW                   = MaxDataW, // TCDM port dimension (in bits)
+  parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault, // set to 1 to support misaligned accesses on TCDM
+  parameter fp_format_e   FpFormat                = FP16, // Data format (default is FP16)
+  parameter int unsigned  Height                  = MaxDim, // Number of PEs within a row
+  parameter int unsigned  Width                   = MaxDim, // Number of parallel rows
+  parameter int unsigned  NumPipeRegs             = MaxPipeRegs-1, // Number of pipeline registers within each PE
+  parameter pipe_config_t PipeConfig              = DISTRIBUTED,
+  parameter int unsigned  EccChunkSize            = 32,
+  parameter bit           LatchBuffers            = 0,
+  parameter fpnew_pkg::fmt_logic_t  FpFmtConfig   = 6'b001101,
+  parameter fpnew_pkg::ifmt_logic_t IntFmtConfig  = 4'b1000,
+  // Choose interface
+  parameter ctrl_intf_e   CtrlIntfConfig          = XIF,
+  // Custom instructions
+  parameter logic [6:0]   McnfigOpCode            = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode            = 7'b0001011,
+  parameter logic [6:0]   MopcntOpCode            = 7'b0001011,
+  parameter logic [2:0]   McnfigFunct3            = 3'b000,
+  parameter logic [2:0]   MarithFunct3            = 3'b001,
+  parameter logic [2:0]   MopcntFunct3            = 3'b010,
+  parameter logic [1:0]   McnfigFunct2            = 2'b00,
+  parameter logic [1:0]   MarithFunct2            = 2'b00,
+  parameter logic [1:0]   MopcntFunct2            = 2'b00,
   // XIF parameters
-  parameter int unsigned  XifNumHarts           = 1,
-  parameter int unsigned  XifIdWidth            = 1,
-  parameter int unsigned  XifIssueRegisterSplit = 0,
+  parameter int unsigned  XifNumHarts             = 1,
+  parameter int unsigned  XifIdWidth              = 1,
+  parameter int unsigned  XifIssueRegisterSplit   = 0,
   // XIF types
   parameter type          x_issue_req_t  = logic,
   parameter type          x_issue_resp_t = logic,
@@ -59,7 +62,7 @@ module redmule_top
   hwpe_stream_intf_stream.source  w_stream_o ,
   // Broadcasted X stream
   hwpe_stream_intf_stream.source  x_stream_o ,
-  // XIF ports
+  // XIF ports (unused if CtrlIntfConfig = HWPE_TARGET)
   input  x_issue_req_t  x_issue_req_i,
   output x_issue_resp_t x_issue_resp_o,
   input  logic          x_issue_valid_i,
@@ -76,7 +79,9 @@ module redmule_top
   output logic          sync_o,
   input  logic          sync_i,
   // TCDM master ports for the memory side
-  hci_core_intf.initiator tcdm
+  hci_core_intf.initiator tcdm,
+  // HWPE-ctrl target port (unused if CtrlIntfConfig = XIF)
+  hwpe_ctrl_intf_periph.slave target
 );
 
 localparam int unsigned FpWidth = fp_width(FpFormat);
@@ -86,6 +91,7 @@ logic                       clk_acc;
 
 logic                       fsm_z_clk_en, ctrl_z_clk_en;
 logic                       enable, clear;
+logic                       target_clear;
 logic                       y_buffer_depth_count,
                             y_buffer_load,
                             z_buffer_fill,
@@ -169,11 +175,12 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( cl
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
-  .DataW          ( DataW        ),
-  .EccChunkSize   ( EccChunkSize ),
-  .FpFormat       ( FpFormat     ),
-  .FpFmtConfig    ( FpFmtConfig  ),
-  .IntFmtConfig   ( IntFmtConfig ),
+  .DataW                   ( DataW                   ),
+  .MisalignedAccessSupport ( MisalignedAccessSupport ),
+  .EccChunkSize            ( EccChunkSize            ),
+  .FpFormat                ( FpFormat                ),
+  .FpFmtConfig             ( FpFmtConfig             ),
+  .IntFmtConfig            ( IntFmtConfig            ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(tcdm) )
 ) i_streamer      (
   .clk_i           ( clk_acc         ),
@@ -498,7 +505,7 @@ redmule_memory_scheduler #(
 ) i_memory_scheduler (
   .clk_i             ( clk_acc         ),
   .rst_ni            ( rst_ni          ),
-  .clear_i           ( '0              ),
+  .clear_i           ( target_clear    ),
   .z_priority_i      ( z_priority      ),
   .config_i          ( redmule_config  ),
   .config_valid_i    ( cfg_complete    ),
@@ -512,52 +519,79 @@ redmule_memory_scheduler #(
 );
 
 /*---------------------------------------------------------------*/
-/* |                    Instruction Decoder                    | */
+/* | Instruction Decoder (XIF) or Target Decoder (HWPE_TARGET) | */
 /*---------------------------------------------------------------*/
 
 logic tiler_busy;
 redmule_config_t dec_config_q;
 
-redmule_inst_decoder #(
-  .InstFifoDepth         ( 4                     ),
-  .McnfigOpCode          ( McnfigOpCode          ),
-  .MarithOpCode          ( MarithOpCode          ),
-  .MopcntOpCode          ( MopcntOpCode          ),
-  .McnfigFunct3          ( McnfigFunct3          ),
-  .MarithFunct3          ( MarithFunct3          ),
-  .MopcntFunct3          ( MopcntFunct3          ),
-  .McnfigFunct2          ( McnfigFunct2          ),
-  .MarithFunct2          ( MarithFunct2          ),
-  .MopcntFunct2          ( MopcntFunct2          ),
-  .XifIdWidth            ( XifIdWidth            ),
-  .XifNumHarts           ( XifNumHarts           ),
-  .XifIssueRegisterSplit ( XifIssueRegisterSplit ),
-  .x_issue_req_t         ( x_issue_req_t         ),
-  .x_issue_resp_t        ( x_issue_resp_t        ),
-  .x_register_t          ( x_register_t          ),
-  .x_commit_t            ( x_commit_t            ),
-  .x_result_t            ( x_result_t            )
-) i_inst_decoder (
-  .clk_i              ( clk_i                                  ),
-  .rst_ni             ( rst_ni                                 ),
-  .clear_i            ( '0                                     ),
-  .config_ready_i     ( ~config_fifo_full                      ),
-  .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
-  .config_valid_o     ( dec_config_valid                       ),
-  .config_o           ( dec_config                             ),
-  .x_issue_req_i      ( x_issue_req_i                          ),
-  .x_issue_resp_o     ( x_issue_resp_o                         ),
-  .x_issue_valid_i    ( x_issue_valid_i                        ),
-  .x_issue_ready_o    ( x_issue_ready_o                        ),
-  .x_register_i       ( x_register_i                           ),
-  .x_register_valid_i ( x_register_valid_i                     ),
-  .x_register_ready_o ( x_register_ready_o                     ),
-  .x_commit_i         ( x_commit_i                             ),
-  .x_commit_valid_i   ( x_commit_valid_i                       ),
-  .x_result_o         ( x_result_o                             ),
-  .x_result_valid_o   ( x_result_valid_o                       ),
-  .x_result_ready_i   ( x_result_ready_i                       )
-);
+if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
+  redmule_inst_decoder #(
+    .InstFifoDepth         ( 4                     ),
+    .McnfigOpCode          ( McnfigOpCode          ),
+    .MarithOpCode          ( MarithOpCode          ),
+    .MopcntOpCode          ( MopcntOpCode          ),
+    .McnfigFunct3          ( McnfigFunct3          ),
+    .MarithFunct3          ( MarithFunct3          ),
+    .MopcntFunct3          ( MopcntFunct3          ),
+    .McnfigFunct2          ( McnfigFunct2          ),
+    .MarithFunct2          ( MarithFunct2          ),
+    .MopcntFunct2          ( MopcntFunct2          ),
+    .XifIdWidth            ( XifIdWidth            ),
+    .XifNumHarts           ( XifNumHarts           ),
+    .XifIssueRegisterSplit ( XifIssueRegisterSplit ),
+    .x_issue_req_t         ( x_issue_req_t         ),
+    .x_issue_resp_t        ( x_issue_resp_t        ),
+    .x_register_t          ( x_register_t          ),
+    .x_commit_t            ( x_commit_t            ),
+    .x_result_t            ( x_result_t            )
+  ) i_inst_decoder (
+    .clk_i              ( clk_i                                  ),
+    .rst_ni             ( rst_ni                                 ),
+    .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
+    .config_ready_i     ( ~config_fifo_full                      ),
+    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .config_valid_o     ( dec_config_valid                       ),
+    .config_o           ( dec_config                             ),
+    .x_issue_req_i      ( x_issue_req_i                          ),
+    .x_issue_resp_o     ( x_issue_resp_o                         ),
+    .x_issue_valid_i    ( x_issue_valid_i                        ),
+    .x_issue_ready_o    ( x_issue_ready_o                        ),
+    .x_register_i       ( x_register_i                           ),
+    .x_register_valid_i ( x_register_valid_i                     ),
+    .x_register_ready_o ( x_register_ready_o                     ),
+    .x_commit_i         ( x_commit_i                             ),
+    .x_commit_valid_i   ( x_commit_valid_i                       ),
+    .x_result_o         ( x_result_o                             ),
+    .x_result_valid_o   ( x_result_valid_o                       ),
+    .x_result_ready_i   ( x_result_ready_i                       )
+  );
+  // bind unused HWPE_TARGET signals
+  assign target_clear = '0; // TODO: a software-accessible clear should be added also to the XIF interface
+  assign target.gnt = '1;
+  assign target.r_data = '0;
+  assign target.r_valid = '0;
+  assign target.r_id = '0;
+end
+else begin : mm_ctrl_intf_gen
+  redmule_target_decoder i_target_decoder (
+    .clk_i              ( clk_i                                  ),
+    .rst_ni             ( rst_ni                                 ),
+    .clear_i            ( '0                                     ), // ORed internally with target_clear
+    .target_clear_o     ( target_clear                           ),
+    .config_ready_i     ( ~config_fifo_full                      ),
+    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .config_valid_o     ( dec_config_valid                       ),
+    .config_o           ( dec_config                             ),
+    .target             ( target                                 )
+  );
+  // bind unused XIF signals
+  assign x_issue_resp_o     = '0;
+  assign x_issue_ready_o    = '0;
+  assign x_register_ready_o = '0;
+  assign x_result_o         = '0;
+  assign x_result_valid_o   = '0;
+end
 
 fifo_v3 #(
   .FALL_THROUGH ( 0                ),
@@ -594,6 +628,7 @@ redmule_ctrl #(
   .flgs_streamer_i   ( flgs_streamer                     ),
   .busy_o            ( busy_o                            ),
   .tiler_busy_o      ( tiler_busy                        ),
+  .target_clear_i    ( target_clear                      ),
   .clear_o           ( clear                             ),
   .evt_o             ( evt_o                             ),
   .config_i          ( dec_config_q                      ),
@@ -623,7 +658,7 @@ redmule_scheduler #(
   .clk_i               ( clk_acc             ),
   .rst_ni              ( rst_ni              ),
   .test_mode_i         ( test_mode_i         ),
-  .clear_i             ( '0                  ),
+  .clear_i             ( target_clear        ),
   .x_valid_i           ( x_buffer_fifo.valid ),
   .w_valid_i           ( w_buffer_fifo.valid ),
   .y_valid_i           ( y_buffer_fifo.valid ),

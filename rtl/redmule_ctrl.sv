@@ -21,6 +21,7 @@ module redmule_ctrl
   input  logic                    rst_ni            ,
   input  logic                    test_mode_i       ,
   output logic                    busy_o            ,
+  input  logic                    target_clear_i    ,
   output logic                    clear_o           ,
   output logic                    evt_o             ,
   input  redmule_config_t         config_i          ,
@@ -156,6 +157,6 @@ module redmule_ctrl
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
   assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done;
-  assign clear_o = latch_clear || current == REDMULE_FINISHED;
+  assign clear_o = target_clear_i || latch_clear || current == REDMULE_FINISHED;
 
 endmodule : redmule_ctrl
