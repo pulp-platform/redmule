@@ -45,6 +45,8 @@ sources:
     - rtl/redmule_row.sv
     - rtl/redmule_engine.sv
     - rtl/redmule_top.sv
+    - rtl/redmule_xif_wrap.sv
+    - rtl/redmule_mm_wrap.sv
     - rtl/redmule_memory_scheduler.sv
     - rtl/redmule_mux.sv
     - rtl/redmule_inst_decoder.sv
