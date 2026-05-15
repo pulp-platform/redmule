@@ -99,14 +99,14 @@ module redmule_scheduler
   logic        x_cols_iter_en, x_w_iters_en, x_rows_iter_en,
                x_done_en;
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_x_config_fifo (
     .clk_i      ( clk_i          ),
     .rst_ni     ( rst_ni         ),
-    .flush_i    ( clear          ),
+    .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
     .full_o     ( x_config_full  ),
     .empty_o    ( x_config_empty ),
@@ -200,6 +200,8 @@ module redmule_scheduler
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_shift_offset
     if(~rst_ni) begin
       x_shift_offs_q <= '0;
+    end else if(clear_i) begin
+      x_shift_offs_q <= '0;
     end else if (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) begin
       x_shift_offs_q <= x_shift_cnt_q + x_shift_offs_q;
     end
@@ -267,14 +269,14 @@ module redmule_scheduler
 
   logic        w_stride_cnt;
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_w_config_fifo (
     .clk_i      ( clk_i          ),
     .rst_ni     ( rst_ni         ),
-    .flush_i    ( clear          ),
+    .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
     .full_o     ( w_config_full  ),
     .empty_o    ( w_config_empty ),
@@ -403,14 +405,14 @@ module redmule_scheduler
   logic [$clog2(W):0]             y_width, z_width;
   logic [$clog2(D):0]             y_height, z_height;
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_y_config_fifo (
     .clk_i      ( clk_i                                                     ),
     .rst_ni     ( rst_ni                                                    ),
-    .flush_i    ( clear                                                     ),
+    .flush_i    ( clear_i                                                   ),
     .testmode_i ( '0                                                        ),
     .full_o     ( y_config_full                                             ),
     .empty_o    ( y_config_empty                                            ),
@@ -421,14 +423,14 @@ module redmule_scheduler
     .pop_i      ( y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en )
   );
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_y_config_fast_fifo (
     .clk_i      ( clk_i                                                                      ),
     .rst_ni     ( rst_ni                                                                     ),
-    .flush_i    ( clear                                                                      ),
+    .flush_i    ( clear_i                                                                    ),
     .testmode_i ( '0                                                                         ),
     .full_o     ( y_config_fast_full                                                         ),
     .empty_o    ( y_config_fast_empty                                                        ),

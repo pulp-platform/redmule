@@ -66,7 +66,7 @@ module redmule_ctrl
   ) i_cfg_tiler (
     .clk_i       ( clk_i          ),
     .rst_ni      ( rst_ni         ),
-    .clear_i     ( '0             ),
+    .clear_i     ( target_clear_i ),
     .setback_i   ( tiler_setback  ),
     .start_cfg_i ( start_cfg_i    ),
     .valid_o     ( tiler_valid    ),
@@ -85,6 +85,8 @@ module redmule_ctrl
   always_ff @(posedge clk_i or negedge rst_ni) begin : state_register
     if(~rst_ni) begin
        current <= REDMULE_LATCH_RST;
+    end else if(target_clear_i) begin
+       current <= REDMULE_LATCH_RST;
     end else begin
       current <= next;
     end
@@ -93,6 +95,8 @@ module redmule_ctrl
   logic slave_start;
   always_ff @(posedge clk_i, negedge rst_ni) begin
     if (~rst_ni) begin
+      slave_start <= 1'b0;
+    end else if(target_clear_i) begin
       slave_start <= 1'b0;
     end else begin
       if (tiler_setback)

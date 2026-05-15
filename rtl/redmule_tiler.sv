@@ -48,10 +48,10 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
 end
 
 tc_clk_gating i_tiler_clockg (
-  .clk_i      ( clk_i   ),
-  .en_i       ( clk_en  ),
-  .test_en_i  ( '0      ),
-  .clk_o      ( clk_int )
+  .clk_i      ( clk_i            ),
+  .en_i       ( clk_en | clear_i ),
+  .test_en_i  ( '0               ),
+  .clk_o      ( clk_int          )
 );
 
 assign busy_o = clk_en || ~ready_i;

@@ -59,7 +59,7 @@ module redmule_memory_scheduler
 
   assign x_done_o = tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done;
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
@@ -77,7 +77,7 @@ module redmule_memory_scheduler
     .pop_i      ( x_done_o                        )
   );
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
@@ -95,7 +95,7 @@ module redmule_memory_scheduler
     .pop_i      ( flgs_streamer_i.w_stream_source_flags.done )
   );
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)
@@ -113,7 +113,7 @@ module redmule_memory_scheduler
     .pop_i      ( y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : store_empty_rise_cnt && store_empty_rise ) // In case of a MATMUL followed by a GEMM, load Y only after the first 2 Z chunks have been completely stored
   );
 
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH (0),
     .DEPTH (2),
     .dtype (redmule_config_t)

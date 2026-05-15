@@ -188,7 +188,7 @@ redmule_streamer #(
   .test_mode_i     ( test_mode_i     ),
   // Controller generated signals
   .enable_i        ( 1'b1            ),
-  .clear_i         ( '0              ),
+  .clear_i         ( target_clear    ),
   // Source interfaces for the incoming streams
   .x_stream_o      ( x_stream_str    ),
   .w_stream_o      ( w_stream_str    ),
@@ -205,7 +205,7 @@ redmule_streamer #(
 redmule_config_t x_sel_config, w_sel_config;
 logic x_done;
 
-fifo_v3 #(
+redmule_config_fifo #(
   .FALL_THROUGH (0),
   .DEPTH (2),
   .dtype (redmule_config_t)
@@ -223,7 +223,7 @@ fifo_v3 #(
   .pop_i      ( x_done                                   )
 );
 
-fifo_v3 #(
+redmule_config_fifo #(
   .FALL_THROUGH (0),
   .DEPTH (2),
   .dtype (redmule_config_t)
@@ -593,14 +593,14 @@ else begin : mm_ctrl_intf_gen
   assign x_result_valid_o   = '0;
 end
 
-fifo_v3 #(
+redmule_config_fifo #(
   .FALL_THROUGH ( 0                ),
   .DEPTH        ( 2                ),
   .dtype        ( redmule_config_t )
 ) i_config_fifo (
   .clk_i      ( clk_acc           ),
   .rst_ni     ( rst_ni            ),
-  .flush_i    ( '0                ),
+  .flush_i    ( target_clear      ),
   .testmode_i ( '0                ),
   .full_o     ( config_fifo_full  ),
   .empty_o    ( config_fifo_empty ),
@@ -681,5 +681,54 @@ redmule_scheduler #(
   .sync_i,
   .sync_o
 );
+
+`ifndef SYNTHESIS 
+always_ff @(posedge clk_acc) begin
+  if (cfg_complete) begin
+    $display("[redmule] Configuration loaded at %t", $time);
+    $display("[redmule]   x_addr = 0x%h",            redmule_config.x_addr);
+    $display("[redmule]   w_addr = 0x%h",            redmule_config.w_addr);
+    $display("[redmule]   z_addr = 0x%h",            redmule_config.z_addr);
+    $display("[redmule]   y_addr = 0x%h",            redmule_config.y_addr);
+    $display("[redmule]   m_size = 0x%h",            redmule_config.m_size);
+    $display("[redmule]   n_size = 0x%h",            redmule_config.n_size);
+    $display("[redmule]   k_size = 0x%h",            redmule_config.k_size);
+    $display("[redmule]   y_offs = 0x%h",            redmule_config.y_offs);
+    $display("[redmule]   gemm_ops = %s",            redmule_config.gemm_ops.name());
+    $display("[redmule]   gemm_input_fmt = %s",      redmule_config.gemm_input_fmt.name());
+    $display("[redmule]   gemm_output_fmt = %s",     redmule_config.gemm_output_fmt.name());
+    $display("[redmule]   x_cols_iter = 0x%h",       redmule_config.x_cols_iter);
+    $display("[redmule]   x_rows_iter = 0x%h",       redmule_config.x_rows_iter);
+    $display("[redmule]   w_cols_iter = 0x%h",       redmule_config.w_cols_iter);
+    $display("[redmule]   w_rows_iter = 0x%h",       redmule_config.w_rows_iter);
+    $display("[redmule]   x_cols_lftovr = 0x%h",     redmule_config.x_cols_lftovr);
+    $display("[redmule]   x_rows_lftovr = 0x%h",     redmule_config.x_rows_lftovr);
+    $display("[redmule]   w_cols_lftovr = 0x%h",     redmule_config.w_cols_lftovr);
+    $display("[redmule]   w_rows_lftovr = 0x%h",     redmule_config.w_rows_lftovr);
+    $display("[redmule]   tot_stores = 0x%h",        redmule_config.tot_stores);
+    $display("[redmule]   x_d1_stride = 0x%h",       redmule_config.x_d1_stride);
+    $display("[redmule]   w_tot_len = 0x%h",         redmule_config.w_tot_len);
+    $display("[redmule]   tot_x_read = 0x%h",        redmule_config.tot_x_read);
+    $display("[redmule]   w_d0_stride = 0x%h",       redmule_config.w_d0_stride);
+    $display("[redmule]   yz_tot_len = 0x%h",        redmule_config.yz_tot_len);
+    $display("[redmule]   yz_d0_stride = 0x%h",      redmule_config.yz_d0_stride);
+    $display("[redmule]   yz_d2_stride = 0x%h",      redmule_config.yz_d2_stride);
+    $display("[redmule]   x_rows_offs = 0x%h",       redmule_config.x_rows_offs);
+    $display("[redmule]   x_buffer_slots = 0x%h",    redmule_config.x_buffer_slots);
+    $display("[redmule]   x_tot_len = 0x%h",         redmule_config.x_tot_len);
+    $display("[redmule]   stage_1_rnd_mode = %s",    redmule_config.stage_1_rnd_mode.name());
+    $display("[redmule]   stage_2_rnd_mode = %s",    redmule_config.stage_2_rnd_mode.name());
+    $display("[redmule]   stage_1_op = %s",          redmule_config.stage_1_op.name());
+    $display("[redmule]   stage_2_op = %s",          redmule_config.stage_2_op.name());
+    $display("[redmule]   input_format = %s",        redmule_config.input_format.name());
+    $display("[redmule]   computing_format = %s",    redmule_config.computing_format.name());
+    $display("[redmule]   gemm_selection = %b",      redmule_config.gemm_selection);
+    $display("[redmule]   send_w = %b",              redmule_config.send_w);
+    $display("[redmule]   receive_w = %b",           redmule_config.receive_w);
+    $display("[redmule]   send_x = %b",              redmule_config.send_x);
+    $display("[redmule]   receive_x = %b",           redmule_config.receive_x);
+  end
+end
+`endif // SYNTHESIS
 
 endmodule : redmule_top

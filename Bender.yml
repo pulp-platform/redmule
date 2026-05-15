@@ -26,6 +26,7 @@ sources:
   files:
   # RedMulE
     - rtl/redmule_pkg.sv
+    - rtl/redmule_config_fifo.sv
     - rtl/redmule_tiler.sv
     - rtl/redmule_ctrl.sv
     - rtl/redmule_scheduler.sv

@@ -236,7 +236,7 @@ module redmule_inst_decoder
   // FIFO tracking which hart each in-flight operation belongs to
   // Pushed when operation starts, popped when operation completes
   // Used to correctly increment the completion counter for MOPCNT instruction
-  fifo_v3 #(
+  redmule_config_fifo #(
     .FALL_THROUGH ( 0                           ),
     .DEPTH        ( InstFifoDepth * XifNumHarts ),
     .DATA_WIDTH   ( HartIdWidth                 )
@@ -388,7 +388,7 @@ module redmule_inst_decoder
     // Register FIFO pops in sync with issue FIFO
     assign register_pop = issue_pop;
 
-    fifo_v3 #(
+    redmule_config_fifo #(
       .FALL_THROUGH ( 0             ),
       .DEPTH        ( InstFifoDepth ),
       .dtype        ( x_issue_req_t )
@@ -411,7 +411,7 @@ module redmule_inst_decoder
       // Push to register FIFO in sync with valid register packet for legal instruction
       assign register_push = x_register_valid_i & legal_inst & x_commit_i.hartid == i;
 
-      fifo_v3 #(
+      redmule_config_fifo #(
         .FALL_THROUGH ( 0             ),
         .DEPTH        ( InstFifoDepth ),
         .dtype        ( x_register_t  )
