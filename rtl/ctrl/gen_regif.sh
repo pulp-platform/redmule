@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2025 ETH Zurich and University of Bologna.
+# Solderpad Hardware License, Version 0.51, see LICENSE for details.
+# SPDX-License-Identifier: SHL-0.51
+
 peakrdl regblock  redmule_regif.rdl -o regif/ --cpuif obi-flat --default-reset arst_n --hwif-report --addr-width 32
 peakrdl html      redmule_regif.rdl -o regif/html/
 peakrdl c-header  redmule_regif.rdl -o regif/hwpe_ctrl_target.h
