@@ -96,7 +96,7 @@ module redmule_tb
     logic [31:0] data;
   } core_data_rsp_t;
 
-  hci_outstanding_intf #(
+  hci_variablelatency_intf #(
   	.DW(DW),
   	.UW(3) ) redmule_tcdm (.clk(clk_i));
 
