@@ -20,6 +20,7 @@ module redmule_mm_wrap
 #(
   parameter int unsigned  DataW                   = MaxDataW,
   parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault,
+  parameter bit           EnableReordering        = 1'b0,
   parameter fp_format_e   FpFormat                = FP16,
   parameter int unsigned  Height                  = MaxDim,
   parameter int unsigned  Width                   = MaxDim,
@@ -72,6 +73,7 @@ module redmule_mm_wrap
   redmule_top #(
     .DataW                   ( DataW                   ),
     .MisalignedAccessSupport ( MisalignedAccessSupport ),
+    .EnableReordering        ( EnableReordering        ),
     .FpFormat                ( FpFormat                ),
     .Height                  ( Height                  ),
     .Width                   ( Width                   ),

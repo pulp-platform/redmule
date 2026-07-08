@@ -15,7 +15,8 @@ module redmule_ctrl
   parameter int unsigned Height = MaxDim,
   parameter int unsigned Width = MaxDim,
   parameter int unsigned PipeRegs = MaxPipeRegs-1,
-  parameter int unsigned FpWidth = 16
+  parameter int unsigned FpWidth = 16,
+  parameter bit          EnableReordering = 1'b0
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -122,6 +123,7 @@ module redmule_ctrl
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
   assign latch_clear                  = current == REDMULE_LATCH_RST;
+
 
   always_comb begin : controller_fsm
     cntrl_flags_o.idle = 1'b0;

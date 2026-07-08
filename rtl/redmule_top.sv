@@ -16,6 +16,7 @@ module redmule_top
 #(
   parameter int unsigned  DataW                   = MaxDataW, // TCDM port dimension (in bits)
   parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault, // set to 1 to support misaligned accesses on TCDM
+  parameter bit           EnableReordering        = 1'b0, // set to 1 to enable ROB-based reordering of outstanding TCDM transactions
   parameter fp_format_e   FpFormat                = FP16, // Data format (default is FP16)
   parameter int unsigned  Height                  = MaxDim, // Number of PEs within a row
   parameter int unsigned  Width                   = MaxDim, // Number of parallel rows
@@ -188,6 +189,9 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( cl
 redmule_streamer #(
   .DataW                   ( DataW                   ),
   .MisalignedAccessSupport ( MisalignedAccessSupport ),
+  .EnableReordering        ( EnableReordering       ),
+  .Height                  ( Height                  ),
+  .NumPipeRegs             ( NumPipeRegs             ),
   .EccChunkSize            ( EccChunkSize            ),
   .FpFormat                ( FpFormat                ),
   .FpFmtConfig             ( FpFmtConfig             ),
