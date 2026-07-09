@@ -21,6 +21,7 @@ module redmule_streamer
   parameter  int unsigned           EccChunkSize = 32      ,
   parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig = 4'b1000,
+  parameter  mux_priority_e         MuxPriority  = MuxPriorityDefault,
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 )(
   input logic                    clk_i,
@@ -139,18 +140,32 @@ hci_core_intf #(
   .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 
-hci_core_mux_ooo #(
-  .NB_CHAN              ( NumStreamSources+1         ),
-  .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-) i_mux (
-  .clk_i            ( clk_i              ),
-  .rst_ni           ( rst_ni             ),
-  .clear_i          ( clear_i            ),
-  .priority_force_i ( '0                 ),
-  .priority_i       ( '0                 ),
-  .in               ( virt_tcdm          ),
-  .out              ( ldst_tcdm_pre_r_valid )
-);
+if (MuxPriority == MUX_PRIORITY_STATIC) begin : static_mux_gen
+  redmule_mux #(
+    .NB_CHAN   (NumStreamSources+1),
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+  ) i_mux (
+    .clk_i      ( clk_i                 ),
+    .rst_ni     ( rst_ni                ),
+    .clear_i    ( clear_i               ),
+    .in         ( virt_tcdm             ),
+    .out        ( ldst_tcdm_pre_r_valid )
+  );
+end
+else begin
+  hci_core_mux_ooo #(
+    .NB_CHAN              ( NumStreamSources+1         ),
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+  ) i_mux (
+    .clk_i            ( clk_i                 ),
+    .rst_ni           ( rst_ni                ),
+    .clear_i          ( clear_i               ),
+    .priority_force_i ( '0                    ),
+    .priority_i       ( '0                    ),
+    .in               ( virt_tcdm             ),
+    .out              ( ldst_tcdm_pre_r_valid )
+  );
+end
 
 hci_core_r_valid_filter #(
   .`HCI_SIZE_PARAM(tcdm_target)   ( `HCI_SIZE_PARAM(ldst_tcdm) )
