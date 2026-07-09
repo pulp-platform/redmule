@@ -23,6 +23,9 @@ package redmule_pkg;
   parameter int unsigned WsourceStreamId      = 1;
   parameter int unsigned YsourceStreamId      = 2;
 
+  typedef enum logic { MUX_PRIORITY_STATIC, MUX_PRIORITY_DYNAMIC } mux_priority_e;
+  parameter mux_priority_e MuxPriorityDefault = MUX_PRIORITY_DYNAMIC;
+
   typedef enum logic { HWPE_TARGET, XIF } ctrl_intf_e;
   
   typedef enum logic { LD_IN_FMP, LD_WEIGHT } source_sel_e;
