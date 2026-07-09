@@ -5,11 +5,13 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+#include <stdint.h>
+
 #include "archi_redmule.h"
 #include "hal_redmule.h"
 #include "redmule_utils.h"
-#include <stdint.h>
 
+#include "tensor_dim.h"
 #include "golden.h"
 #include "w_input.h"
 #include "x_input.h"
