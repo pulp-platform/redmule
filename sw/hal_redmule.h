@@ -29,17 +29,10 @@ static inline void redmule_z_add_set(unsigned int value) {
   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_Z_PTR);
 }
 
-static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1) {
+static inline void redmule_mcfg_set(uint32_t mcfg0, uint32_t mcfg1, uint32_t mcfg2) {
   HWPE_WRITE(mcfg0, REDMULE_REG_OFFS + REDMULE_MCFG0_PTR);
   HWPE_WRITE(mcfg1, REDMULE_REG_OFFS + REDMULE_MCFG1_PTR);
-}
-
-static inline void redmule_arith_set(uint32_t arith) {
-  HWPE_WRITE(arith, REDMULE_REG_OFFS + REDMULE_ARITH_PTR);
-}
-
-static inline void redmule_r_add_set(uint32_t arith) {
-  HWPE_WRITE(arith, REDMULE_REG_OFFS + REDMULE_REG_R_PTR);
+  HWPE_WRITE(mcfg2, REDMULE_REG_OFFS + REDMULE_MCFG2_PTR);
 }
 
 static inline void hwpe_trigger_job() { HWPE_WRITE(0, REDMULE_TRIGGER); }
@@ -64,18 +57,27 @@ void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size
 
   uint32_t mcfg_reg0 = 0;
   uint32_t mcfg_reg1 = 0;
-  uint32_t arith_reg = 0;
+  uint32_t mcfg_reg2 = 0;
 
-  mcfg_reg0 = (k_size << 16) | (m_size << 0);
-  mcfg_reg1 = n_size << 0;
+  // mcnfig0: K size in [31:16], M size in [15:0]
+  mcfg_reg0 = ((uint32_t)k_size << 16) | ((uint32_t)m_size << 0);
 
-  arith_reg = (gemm_op << 10) | (gemm_fmt << 7);
+  // mcnfig1: N size in [15:0]; op/format folded in (there is no separate ARITH reg).
+  //   gemm_ops        [22:20]
+  //   gemm_input_fmt  [24:23]
+  //   gemm_output_fmt [26:25]
+  //   stream-routing bits [19:16] left 0 (no external streaming in the MM scenario)
+  mcfg_reg1 = ((uint32_t)n_size << 0) | ((uint32_t)gemm_op << 20) |
+              ((uint32_t)gemm_fmt << 23) | ((uint32_t)gemm_fmt << 25);
 
+  // mcnfig2: Y offset (bias). y_addr = z_addr + y_offs, so y_offs = 0 keeps the
+  // in-place GEMM behaviour (Y read from, and Z written to, the same buffer).
+  mcfg_reg2 = 0;
+
+  redmule_mcfg_set((unsigned int)mcfg_reg0, (unsigned int)mcfg_reg1, (unsigned int)mcfg_reg2);
   redmule_x_add_set((unsigned int)x);
   redmule_w_add_set((unsigned int)w);
   redmule_z_add_set((unsigned int)z);
-  redmule_mcfg_set((unsigned int)mcfg_reg0, (unsigned int)mcfg_reg1);
-  redmule_arith_set((unsigned int)arith_reg);
 }
 
 #endif

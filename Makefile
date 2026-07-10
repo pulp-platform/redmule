@@ -14,11 +14,24 @@ ScriptsDir := $(RootDir)scripts
 VerilatorPath := target/sim/verilator
 VsimPath      := target/sim/vsim
 SW         ?= $(RootDir)sw
-BUILD_DIR  ?= $(SW)/build
 SIM_DIR    ?= $(RootDir)vsim
-QUESTA     ?= questa-2023.4
-Bender     ?= $(CargoInstallDir)/bin/bender
-Gcc        ?= $(GccInstallDir)/bin/
+ifneq (,$(wildcard /etc/iis.version))
+    QUESTA ?= questa-2023.4
+    Bender ?= $(CargoInstallDir)/bin/bende
+    Gcc    ?= $(GccInstallDir)/bin/
+else
+    QUESTA ?=
+    Bender ?= bender
+    Gcc    ?= 
+endif
+OP     ?= gemm
+fp_fmt ?= FP16
+M      ?= 24
+N      ?= 16
+K      ?= 16
+TEST_ID   ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)
+INC_DIR   ?= $(SW)/inc/$(TEST_ID)
+BUILD_DIR  ?= $(SW)/build/$(TEST_ID)
 ISA        ?= riscv
 ARCH       ?= rv
 XLEN       ?= 32
@@ -60,7 +73,7 @@ endif
 
 # Include directories
 INC += -I$(SW)
-INC += -I$(SW)/inc
+INC += -I$(INC_DIR)
 INC += -I$(SW)/utils
 
 BOOTSCRIPT := $(SW)/kernel/crt0.S
@@ -119,17 +132,35 @@ sw-clean:
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
-OP     ?= gemm
-fp_fmt ?= FP16
-M      ?= 24
-N      ?= 16
-K      ?= 16
-
-golden: golden-clean
-	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
+golden:
+	mkdir -p $(INC_DIR)
+	PYTHONDONTWRITEBYTECODE=1 $(MAKE) -C golden-model $(OP) \
+	SW=$(INC_DIR) TXT_DIR=$(BUILD_DIR)/golden_txt           \
+	M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
 
 golden-clean:
 	$(MAKE) -C golden-model golden-clean
+
+# ---------------------------------------------------------------------------- #
+# One-shot memory-mapped test. In a single command this:
+#   1. (re)generates the golden model for the requested M/N/K,
+#   2. rebuilds the test software against the fresh operands/golden headers,
+#   3. compiles and runs the RedMulE memory-mapped testbench in Questa.
+# The TB prints "[TB] - Success!" (errors=0) on a passing run. Example:
+#
+#     make test M=32 N=32 K=32
+#
+# OP (gemm, matmul, addmax, ...) and fp_fmt (FP16, FP8) can also be overridden.
+# The recipe pins the backend to vsim (memory-mapped Questa flow) and resolves
+# the toolchain to the copies on PATH (bender, Questa, PULP GCC7 with the imc
+# ISA string). Override any of these on the command line, or call the underlying
+# golden / sw-build / hw-* targets directly, if your environment differs.
+# ---------------------------------------------------------------------------- #
+.PHONY: test
+test:
+	$(MAKE) golden OP=$(OP) fp_fmt=$(fp_fmt) M=$(M) N=$(N) K=$(K)
+	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc_zicsr
+	$(MAKE) hw-run REDMULE_COMPLEX=0 target=vsim Bender=bender Questa= QUESTA=
 
 clean-all: sw-clean
 	rm -rf $(RootDir).bender
@@ -144,29 +175,29 @@ NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
 VendorDir ?= $(RootDir)vendor
 InstallDir ?= $(VendorDir)/install
 # Verilator
-VerilatorVersion ?= v5.028
+# Resolve to the latest tagged release unless the caller pins a version explicitly.
+VerilatorVersion ?= $(shell git ls-remote --tags --refs https://github.com/verilator/verilator.git \
+	| sed 's/.*refs\/tags\///' | grep -E '^v[0-9]+\.[0-9]+$$' | sort -V | tail -1)
 VerilatorInstallDir := $(InstallDir)/verilator
 # GCC
 GccInstallDir := $(InstallDir)/riscv
 RiscvTarDir := riscv.tar.gz
 GccUrl := https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/riscv32-elf-ubuntu-20.04-gcc-nightly-2024.08.28-nightly.tar.gz
-# Bender
-RustupInit := $(ScriptsDir)/rustup-init.sh
+# Bender (installed from prebuilt release binaries, no Rust toolchain needed)
+BenderVersion ?= 0.32.1
 CargoInstallDir := $(InstallDir)/cargo
-RustupInstallDir := $(InstallDir)/rustup
-Cargo := $(CargoInstallDir)/bin/cargo
 
-verilator: $(InstallDir)/bin/verilator
-
-$(InstallDir)/bin/verilator:
-	rm -rf $(VendorDir)/verilator
-	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
-	# Checkout the right version
-	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
-	# Compile verilator
-	sudo apt install libfl-dev help2man
-	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
-	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
+# verilator: $(VerilatorInstallDir)/bin/verilator
+# 
+# $(VerilatorInstallDir)/bin/verilator:
+# 	rm -rf $(VendorDir)/verilator
+# 	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
+# 	# Checkout the latest tagged release (or VerilatorVersion, if overridden on the command line)
+# 	cd $(VendorDir)/verilator && git reset --hard && git fetch --tags && git checkout $(VerilatorVersion)
+# 	# Compile verilator
+# 	rm -rf $(VerilatorInstallDir)
+# 	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
+# 	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
 
 riscv32-gcc: $(GccInstallDir)
 
@@ -180,9 +211,8 @@ $(GccInstallDir):
 bender: $(CargoInstallDir)/bin/bender
 
 $(CargoInstallDir)/bin/bender:
-	curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf > $(RustupInit)
 	mkdir -p $(InstallDir)
-	export CARGO_HOME=$(CargoInstallDir) && export RUSTUP_HOME=$(RustupInstallDir) && \
-	chmod +x $(RustupInit); source $(RustupInit) -y && \
-	$(Cargo) install bender
-	rm -rf $(RustupInit)
+	curl --proto '=https' --tlsv1.2 -sSfL https://github.com/pulp-platform/bender/releases/download/v$(BenderVersion)/bender-installer.sh > $(InstallDir)/bender-installer.sh
+	BENDER_INSTALL_DIR=$(CargoInstallDir) BENDER_NO_MODIFY_PATH=1 BENDER_DISABLE_UPDATE=1 \
+		sh $(InstallDir)/bender-installer.sh
+	rm -f $(InstallDir)/bender-installer.sh
