@@ -4,6 +4,11 @@
 //
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
+// Memory-mapped (HWPE-target) RedMulE testbench: a CV32E40P core configures
+// RedMulE through the RDL-generated register file and shares the TCDM data
+// memory with it. RedMulE is instantiated via redmule_mm_wrap, which exposes a
+// modern hci_core_intf TCDM initiator and a hwpe_ctrl_intf_periph register slave.
+//
 
 timeunit 1ps; timeprecision 1ps;
 
@@ -24,9 +29,23 @@ module redmule_tb
 
   // parameters
   localparam int unsigned NC = 1;
-  localparam int unsigned ID = 10;
-  localparam int unsigned DW = redmule_pkg::DATA_W;
+  localparam int unsigned ID = 4; // matches the OpIdWidth used inside redmule_top's target decoder
+  localparam int unsigned DW = redmule_pkg::MaxDataW;
   localparam int unsigned MP = DW/32;
+  // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
+  // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no
+  // fallback), otherwise the internal OoO multiplexer sees BW=0 and fails to
+  // elaborate. Fields other than DW take the hci_core_intf defaults, matching
+  // the `redmule_tcdm` interface declared below (DW-only override).
+  localparam hci_size_parameter_t HciSizeTcdm = '{
+    DW:  DW,
+    AW:  hci_package::DEFAULT_AW,
+    BW:  hci_package::DEFAULT_BW,
+    UW:  hci_package::DEFAULT_UW,
+    IW:  hci_package::DEFAULT_IW,
+    EW:  hci_package::DEFAULT_EW,
+    EHW: hci_package::DEFAULT_EHW
+  };
   localparam int unsigned MEMORY_SIZE = 192*1024;
   localparam int unsigned STACK_MEMORY_SIZE = 192*1024;
   localparam int unsigned PULP_XPULP = 1;
@@ -34,44 +53,25 @@ module redmule_tb
   localparam int unsigned PULP_ZFINX = 0;
   localparam logic [31:0] BASE_ADDR = 32'h1c000000;
   localparam logic [31:0] HWPE_ADDR_BASE_BIT = 20;
-  localparam bit          USE_ECC = 0;
-  localparam int unsigned EW = (USE_ECC) ? 72 : DEFAULT_EW;
 
   // global signals
   string stim_instr, stim_data;
   logic test_mode;
   logic [31:0] core_boot_addr;
   logic redmule_busy;
+  logic redmule_evt;
 
   hwpe_stream_intf_tcdm instr[0:0]  (.clk(clk_i));
   hwpe_stream_intf_tcdm stack[0:0]  (.clk(clk_i));
   hwpe_stream_intf_tcdm tcdm [MP:0] (.clk(clk_i));
 
-  logic [NC-1:0][1:0] evt;
+  // RedMulE modern interfaces
+  hci_core_intf #(.DW(DW))              redmule_tcdm (.clk(clk_i));
+  hwpe_ctrl_intf_periph #(.ID_WIDTH(ID)) periph      (.clk(clk_i));
 
-  logic [MP-1:0]       tcdm_req;
   logic [MP-1:0]       tcdm_gnt;
-  logic [MP-1:0][31:0] tcdm_add;
-  logic [MP-1:0]       tcdm_wen;
-  logic [MP-1:0][3:0]  tcdm_be;
-  logic [MP-1:0][31:0] tcdm_data;
-  logic [EW-1:0]       tcdm_ecc;
   logic [MP-1:0][31:0] tcdm_r_data;
   logic [MP-1:0]       tcdm_r_valid;
-  logic                tcdm_r_opc;
-  logic                tcdm_r_user;
-  logic [EW-1:0]       tcdm_r_ecc;
-
-  logic          periph_req;
-  logic          periph_gnt;
-  logic [31:0]   periph_add;
-  logic          periph_wen;
-  logic [3:0]    periph_be;
-  logic [31:0]   periph_data;
-  logic [ID-1:0] periph_id;
-  logic [31:0]   periph_r_data;
-  logic          periph_r_valid;
-  logic [ID-1:0] periph_r_id;
 
   logic          instr_req;
   logic          instr_gnt;
@@ -90,14 +90,14 @@ module redmule_tb
   logic          data_err;
   logic          core_sleep;
 
-  // bindings
+  // Register-file (peripheral) port: the core drives the master side of `periph`.
   always_comb begin : bind_periph
-    periph_req  = data_req & data_addr[HWPE_ADDR_BASE_BIT];
-    periph_add  = data_addr;
-    periph_wen  = ~data_we;
-    periph_be   = data_be;
-    periph_data = data_wdata;
-    periph_id   = '0;
+    periph.req  = data_req & data_addr[HWPE_ADDR_BASE_BIT];
+    periph.add  = data_addr;
+    periph.wen  = ~data_we;
+    periph.be   = data_be;
+    periph.data = data_wdata;
+    periph.id   = '0;
   end
 
   always_comb begin : bind_instrs
@@ -127,110 +127,58 @@ module redmule_tb
       other_r_valid <= data_req & (data_addr[31:24] == 8'h80);
   end
 
+  // RedMulE TCDM initiator fanned out over MP word-wide banks of the data memory.
   for(genvar ii=0; ii<MP; ii++) begin : tcdm_binding
-    assign tcdm[ii].req  = tcdm_req  [ii];
-    assign tcdm[ii].add  = tcdm_add  [ii];
-    assign tcdm[ii].wen  = tcdm_wen  [ii];
-    assign tcdm[ii].be   = tcdm_be   [ii];
-    if (~USE_ECC)
-      assign tcdm[ii].data = tcdm_data [ii];
+    assign tcdm[ii].req  = redmule_tcdm.req;
+    assign tcdm[ii].add  = redmule_tcdm.add + ii*4;
+    assign tcdm[ii].wen  = redmule_tcdm.wen;
+    assign tcdm[ii].be   = redmule_tcdm.be[(ii+1)*4-1:ii*4];
+    assign tcdm[ii].data = redmule_tcdm.data[(ii+1)*32-1:ii*32];
     assign tcdm_gnt     [ii] = tcdm[ii].gnt;
     assign tcdm_r_data  [ii] = tcdm[ii].r_data;
     assign tcdm_r_valid [ii] = tcdm[ii].r_valid;
   end
+  assign redmule_tcdm.gnt     = &tcdm_gnt;
+  assign redmule_tcdm.r_data  = { >> {tcdm_r_data} };
+  assign redmule_tcdm.r_valid = &tcdm_r_valid;
+  assign redmule_tcdm.r_opc   = '0;
+  assign redmule_tcdm.r_user  = '0;
+
+  // Core data-side port (last bank of the data memory).
   assign tcdm[MP].req  = data_req & (data_addr[31:24] != '0) & (data_addr[31:24] != 8'h80) & ~data_addr[HWPE_ADDR_BASE_BIT];
   assign tcdm[MP].add  = data_addr;
   assign tcdm[MP].wen  = ~data_we;
   assign tcdm[MP].be   = data_be;
   assign tcdm[MP].data = data_wdata;
-  assign tcdm_r_opc   = 0;
-  assign tcdm_r_user  = 0;
-  assign data_gnt    = periph_req ?
-                       periph_gnt : stack[0].req ?
+
+  assign data_gnt    = periph.req ?
+                       periph.gnt : stack[0].req ?
                                     stack[0].gnt : tcdm[MP].req ?
                                                    tcdm[MP].gnt : '1;
-  assign data_rdata  = periph_r_valid ? periph_r_data  :
+  assign data_rdata  = periph.r_valid ? periph.r_data  :
                                         stack[0].r_valid ? stack[0].r_data  :
                                                            tcdm[MP].r_valid ? tcdm[MP].r_data : '0;
-  assign data_rvalid = periph_r_valid   |
+  assign data_rvalid = periph.r_valid   |
                        stack[0].r_valid |
                        tcdm[MP].r_valid |
                        other_r_valid    ;
 
-  if (USE_ECC) begin : gen_r_ecc
-    // RESPONSE PHASE ENCODING
-    logic [MP-1:0][38:0] tcdm_r_data_enc;
-    for(genvar ii=0; ii<MP; ii++) begin : r_data_encoding
-      hsiao_ecc_enc #(
-        .DataWidth ( 32 )
-      ) i_r_data_enc (
-        .in  (tcdm[ii].r_data),
-        .out (tcdm_r_data_enc[ii])
-      );
-      assign tcdm_r_ecc[(ii+1)*7-1:ii*7] = tcdm_r_data_enc[ii][38:32];
-    end
-    assign tcdm_r_ecc[EW-1:(7*MP)] = '0;
-  end else begin : gen_no_r_ecc
-    assign tcdm_r_ecc = '0;
-  end
-
-  if (USE_ECC) begin : gen_ecc_dec
-    // REQUEST PHASE DECODING
-    for(genvar ii=0; ii<MP; ii++) begin : data_decoding
-      hsiao_ecc_dec #(
-        .DataWidth ( 32 )
-      ) i_data_dec (
-        .in         ( { tcdm_ecc[(ii+1)*7-1+9:ii*7+9], tcdm_data[ii] } ),
-        .out        ( tcdm[ii].data ),
-        .syndrome_o ( ),
-        .err_o      ( )
-      );
-    end
-
-    hsiao_ecc_dec #(
-      .DataWidth ( 32+36+1 )
-    ) i_meta_dec (
-      .in         ( { tcdm_ecc[8:0], tcdm_add[0], tcdm_wen[0], tcdm_be } ),
-      .out        (  ),
-      .syndrome_o (  ),
-      .err_o      (  )
-    );
-  end
-
-  redmule_wrap #(
-    .ID_WIDTH           ( ID                 ),
-    .N_CORES            ( NC                 ),
-    .DW                 ( DW                 ),
-    .MP                 ( DW/32              ),
-    .EW                 ( EW                 )
-  ) i_redmule_wrap      (
-    .clk_i              ( clk_i              ),
-    .rst_ni             ( rst_ni             ),
-    .test_mode_i        ( test_mode          ),
-    .evt_o              ( evt                ),
-    .busy_o             ( redmule_busy       ),
-    .tcdm_req_o         ( tcdm_req           ),
-    .tcdm_add_o         ( tcdm_add           ),
-    .tcdm_wen_o         ( tcdm_wen           ),
-    .tcdm_be_o          ( tcdm_be            ),
-    .tcdm_data_o        ( tcdm_data          ),
-    .tcdm_ecc_o         ( tcdm_ecc           ),
-    .tcdm_gnt_i         ( tcdm_gnt           ),
-    .tcdm_r_data_i      ( tcdm_r_data        ),
-    .tcdm_r_valid_i     ( tcdm_r_valid       ),
-    .tcdm_r_opc_i       ( tcdm_r_opc         ),
-    .tcdm_r_user_i      ( tcdm_r_user        ),
-    .tcdm_r_ecc_i       ( tcdm_r_ecc         ),
-    .periph_req_i       ( periph_req         ),
-    .periph_gnt_o       ( periph_gnt         ),
-    .periph_add_i       ( periph_add         ),
-    .periph_wen_i       ( periph_wen         ),
-    .periph_be_i        ( periph_be          ),
-    .periph_data_i      ( periph_data        ),
-    .periph_id_i        ( periph_id          ),
-    .periph_r_data_o    ( periph_r_data      ),
-    .periph_r_valid_o   ( periph_r_valid     ),
-    .periph_r_id_o      ( periph_r_id        )
+  redmule_mm_wrap #(
+    .HCI_SIZE_tcdm ( HciSizeTcdm ),
+    .DataW         ( 256 ),
+    .Height        ( 8   ),
+    .Width         ( 8   ),
+    .NumPipeRegs   ( 1   )
+  ) i_redmule_wrap (
+    .clk_i       ( clk_i        ),
+    .rst_ni      ( rst_ni       ),
+    .test_mode_i ( test_mode    ),
+    .busy_o      ( redmule_busy ),
+    .evt_o       ( redmule_evt  ),
+    .sync_o      (              ),
+    .sync_i      ( 1'b0         ),
+    .tcdm        ( redmule_tcdm ),
+    .target      ( periph       )
   );
 
   tb_dummy_memory  #(
@@ -331,7 +279,7 @@ module redmule_tb
     .apu_result_i        ( '0           ),
     .apu_flags_i         ( '0           ),
     // Interrupt inputs
-    .irq_i               ({28'd0, evt[0][0], 3'd0}),  // CLINT interrupts + CLINT extension interrupts
+    .irq_i               ({28'd0, redmule_evt, 3'd0}),  // CLINT interrupts + CLINT extension interrupts
     .irq_ack_o           (              ),
     .irq_id_o            (              ),
     // Debug Interface
@@ -373,24 +321,12 @@ module redmule_tb
 
     // End: WFI + returned != -1 signals end-of-computation
     while(~core_sleep || errors==-1) @(posedge clk_i);
-    cnt_rd = redmule_tb.i_dummy_dmemory.cnt_rd[0] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[1] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[2] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[3] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[4] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[5] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[6] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[7] +
-             redmule_tb.i_dummy_dmemory.cnt_rd[8];
-    cnt_wr = redmule_tb.i_dummy_dmemory.cnt_wr[0] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[1] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[2] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[3] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[4] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[5] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[6] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[7] +
-             redmule_tb.i_dummy_dmemory.cnt_wr[8];
+    cnt_rd = 0;
+    cnt_wr = 0;
+    for (int i=0; i<=MP; i++) begin
+      cnt_rd += redmule_tb.i_dummy_dmemory.cnt_rd[i];
+      cnt_wr += redmule_tb.i_dummy_dmemory.cnt_wr[i];
+    end
     $display("[TB] - cnt_rd=%-8d", cnt_rd);
     $display("[TB] - cnt_wr=%-8d", cnt_wr);
     if(errors != 0) begin

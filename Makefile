@@ -131,6 +131,27 @@ golden: golden-clean
 golden-clean:
 	$(MAKE) -C golden-model golden-clean
 
+# ---------------------------------------------------------------------------- #
+# One-shot memory-mapped test. In a single command this:
+#   1. (re)generates the golden model for the requested M/N/K,
+#   2. rebuilds the test software against the fresh operands/golden headers,
+#   3. compiles and runs the RedMulE memory-mapped testbench in Questa.
+# The TB prints "[TB] - Success!" (errors=0) on a passing run. Example:
+#
+#     make test M=32 N=32 K=32
+#
+# OP (gemm, matmul, addmax, ...) and fp_fmt (FP16, FP8) can also be overridden.
+# The recipe pins the backend to vsim (memory-mapped Questa flow) and resolves
+# the toolchain to the copies on PATH (bender, Questa, PULP GCC7 with the imc
+# ISA string). Override any of these on the command line, or call the underlying
+# golden / sw-build / hw-* targets directly, if your environment differs.
+# ---------------------------------------------------------------------------- #
+.PHONY: test
+test:
+	$(MAKE) golden OP=$(OP) fp_fmt=$(fp_fmt) M=$(M) N=$(N) K=$(K)
+	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc
+	$(MAKE) hw-run REDMULE_COMPLEX=0 target=vsim Bender=bender Questa= QUESTA=
+
 clean-all: sw-clean
 	rm -rf $(RootDir).bender
 	rm -rf $(compile_script)
