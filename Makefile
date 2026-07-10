@@ -189,18 +189,17 @@ CargoInstallDir := $(InstallDir)/cargo
 RustupInstallDir := $(InstallDir)/rustup
 Cargo := $(CargoInstallDir)/bin/cargo
 
-verilator: $(VerilatorInstallDir)/bin/verilator
-
-$(VerilatorInstallDir)/bin/verilator:
-	rm -rf $(VendorDir)/verilator
-	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
-	# Checkout the latest tagged release (or VerilatorVersion, if overridden on the command line)
-	cd $(VendorDir)/verilator && git reset --hard && git fetch --tags && git checkout $(VerilatorVersion)
-	# Compile verilator
-	sudo apt install libfl-dev help2man
-	rm -rf $(VerilatorInstallDir)
-	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
-	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
+# verilator: $(VerilatorInstallDir)/bin/verilator
+# 
+# $(VerilatorInstallDir)/bin/verilator:
+# 	rm -rf $(VendorDir)/verilator
+# 	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
+# 	# Checkout the latest tagged release (or VerilatorVersion, if overridden on the command line)
+# 	cd $(VendorDir)/verilator && git reset --hard && git fetch --tags && git checkout $(VerilatorVersion)
+# 	# Compile verilator
+# 	rm -rf $(VerilatorInstallDir)
+# 	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
+# 	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
 
 riscv32-gcc: $(GccInstallDir)
 
