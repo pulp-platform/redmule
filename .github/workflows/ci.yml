@@ -7,66 +7,17 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  install-tools:
-    name: install-tools
-    runs-on: ubuntu-latest
-    env:
-      NUM_JOBS: 8
-      VERILATOR_VERSION: "5.046"
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install Verilator (prebuilt)
-      uses: veryl-lang/setup-verilator@v1
-      with:
-        version: ${{ env.VERILATOR_VERSION }}
-
-    - name: Verify Verilator installation
-      run: |
-        verilator --version
-
-    - name: Verify GCC installation
-      run: |
-        make riscv32-gcc
-
-    - name: Verify bender installation
-      run: |
-        make bender
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v8.3.2
-
-    - name: Verify Python tools installation
-      run: |
-        cd golden-model && source setup-py.sh
-
-    - name: Upload installed toolchain
-      uses: actions/upload-artifact@v4
-      with:
-        name: toolchain
-        path: |
-          vendor/install
-          golden-model/venv
-        retention-days: 1
-
-    # - name: Install
-    #   run: |
-    #     make verilator riscv32-gcc bender; cd golden-model && source setup-py.sh
-
   run-hwpe-tests:
     name: run-hwpe-tests
     runs-on: ubuntu-latest
     env:
+      NUM_JOBS: 8
       Target: verilator
       REDMULE_COMPLEX: 0
       BENDER: ./bender
       Verilator: verilator
       VERILATOR_VERSION: "5.046"
 
-    needs:
-      install-tools
     steps:
     - uses: actions/checkout@v4
       with:
@@ -77,14 +28,17 @@ jobs:
       with:
         version: ${{ env.VERILATOR_VERSION }}
 
-    - name: Download installed toolchain
-      uses: actions/download-artifact@v4
-      with:
-        name: toolchain
+    - name: Install uv
+      uses: astral-sh/setup-uv@v8.3.2
+
+    - name: Install required tools
+      run: |
+        make riscv32-gcc
+        make bender
+        cd golden-model && source setup-py.sh && cd ..
 
     - name: Add installed tools to PATH
       run: |
-        chmod +x vendor/install/cargo/bin/bender vendor/install/riscv/bin/*
         echo "$(pwd)/vendor/install/cargo/bin" >> $GITHUB_PATH
         echo "$(pwd)/vendor/install/riscv/bin" >> $GITHUB_PATH
         echo "$(pwd)/golden-model/venv/bin" >> $GITHUB_PATH
