@@ -52,10 +52,19 @@ hw-build: hw-script
 	+PROB_STALL=$(P_STALL)    \
 	-do 'quit -code [source $(VsimCompileScript)]'
 
+# Run each test inside its own per-test $(BUILD_DIR) (keyed by TEST_ID) so that
+# concurrent regression runs never clobber each other's transcript/*.wlf. The
+# compiled design lives in the single shared $(VsimDir)/work library built once
+# by hw-build; we symlink it in so vsim resolves $(Tb)_opt. Stimuli are passed
+# as explicit absolute plusargs, so the working directory no longer matters.
 hw-run:
-	cd $(VsimDir);                \
+	mkdir -p $(BUILD_DIR)
+	ln -sfn $(VsimDir)/work $(BUILD_DIR)/work
+	cd $(BUILD_DIR);              \
 	$(QUESTA) $(target) $(Tb)_opt \
 	$(VsimFlags)                  \
+	+STIM_INSTR=$(STIM_INSTR)     \
+	+STIM_DATA=$(STIM_DATA)       \
 	-do "run -a"
 
 hw-all: hw-clean hw-script hw-build hw-run

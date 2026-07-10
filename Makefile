@@ -14,11 +14,24 @@ ScriptsDir := $(RootDir)scripts
 VerilatorPath := target/sim/verilator
 VsimPath      := target/sim/vsim
 SW         ?= $(RootDir)sw
-BUILD_DIR  ?= $(SW)/build
 SIM_DIR    ?= $(RootDir)vsim
-QUESTA     ?= questa-2023.4
-Bender     ?= $(CargoInstallDir)/bin/bender
-Gcc        ?= $(GccInstallDir)/bin/
+ifneq (,$(wildcard /etc/iis.version))
+    QUESTA ?= questa-2023.4
+    Bender ?= $(CargoInstallDir)/bin/bende
+    Gcc    ?= $(GccInstallDir)/bin/
+else
+    QUESTA ?=
+    Bender ?= bender
+    Gcc    ?= 
+endif
+OP     ?= gemm
+fp_fmt ?= FP16
+M      ?= 24
+N      ?= 16
+K      ?= 16
+TEST_ID   ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)
+INC_DIR   ?= $(SW)/inc/$(TEST_ID)
+BUILD_DIR  ?= $(SW)/build/$(TEST_ID)
 ISA        ?= riscv
 ARCH       ?= rv
 XLEN       ?= 32
@@ -60,7 +73,7 @@ endif
 
 # Include directories
 INC += -I$(SW)
-INC += -I$(SW)/inc
+INC += -I$(INC_DIR)
 INC += -I$(SW)/utils
 
 BOOTSCRIPT := $(SW)/kernel/crt0.S
@@ -119,14 +132,11 @@ sw-clean:
 dis:
 	$(OBJDUMP) -d $(BIN) > $(DUMP)
 
-OP     ?= gemm
-fp_fmt ?= FP16
-M      ?= 24
-N      ?= 16
-K      ?= 16
-
-golden: golden-clean
-	$(MAKE) -C golden-model $(OP) SW=$(SW)/inc M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
+golden:
+	mkdir -p $(INC_DIR)
+	PYTHONDONTWRITEBYTECODE=1 $(MAKE) -C golden-model $(OP) \
+	SW=$(INC_DIR) TXT_DIR=$(BUILD_DIR)/golden_txt           \
+	M=$(M) N=$(N) K=$(K) fp_fmt=$(fp_fmt)
 
 golden-clean:
 	$(MAKE) -C golden-model golden-clean

@@ -70,15 +70,21 @@ addmin: check_penv
 	cd $(PENV);                               \
 	deactivate
 
+# TXT_DIR selects where the (debug) hex dumps and the unused net_parameters.h
+# go. It defaults to the historical per-op $(CUR_DIR)/$@/txt for standalone use,
+# but the top-level Makefile overrides it with a per-test directory so parallel
+# regression runs never share (and race on) the txt_dir the script wipes.
 gemm: check_penv
-	mkdir -p $@/txt;                          \
+	TXTDIR="$${TXT_DIR:-$(CUR_DIR)/$@/txt}"; \
+	mkdir -p "$$TXTDIR";                      \
 	cd $(PENV);                               \
 	source ./bin/activate;                    \
 	cd $(CUR_DIR)/$(fp_fmt);                  \
 	python3 ./scripts/$@.py                   \
 	--m_size $(M) --n_size $(N) --k_size $(K) \
 	--inc_dir $(SW)                           \
-	--txt_dir $(CUR_DIR)/$@/txt;              \
+	--txt_dir "$$TXTDIR"                      \
+	--file_name "$$TXTDIR/net_parameters.h";  \
 	cd $(PENV);                               \
 	deactivate
 

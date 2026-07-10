@@ -18,15 +18,17 @@ fi
 
 ScriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Best-effort: pick up the module-provided toolchain if `module` is
-# available. No-op if the tools are already on PATH some other way.
-module load questasim bender pulp-gcc7 >/dev/null 2>&1 || true
-
 BASE_TIMEOUT=500
 REGR_FILE="${REGR_FILE:-$ScriptDir/regression.yml}"
+# Number of tests to run concurrently. Each test now builds into its own
+# per-TEST_ID folder and only reads the shared, already-compiled RTL work
+# library, so the runs are isolated. Override N_PROC per invocation (bounded by
+# available Questa licenses / cores).
+N_PROC="${N_PROC:-4}"
 
 export Target
 
+# Compile the hardware once (shared across all parallel tests) before the pool.
 make hw-clean hw-build target=$Target Bender=bender Questa= 1>/dev/null 2>&1
 
-python3 "$ScriptDir/bwruntests.py" --yaml -t $BASE_TIMEOUT -p 1 "$REGR_FILE"
+python3 "$ScriptDir/bwruntests.py" --yaml -t $BASE_TIMEOUT -p "$N_PROC" "$REGR_FILE"
