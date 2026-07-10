@@ -159,7 +159,7 @@ golden-clean:
 .PHONY: test
 test:
 	$(MAKE) golden OP=$(OP) fp_fmt=$(fp_fmt) M=$(M) N=$(N) K=$(K)
-	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc
+	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc_zicsr
 	$(MAKE) hw-run REDMULE_COMPLEX=0 target=vsim Bender=bender Questa= QUESTA=
 
 clean-all: sw-clean
