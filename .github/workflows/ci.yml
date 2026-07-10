@@ -14,7 +14,6 @@ jobs:
       NUM_JOBS: 8
       Target: verilator
       REDMULE_COMPLEX: 0
-      BENDER: ./bender
       Verilator: verilator
       VERILATOR_VERSION: "5.046"
 
@@ -43,9 +42,13 @@ jobs:
         echo "$(pwd)/vendor/install/riscv/bin" >> $GITHUB_PATH
         echo "$(pwd)/golden-model/venv/bin" >> $GITHUB_PATH
 
+    - name: Build verilator model
+      run: |
+        make hw-build target=verilator
+
     - name: Run Tests
       run: |
-        Target=verilator scripts/regression-list.sh
+        scripts/regression-list.sh
 
   # run-complex-tests:
   #   name: run-complex-tests
