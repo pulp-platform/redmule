@@ -7,9 +7,11 @@
 
 export PYTHON=python3
 export PENV=$(pwd)/venv
-$PYTHON -m venv $PENV
+command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv --python $PYTHON $PENV
 source $PENV/bin/activate
-pip3 install --upgrade pip
-pip3 install numpy
-pip3 install torch
+uv pip install numpy
+uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+uv pip install prettytable pyyaml junit-xml
+
 deactivate

@@ -183,11 +183,9 @@ VerilatorInstallDir := $(InstallDir)/verilator
 GccInstallDir := $(InstallDir)/riscv
 RiscvTarDir := riscv.tar.gz
 GccUrl := https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/riscv32-elf-ubuntu-20.04-gcc-nightly-2024.08.28-nightly.tar.gz
-# Bender
-RustupInit := $(ScriptsDir)/rustup-init.sh
+# Bender (installed from prebuilt release binaries, no Rust toolchain needed)
+BenderVersion ?= 0.32.1
 CargoInstallDir := $(InstallDir)/cargo
-RustupInstallDir := $(InstallDir)/rustup
-Cargo := $(CargoInstallDir)/bin/cargo
 
 # verilator: $(VerilatorInstallDir)/bin/verilator
 # 
@@ -213,9 +211,8 @@ $(GccInstallDir):
 bender: $(CargoInstallDir)/bin/bender
 
 $(CargoInstallDir)/bin/bender:
-	curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf > $(RustupInit)
 	mkdir -p $(InstallDir)
-	export CARGO_HOME=$(CargoInstallDir) && export RUSTUP_HOME=$(RustupInstallDir) && \
-	chmod +x $(RustupInit); source $(RustupInit) -y && \
-	$(Cargo) install bender
-	rm -rf $(RustupInit)
+	curl --proto '=https' --tlsv1.2 -sSfL https://github.com/pulp-platform/bender/releases/download/v$(BenderVersion)/bender-installer.sh > $(InstallDir)/bender-installer.sh
+	BENDER_INSTALL_DIR=$(CargoInstallDir) BENDER_NO_MODIFY_PATH=1 BENDER_DISABLE_UPDATE=1 \
+		sh $(InstallDir)/bender-installer.sh
+	rm -f $(InstallDir)/bender-installer.sh
