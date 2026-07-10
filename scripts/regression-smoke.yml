@@ -1,0 +1,14 @@
+# Copyright 2023 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Single-test smoke check for the regression runner (scripts/bwruntests.py).
+# Useful for quickly validating the pipeline without paying for the full
+# scripts/regression.yml sweep. Run with:
+#
+#     Target=vsim REGR_FILE=scripts/regression-smoke.yml ./scripts/regression-list.sh
+
+redmule_regression_smoke:
+  M32_N32_K32:
+    path: .
+    command: make golden M=32 N=32 K=32 && make sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc && make hw-run REDMULE_COMPLEX=0 target=$Target Bender=bender Questa= QUESTA= | tee target/sim/$Target/transcript_32_32_32 | grep -q '\[TB\] - Success!'
