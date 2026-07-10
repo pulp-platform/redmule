@@ -31,15 +31,20 @@ hw-script:
 
 hw-build: hw-script
 	$(Verilator) --trace --timing --bbox-unsup \
-	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK \
+	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK -Wno-ENUMVALUE \
 	--x-assign unique --x-initial unique --top-module $(Module)_tb --Mdir $(VerilatorAbsObjDir) \
 	-CFLAGS "-DTbName=$(Vmodule)_tb -DWafeformPath=$(VerilatorWaves)" \
 	-sv -cc -f $(VerilatorCompileScript) --exe $(VerilatorSrc)/$(Module)_tb.cpp
-	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb
+	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb \
+	OBJCACHE=ccache OPT_SLOW=-O0 OPT_FAST=-O0 OPT_GLOBAL=-O0
 
 hw-run:
-	cd $(VerilatorDir);           \
-	./$(ObjDirName)/$(Vmodule)_tb
+	mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR);                    \
+	$(VerilatorAbsObjDir)/$(Vmodule)_tb  \
+	+STIM_INSTR=$(STIM_INSTR)           \
+	+STIM_DATA=$(STIM_DATA)             \
+	$(if $(filter 1,$(gui)),,+NOTRACE)
 ifeq ($(gui),1)
 	$(GtkWave) $(VerilatorWaves)
 endif

@@ -175,7 +175,9 @@ NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
 VendorDir ?= $(RootDir)vendor
 InstallDir ?= $(VendorDir)/install
 # Verilator
-VerilatorVersion ?= v5.028
+# Resolve to the latest tagged release unless the caller pins a version explicitly.
+VerilatorVersion ?= $(shell git ls-remote --tags --refs https://github.com/verilator/verilator.git \
+	| sed 's/.*refs\/tags\///' | grep -E '^v[0-9]+\.[0-9]+$$' | sort -V | tail -1)
 VerilatorInstallDir := $(InstallDir)/verilator
 # GCC
 GccInstallDir := $(InstallDir)/riscv
@@ -187,15 +189,16 @@ CargoInstallDir := $(InstallDir)/cargo
 RustupInstallDir := $(InstallDir)/rustup
 Cargo := $(CargoInstallDir)/bin/cargo
 
-verilator: $(InstallDir)/bin/verilator
+verilator: $(VerilatorInstallDir)/bin/verilator
 
-$(InstallDir)/bin/verilator:
+$(VerilatorInstallDir)/bin/verilator:
 	rm -rf $(VendorDir)/verilator
 	mkdir -p $(VendorDir) && cd $(VendorDir) && git clone https://github.com/verilator/verilator.git
-	# Checkout the right version
-	cd $(VendorDir)/verilator && git reset --hard && git fetch && git checkout $(VerilatorVersion)
+	# Checkout the latest tagged release (or VerilatorVersion, if overridden on the command line)
+	cd $(VendorDir)/verilator && git reset --hard && git fetch --tags && git checkout $(VerilatorVersion)
 	# Compile verilator
 	sudo apt install libfl-dev help2man
+	rm -rf $(VerilatorInstallDir)
 	mkdir -p $(VerilatorInstallDir) && cd $(VendorDir)/verilator && git clean -xfdf && autoconf && \
 	./configure --prefix=$(VerilatorInstallDir) CXX=$(CXX) && make -j$(NumCoresHalf)  && make install
 

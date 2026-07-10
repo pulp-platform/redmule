@@ -137,6 +137,15 @@ module redmule_config_fifo #(
     end
 
 `ifndef COMMON_CELLS_ASSERTS_OFF
+    // Some vendored IPs (e.g. ibex's prim_assert.sv) redefine `ASSERT`/`ASSERT_INIT`
+    // with a different (description-less) signature. Since assertions.svh is
+    // include-guarded, the plain `include at the top of this file is a no-op if
+    // any such IP was compiled first, leaving the wrong macro active here. Force
+    // a re-include right before use so these macros always have the expected
+    // common_cells signature regardless of compile order.
+    `undef COMMON_CELLS_ASSERTIONS_SVH
+    `include "common_cells/assertions.svh"
+
     `ASSERT_INIT(depth_0, DEPTH > 0, "DEPTH must be greater than 0.")
 
     `ASSERT(full_write, full_o |-> ~push_i, clk_i, !rst_ni,

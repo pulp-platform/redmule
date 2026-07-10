@@ -28,7 +28,4 @@ N_PROC="${N_PROC:-4}"
 
 export Target
 
-# Compile the hardware once (shared across all parallel tests) before the pool.
-make hw-clean hw-build target=$Target Bender=bender Questa= 1>/dev/null 2>&1
-
 python3 "$ScriptDir/bwruntests.py" --yaml -t $BASE_TIMEOUT -p "$N_PROC" "$REGR_FILE"
