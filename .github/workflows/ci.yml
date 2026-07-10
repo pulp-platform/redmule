@@ -11,16 +11,24 @@ jobs:
     name: run-hwpe-tests
     runs-on: ubuntu-latest
     env:
-      NUM_JOBS: 8
+      N_PROC: 8
       Target: verilator
       REDMULE_COMPLEX: 0
       Verilator: verilator
       VERILATOR_VERSION: "5.046"
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@v1
+      with:
+        key: ${{ runner.os }}-verilator-${{ env.VERILATOR_VERSION }}
+        max-size: 2G
 
     - name: Install Verilator (prebuilt)
       uses: veryl-lang/setup-verilator@v1
