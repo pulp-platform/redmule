@@ -6,7 +6,12 @@
 #
 # Makefragment for Verilator simulation.
 
-Verilator ?= $(VerilatorInstallDir)/bin/verilator
+# Prefer a verilator already on PATH (system package, environment module, ...);
+# fall back to the copy vendored under vendor/install (see the `verilator`
+# target in the top-level Makefile) only if none is found. Force one or the
+# other explicitly with `make ... Verilator=verilator` or
+# `make ... Verilator=$(VerilatorInstallDir)/bin/verilator`.
+Verilator ?= $(if $(shell command -v verilator 2>/dev/null),verilator,$(VerilatorInstallDir)/bin/verilator)
 GtkWave ?= gtkwave
 VerilatorRoot ?= $(VerilatorInstallDir)/share/verilator
 Module := redmule
