@@ -48,6 +48,12 @@ module redmule_streamer
 
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
+// The load/store cast units sit on the TCDM data bus. With MisalignedAccessSupport
+// the HCI sink/source widen that bus to DataW+32 (the extra word carries the
+// realignment overflow), so the casts must span the full TCDM width or they drop
+// the realignment word (corrupting misaligned, e.g. odd-k_size, transfers).
+localparam int unsigned CastDataW = DataW + (MisalignedAccessSupport ? 32 : 0);
+
 // Non-ECC variant of tcdm size params, used for all internal (non-ECC) interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   DW:  `HCI_SIZE_GET_DW(tcdm),
@@ -236,7 +242,7 @@ assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
 // This unit uses only the data bus of the TCDM interface. The other buses
 // are assigned manually.
 redmule_castout #(
-  .DataW         ( DataW        ),
+  .DataW         ( CastDataW    ),
   .FpFmtConfig   ( FpFmtConfig  ),
   .IntFmtConfig  ( IntFmtConfig ),
   .SrcFormat     ( FpFormat     )
@@ -386,7 +392,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   // This unit uses only the data bus of the TCDM interface. The other buses
   // are assigned manually.
   redmule_castin #(
-    .DataW        ( DataW        ),
+    .DataW        ( CastDataW    ),
     .FpFmtConfig  ( FpFmtConfig  ),
     .IntFmtConfig ( IntFmtConfig ),
     .DstFormat    ( FpFormat     )
