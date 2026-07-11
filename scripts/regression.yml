@@ -30,11 +30,9 @@ redmule_regression:
   M48_N32_K32:
     path: .
     command: make golden M=48 N=32 K=32 && make sw-clean sw-build M=48 N=32 K=32 REDMULE_COMPLEX=0 Gcc= && make hw-run M=48 N=32 K=32 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_48_32_32 | grep -q '\[TB\] - Success!'
-  # M30_N32_K18: # STILL BROKEN (separate bug): a *small* trailing K-leftover
-  #   path: .     # (K=18 -> 16+2) combined with N-tiling (N=32) hits a z-buffer
-  #               # store/push race (see redmule_z_buffer.sv "very small leftovers
-  #               # on K"), independent of the z_config_fast store-geometry fix.
-  #   command: make golden M=30 N=32 K=18 && make sw-clean sw-build M=30 N=32 K=18 REDMULE_COMPLEX=0 Gcc= && make hw-run M=30 N=32 K=18 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_30_32_18 | grep -q '\[TB\] - Success!'
+  M30_N32_K18: # small trailing K-leftover (16+2) + N-tiling + M-leftover
+    path: .
+    command: make golden M=30 N=32 K=18 && make sw-clean sw-build M=30 N=32 K=18 REDMULE_COMPLEX=0 Gcc= && make hw-run M=30 N=32 K=18 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_30_32_18 | grep -q '\[TB\] - Success!'
   M24_N32_K2:
     path: .
     command: make golden M=24 N=32 K=2 && make sw-clean sw-build M=24 N=32 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=24 N=32 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_24_32_2 | grep -q '\[TB\] - Success!'
@@ -62,3 +60,6 @@ redmule_regression:
   M32_N32_K24: # K-leftover across multiple K and row tiles
     path: .
     command: make golden M=32 N=32 K=24 && make sw-clean sw-build M=32 N=32 K=24 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=32 K=24 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_32_24 | grep -q '\[TB\] - Success!'
+  M16_N32_K18: # small trailing K-leftover (16+2) + N-tiling (bias-push-height race)
+    path: .
+    command: make golden M=16 N=32 K=18 && make sw-clean sw-build M=16 N=32 K=18 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=32 K=18 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_32_18 | grep -q '\[TB\] - Success!'

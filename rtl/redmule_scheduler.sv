@@ -415,6 +415,7 @@ module redmule_scheduler
 
   logic [$clog2(W):0]             y_width, z_width, z_width_next;
   logic [$clog2(D):0]             y_height, z_height, z_height_next;
+  logic [$clog2(D):0]             y_push_height;
 
   logic y_config_pop;
   assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
@@ -647,8 +648,26 @@ module redmule_scheduler
     end
   end
 
-  assign y_push_counter_d = y_push_counter_q == y_height-1 ? '0 : y_push_counter_q + 1;
-  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_height-1;
+  // Latch the bias-push height at the start of each push and hold it stable for
+  // the whole push. y_height is combinational off the store-timed y_cols_iter_q,
+  // which can advance (on a store-empty) *mid-push* — most visibly with a small
+  // trailing K-leftover under N-tiling, where it flips D->w_cols_lftovr partway
+  // through a full tile's push and makes the counter overshoot, injecting extra
+  // bias columns into the next tile. Latching pins it to the current push's tile.
+  always_ff @(posedge clk_i or negedge rst_ni) begin : y_push_height_register
+    if (~rst_ni) begin
+      y_push_height <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        y_push_height <= '0;
+      end else if ((z_wait_en && ~stall_engine && z_wait_counter_q == NumPipeRegs-1) || start_computation) begin
+        y_push_height <= y_height;
+      end
+    end
+  end
+
+  assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
+  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
   assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
@@ -692,7 +711,7 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.mask_y        = y_config_fast.gemm_selection;
 
   assign cntrl_z_buffer_o.y_width       = y_width;
-  assign cntrl_z_buffer_o.y_height      = y_height;
+  assign cntrl_z_buffer_o.y_height      = y_push_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
 
