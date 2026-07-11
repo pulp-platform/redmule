@@ -45,6 +45,7 @@ module redmule_ctrl
 
   logic        latch_clear;
   logic        tiler_setback, tiler_valid;
+  logic        fifo_z_empty;
 
   typedef enum logic [2:0] {
     REDMULE_LATCH_RST,
@@ -123,7 +124,7 @@ module redmule_ctrl
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
   assign latch_clear                  = current == REDMULE_LATCH_RST;
-
+  assign fifo_z_empty                 = EnableReordering ? flgs_streamer_i.store_fifo_empty : 1'b1;
 
   always_comb begin : controller_fsm
     cntrl_flags_o.idle = 1'b0;
