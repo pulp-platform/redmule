@@ -102,3 +102,147 @@ redmule_regression:
   M12_N30_K15: # odd K misaligned + odd N + M-leftover
     path: .
     command: make golden M=12 N=30 K=15 && make sw-clean sw-build M=12 N=30 K=15 REDMULE_COMPLEX=0 Gcc= && make hw-run M=12 N=30 K=15 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_12_30_15 | grep -q '\[TB\] - Success!'
+  M1_N16_K1:
+    path: .
+    command: make golden M=1 N=16 K=1 && make sw-clean sw-build M=1 N=16 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=16 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_16_1 | grep -q '\[TB\] - Success!'
+  M1_N16_K2:
+    path: .
+    command: make golden M=1 N=16 K=2 && make sw-clean sw-build M=1 N=16 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=16 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_16_2 | grep -q '\[TB\] - Success!'
+  M1_N16_K4:
+    path: .
+    command: make golden M=1 N=16 K=4 && make sw-clean sw-build M=1 N=16 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=16 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_16_4 | grep -q '\[TB\] - Success!'
+  M1_N16_K8:
+    path: .
+    command: make golden M=1 N=16 K=8 && make sw-clean sw-build M=1 N=16 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=16 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_16_8 | grep -q '\[TB\] - Success!'
+  M1_N24_K1:
+    path: .
+    command: make golden M=1 N=24 K=1 && make sw-clean sw-build M=1 N=24 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=24 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_24_1 | grep -q '\[TB\] - Success!'
+  M1_N24_K2:
+    path: .
+    command: make golden M=1 N=24 K=2 && make sw-clean sw-build M=1 N=24 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=24 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_24_2 | grep -q '\[TB\] - Success!'
+  M1_N24_K4:
+    path: .
+    command: make golden M=1 N=24 K=4 && make sw-clean sw-build M=1 N=24 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=24 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_24_4 | grep -q '\[TB\] - Success!'
+  M1_N24_K8:
+    path: .
+    command: make golden M=1 N=24 K=8 && make sw-clean sw-build M=1 N=24 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=24 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_24_8 | grep -q '\[TB\] - Success!'
+  M1_N32_K1:
+    path: .
+    command: make golden M=1 N=32 K=1 && make sw-clean sw-build M=1 N=32 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=32 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_32_1 | grep -q '\[TB\] - Success!'
+  M1_N32_K2:
+    path: .
+    command: make golden M=1 N=32 K=2 && make sw-clean sw-build M=1 N=32 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=32 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_32_2 | grep -q '\[TB\] - Success!'
+  M1_N32_K4:
+    path: .
+    command: make golden M=1 N=32 K=4 && make sw-clean sw-build M=1 N=32 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=32 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_32_4 | grep -q '\[TB\] - Success!'
+  M1_N32_K8:
+    path: .
+    command: make golden M=1 N=32 K=8 && make sw-clean sw-build M=1 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=1 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_1_32_8 | grep -q '\[TB\] - Success!'
+  M2_N16_K1:
+    path: .
+    command: make golden M=2 N=16 K=1 && make sw-clean sw-build M=2 N=16 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=16 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_16_1 | grep -q '\[TB\] - Success!'
+  M2_N16_K2:
+    path: .
+    command: make golden M=2 N=16 K=2 && make sw-clean sw-build M=2 N=16 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=16 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_16_2 | grep -q '\[TB\] - Success!'
+  M2_N16_K4:
+    path: .
+    command: make golden M=2 N=16 K=4 && make sw-clean sw-build M=2 N=16 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=16 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_16_4 | grep -q '\[TB\] - Success!'
+  M2_N16_K8:
+    path: .
+    command: make golden M=2 N=16 K=8 && make sw-clean sw-build M=2 N=16 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=16 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_16_8 | grep -q '\[TB\] - Success!'
+  M2_N24_K1:
+    path: .
+    command: make golden M=2 N=24 K=1 && make sw-clean sw-build M=2 N=24 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=24 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_24_1 | grep -q '\[TB\] - Success!'
+  M2_N24_K2:
+    path: .
+    command: make golden M=2 N=24 K=2 && make sw-clean sw-build M=2 N=24 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=24 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_24_2 | grep -q '\[TB\] - Success!'
+  M2_N24_K4:
+    path: .
+    command: make golden M=2 N=24 K=4 && make sw-clean sw-build M=2 N=24 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=24 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_24_4 | grep -q '\[TB\] - Success!'
+  M2_N24_K8:
+    path: .
+    command: make golden M=2 N=24 K=8 && make sw-clean sw-build M=2 N=24 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=24 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_24_8 | grep -q '\[TB\] - Success!'
+  M2_N32_K1:
+    path: .
+    command: make golden M=2 N=32 K=1 && make sw-clean sw-build M=2 N=32 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=32 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_32_1 | grep -q '\[TB\] - Success!'
+  M2_N32_K2:
+    path: .
+    command: make golden M=2 N=32 K=2 && make sw-clean sw-build M=2 N=32 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=32 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_32_2 | grep -q '\[TB\] - Success!'
+  M2_N32_K4:
+    path: .
+    command: make golden M=2 N=32 K=4 && make sw-clean sw-build M=2 N=32 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=32 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_32_4 | grep -q '\[TB\] - Success!'
+  M2_N32_K8:
+    path: .
+    command: make golden M=2 N=32 K=8 && make sw-clean sw-build M=2 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=2 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_2_32_8 | grep -q '\[TB\] - Success!'
+  M4_N16_K1:
+    path: .
+    command: make golden M=4 N=16 K=1 && make sw-clean sw-build M=4 N=16 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=16 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_16_1 | grep -q '\[TB\] - Success!'
+  M4_N16_K2:
+    path: .
+    command: make golden M=4 N=16 K=2 && make sw-clean sw-build M=4 N=16 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=16 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_16_2 | grep -q '\[TB\] - Success!'
+  M4_N16_K4:
+    path: .
+    command: make golden M=4 N=16 K=4 && make sw-clean sw-build M=4 N=16 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=16 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_16_4 | grep -q '\[TB\] - Success!'
+  M4_N16_K8:
+    path: .
+    command: make golden M=4 N=16 K=8 && make sw-clean sw-build M=4 N=16 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=16 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_16_8 | grep -q '\[TB\] - Success!'
+  M4_N24_K1:
+    path: .
+    command: make golden M=4 N=24 K=1 && make sw-clean sw-build M=4 N=24 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=24 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_24_1 | grep -q '\[TB\] - Success!'
+  M4_N24_K2:
+    path: .
+    command: make golden M=4 N=24 K=2 && make sw-clean sw-build M=4 N=24 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=24 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_24_2 | grep -q '\[TB\] - Success!'
+  M4_N24_K4:
+    path: .
+    command: make golden M=4 N=24 K=4 && make sw-clean sw-build M=4 N=24 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=24 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_24_4 | grep -q '\[TB\] - Success!'
+  M4_N24_K8:
+    path: .
+    command: make golden M=4 N=24 K=8 && make sw-clean sw-build M=4 N=24 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=24 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_24_8 | grep -q '\[TB\] - Success!'
+  M4_N32_K1:
+    path: .
+    command: make golden M=4 N=32 K=1 && make sw-clean sw-build M=4 N=32 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=32 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_32_1 | grep -q '\[TB\] - Success!'
+  M4_N32_K2:
+    path: .
+    command: make golden M=4 N=32 K=2 && make sw-clean sw-build M=4 N=32 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=32 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_32_2 | grep -q '\[TB\] - Success!'
+  M4_N32_K4:
+    path: .
+    command: make golden M=4 N=32 K=4 && make sw-clean sw-build M=4 N=32 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=32 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_32_4 | grep -q '\[TB\] - Success!'
+  M4_N32_K8:
+    path: .
+    command: make golden M=4 N=32 K=8 && make sw-clean sw-build M=4 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=4 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_4_32_8 | grep -q '\[TB\] - Success!'
+  M8_N16_K1:
+    path: .
+    command: make golden M=8 N=16 K=1 && make sw-clean sw-build M=8 N=16 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=16 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_16_1 | grep -q '\[TB\] - Success!'
+  M8_N16_K2:
+    path: .
+    command: make golden M=8 N=16 K=2 && make sw-clean sw-build M=8 N=16 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=16 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_16_2 | grep -q '\[TB\] - Success!'
+  M8_N16_K4:
+    path: .
+    command: make golden M=8 N=16 K=4 && make sw-clean sw-build M=8 N=16 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=16 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_16_4 | grep -q '\[TB\] - Success!'
+  M8_N16_K8:
+    path: .
+    command: make golden M=8 N=16 K=8 && make sw-clean sw-build M=8 N=16 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=16 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_16_8 | grep -q '\[TB\] - Success!'
+  M8_N24_K1:
+    path: .
+    command: make golden M=8 N=24 K=1 && make sw-clean sw-build M=8 N=24 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=24 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_24_1 | grep -q '\[TB\] - Success!'
+  M8_N24_K2:
+    path: .
+    command: make golden M=8 N=24 K=2 && make sw-clean sw-build M=8 N=24 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=24 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_24_2 | grep -q '\[TB\] - Success!'
+  M8_N24_K4:
+    path: .
+    command: make golden M=8 N=24 K=4 && make sw-clean sw-build M=8 N=24 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=24 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_24_4 | grep -q '\[TB\] - Success!'
+  M8_N24_K8:
+    path: .
+    command: make golden M=8 N=24 K=8 && make sw-clean sw-build M=8 N=24 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=24 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_24_8 | grep -q '\[TB\] - Success!'
+  M8_N32_K1:
+    path: .
+    command: make golden M=8 N=32 K=1 && make sw-clean sw-build M=8 N=32 K=1 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=1 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_1 | grep -q '\[TB\] - Success!'
+  M8_N32_K2:
+    path: .
+    command: make golden M=8 N=32 K=2 && make sw-clean sw-build M=8 N=32 K=2 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=2 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_2 | grep -q '\[TB\] - Success!'
+  M8_N32_K4:
+    path: .
+    command: make golden M=8 N=32 K=4 && make sw-clean sw-build M=8 N=32 K=4 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=4 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_4 | grep -q '\[TB\] - Success!'
+  M8_N32_K8:
+    path: .
+    command: make golden M=8 N=32 K=8 && make sw-clean sw-build M=8 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_8 | grep -q '\[TB\] - Success!'

@@ -128,7 +128,7 @@ class FinishedProcess(object):
         throughput = 0
         workload = 0
         if returncode == 0:
-            matches = re.findall("# hwpe cycles =\s+(\d+)", stdout)
+            matches = re.findall(r"# hwpe cycles =\s+(\d+)", stdout)
             if matches:
                 exec_time = int(matches[0])
         self.exec_time = exec_time
@@ -174,7 +174,7 @@ def fork(name, cwd, *popenargs, check=False, shell=True,
                     raise
             # measure runtime
             start = time.time()
-            stdout, stderr = process.communicate(input, timeout=args.timeout)
+            stdout, stderr = process.communicate(input, timeout=proc_timeout)
         except TimeoutExpired:
             pgid = os.getpgid(process.pid)
             os.killpg(pgid, signal.SIGKILL)
@@ -183,9 +183,9 @@ def fork(name, cwd, *popenargs, check=False, shell=True,
             # (make -> vsim -> etc). We need to make a process group and kill
             # that
             stdout, stderr = process.communicate()
-            timeoutmsg = 'TIMEOUT after {:f}s'.format(args.timeout)
+            timeoutmsg = 'TIMEOUT after {:f}s'.format(proc_timeout)
 
-            if args.proc_verbose:
+            if proc_verbose:
                 stdout_lock.acquire()
                 print(name)
                 print(timeoutmsg)
@@ -207,7 +207,7 @@ def fork(name, cwd, *popenargs, check=False, shell=True,
         if check and retcode:
             raise CalledProcessError(retcode, process.args,
                                      output=stdout, stderr=stderr)
-        if args.proc_verbose:
+        if proc_verbose:
             stdout_lock.acquire()
             print(name)
             proc_out(cwd, stdout, stderr)
@@ -222,13 +222,17 @@ def fork(name, cwd, *popenargs, check=False, shell=True,
                            stderr.decode('utf-8'),
                            time.time() - start)
 
-def poolInit(s, t, l):
+def poolInit(s, t, l, timeout, verbose):
     global shared_total
     global len_total
     global lock
+    global proc_timeout
+    global proc_verbose
     shared_total = s
     len_total = t
     lock = l
+    proc_timeout = timeout
+    proc_verbose = verbose
 
 if __name__ == '__main__':
     args = runtest.parse_args()
@@ -289,7 +293,7 @@ the pyyaml library which is not installed.""",
     lock = multiprocessing.Lock()
     shared_total = multiprocessing.Value('i', 0)
     len_total = multiprocessing.Value('i', len(tests))
-    pool = multiprocessing.Pool(processes=args.max_procs, initializer=poolInit, initargs=(shared_total, len_total, lock ))
+    pool = multiprocessing.Pool(processes=args.max_procs, initializer=poolInit, initargs=(shared_total, len_total, lock, args.timeout, args.proc_verbose ))
     # Restore SIGINT handler
     signal.signal(signal.SIGINT, original_sigint_handler)
     # Shuffle tests
