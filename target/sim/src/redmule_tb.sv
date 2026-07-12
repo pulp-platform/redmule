@@ -299,6 +299,15 @@ module redmule_tb
   integer f_x, f_W, f_y, f_tau;
   logic start;
   int cnt_rd, cnt_wr;
+  int unsigned cnt_cycles;
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      cnt_cycles <= 0;
+    else if(redmule_busy)
+      cnt_cycles <= cnt_cycles + 1;
+  end
 
   int errors = -1;
   always_ff @(posedge clk_i)
@@ -333,6 +342,7 @@ module redmule_tb
     end
     $display("[TB] - cnt_rd=%-8d", cnt_rd);
     $display("[TB] - cnt_wr=%-8d", cnt_wr);
+    $display("# hwpe cycles = %0d", cnt_cycles);
     if(errors != 0) begin
       $display("[TB] - Fail!");
       $error("[TB] - errors=%08x", errors);
