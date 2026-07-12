@@ -63,3 +63,42 @@ redmule_regression:
   M16_N32_K18: # small trailing K-leftover (16+2) + N-tiling (bias-push-height race)
     path: .
     command: make golden M=16 N=32 K=18 && make sw-clean sw-build M=16 N=32 K=18 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=32 K=18 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_32_18 | grep -q '\[TB\] - Success!'
+  M24_N16_K18: # even K-leftover (16+2), 4-aligned Z stride, no N-tiling
+    path: .
+    command: make golden M=24 N=16 K=18 && make sw-clean sw-build M=24 N=16 K=18 REDMULE_COMPLEX=0 Gcc= && make hw-run M=24 N=16 K=18 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_24_16_18 | grep -q '\[TB\] - Success!'
+  M8_N16_K17: # odd K -> misaligned (2B) Z stride, single M-block (misaligned cold-start repro)
+    path: .
+    command: make golden M=8 N=16 K=17 && make sw-clean sw-build M=8 N=16 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=16 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_16_17 | grep -q '\[TB\] - Success!'
+  M16_N16_K13: # odd K sub-tile leftover (13 < 16), misaligned
+    path: .
+    command: make golden M=16 N=16 K=13 && make sw-clean sw-build M=16 N=16 K=13 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=16 K=13 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_16_13 | grep -q '\[TB\] - Success!'
+  M16_N16_K15: # odd K sub-tile leftover (15 < 16), misaligned
+    path: .
+    command: make golden M=16 N=16 K=15 && make sw-clean sw-build M=16 N=16 K=15 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=16 K=15 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_16_15 | grep -q '\[TB\] - Success!'
+  M16_N16_K17: # odd K (16+1) misaligned, multi-M-block
+    path: .
+    command: make golden M=16 N=16 K=17 && make sw-clean sw-build M=16 N=16 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=16 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_16_17 | grep -q '\[TB\] - Success!'
+  M24_N16_K17: # odd K misaligned, first-M-block cold-start check (multi-block)
+    path: .
+    command: make golden M=24 N=16 K=17 && make sw-clean sw-build M=24 N=16 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=24 N=16 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_24_16_17 | grep -q '\[TB\] - Success!'
+  M32_N32_K17: # odd K misaligned + N-tiling + multiple M/K tiles
+    path: .
+    command: make golden M=32 N=32 K=17 && make sw-clean sw-build M=32 N=32 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=32 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_32_17 | grep -q '\[TB\] - Success!'
+  M24_N32_K17: # odd K misaligned + N-tiling + M multi-block
+    path: .
+    command: make golden M=24 N=32 K=17 && make sw-clean sw-build M=24 N=32 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=24 N=32 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_24_32_17 | grep -q '\[TB\] - Success!'
+  M30_N32_K17: # odd K misaligned + N-tiling + M-leftover
+    path: .
+    command: make golden M=30 N=32 K=17 && make sw-clean sw-build M=30 N=32 K=17 REDMULE_COMPLEX=0 Gcc= && make hw-run M=30 N=32 K=17 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_30_32_17 | grep -q '\[TB\] - Success!'
+  M16_N32_K33: # odd K > 32 (two full K-tiles + odd leftover) misaligned + N-tiling
+    path: .
+    command: make golden M=16 N=32 K=33 && make sw-clean sw-build M=16 N=32 K=33 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=32 K=33 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_32_33 | grep -q '\[TB\] - Success!'
+  M32_N48_K25: # odd K misaligned + N-tiling, larger
+    path: .
+    command: make golden M=32 N=48 K=25 && make sw-clean sw-build M=32 N=48 K=25 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=48 K=25 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_48_25 | grep -q '\[TB\] - Success!'
+  M48_N32_K19: # odd K misaligned, larger M (many M-blocks)
+    path: .
+    command: make golden M=48 N=32 K=19 && make sw-clean sw-build M=48 N=32 K=19 REDMULE_COMPLEX=0 Gcc= && make hw-run M=48 N=32 K=19 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_48_32_19 | grep -q '\[TB\] - Success!'
+  M12_N30_K15: # odd K misaligned + odd N + M-leftover
+    path: .
+    command: make golden M=12 N=30 K=15 && make sw-clean sw-build M=12 N=30 K=15 REDMULE_COMPLEX=0 Gcc= && make hw-run M=12 N=30 K=15 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_12_30_15 | grep -q '\[TB\] - Success!'
