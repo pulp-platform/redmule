@@ -246,3 +246,19 @@ redmule_regression:
   M8_N32_K8:
     path: .
     command: make golden M=8 N=32 K=8 && make sw-clean sw-build M=8 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_8_32_8
+  # Small contraction N <= Height promoted to MinimumSizeN (previously HUNG on multi-block).
+  M16_N8_K16: # N=Height, 2 M-blocks -> was the canonical hang
+    path: .
+    command: make golden M=16 N=8 K=16 && make sw-clean sw-build M=16 N=8 K=16 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=8 K=16 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_8_16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_16_8_16
+  M24_N8_K16: # N=Height, 3 M-blocks
+    path: .
+    command: make golden M=24 N=8 K=16 && make sw-clean sw-build M=24 N=8 K=16 REDMULE_COMPLEX=0 Gcc= && make hw-run M=24 N=8 K=16 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_24_8_16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_24_8_16
+  M32_N8_K16: # N=Height, 4 M-blocks
+    path: .
+    command: make golden M=32 N=8 K=16 && make sw-clean sw-build M=32 N=8 K=16 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=8 K=16 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_8_16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_32_8_16
+  M16_N8_K24: # N=Height, 2 M-blocks + 2 K-tiles (K-leftover)
+    path: .
+    command: make golden M=16 N=8 K=24 && make sw-clean sw-build M=16 N=8 K=24 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=8 K=24 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_8_24 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_16_8_24
+  M16_N4_K16: # N < Height (padded rows [4..15] gated to zero)
+    path: .
+    command: make golden M=16 N=4 K=16 && make sw-clean sw-build M=16 N=4 K=16 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=4 K=16 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_4_16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_16_4_16

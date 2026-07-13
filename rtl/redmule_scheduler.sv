@@ -175,8 +175,19 @@ module redmule_scheduler
 
   assign x_done_en = /*flgs_streamer_i.x_stream_source_flags.ready_start &&*/ x_rows_iter_en && x_rows_iter_q == x_config.x_rows_iter-1 && x_w_iters_q == x_config.w_cols_iter-1 && x_cols_iter_q == x_config.x_cols_iter-1;
 
+  // For N <= Height the contraction is promoted to a full N-tile (MinimumSizeN steps) by the tiler
+  // (see redmule_tiler.sv). The X buffer must then iterate a full D-deep tile so its refill / M-block
+  // row-advance stays in step with the promoted contraction; otherwise it would serve only
+  // x_buffer_slots (= n_size rounded up to Height, = Height for N <= Height) columns and never advance
+  // to the next M-block's X rows (the trailing output tile would reuse the first block's X). This is
+  // the X-side analogue of the W-row promotion and mirrors what already happens for Height < N < D
+  // (e.g. N=12 -> x_buffer_slots = D). The valid-column count `height` stays at the real x_cols_lftovr
+  // so the padded columns [n_size .. D-1] are still zeroed on the way into the buffer.
+  logic small_n_promoted_x;
+  assign small_n_promoted_x = (x_config.n_size <= H);
   assign cntrl_x_buffer_o.height = x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_cols_lftovr : D;
-  assign cntrl_x_buffer_o.slots  = x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_buffer_slots : D;
+  assign cntrl_x_buffer_o.slots  = small_n_promoted_x ? D
+                                 : (x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_buffer_slots : D);
   assign cntrl_x_buffer_o.width  = x_rows_iter_q == x_config.x_rows_iter-1 && x_config.x_rows_lftovr != '0 ? x_config.x_rows_lftovr : W;
 
   /******************************
@@ -360,7 +371,18 @@ module redmule_scheduler
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == w_config.x_rows_iter-1;
 
-  assign cntrl_w_buffer_o.height = w_rows_iter_q >= w_config.w_rows_iter-(NumPipeRegs+1) && w_config.w_rows_lftovr != '0 ? w_config.w_rows_lftovr : H;
+  // When N <= Height the tiler promotes the W-row loop to MinimumSizeN (a full N-tile) so the
+  // W-load pacing matches the proven-good large-N case. The extra padded contraction rows
+  // [n_size .. MinimumSizeN-1] must be zeroed at the W-buffer input: rows with a global
+  // contraction index >= real n_size are gated to zero. Since real N <= H, all valid rows fall in
+  // the first Height-deep buffer pass (w_rows_iter_q < H, valid depth = n_size); the second pass
+  // (w_rows_iter_q >= H) is fully invalid (valid depth = 0). This mirrors the operand zeroing the
+  // ordinary partial-N-tile leftover already performs for Height < N < MinimumSizeN.
+  logic small_n_promoted;
+  assign small_n_promoted = (w_config.n_size <= H);
+  assign cntrl_w_buffer_o.height = small_n_promoted
+                                 ? (w_rows_iter_q < H ? w_config.n_size[$clog2(MaxDim)-1:0] : '0)
+                                 : (w_rows_iter_q >= w_config.w_rows_iter-(NumPipeRegs+1) && w_config.w_rows_lftovr != '0 ? w_config.w_rows_lftovr : H);
   assign cntrl_w_buffer_o.width  = w_cols_iter_q == w_config.w_cols_iter-1 && w_config.w_cols_lftovr != '0 ? w_config.w_cols_lftovr : D;
 
   assign cntrl_w_buffer_o.load  = current_state == LOAD_W && ~stall_engine && ~w_done;
