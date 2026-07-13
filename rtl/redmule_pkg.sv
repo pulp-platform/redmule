@@ -17,13 +17,11 @@ package redmule_pkg;
   parameter int unsigned MaxDataW             = MaxDepth * 16;
   parameter int unsigned MisalignedAccessSupportDefault = 0; // default to 0 for compatibility with Snitch
 
-  // Minimum contraction size (N) handled by the internal control. Any job with n_size <= Height
-  // is run "as if" N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer
-  // timing (see redmule_tiler.sv), while the input operands for the padded contraction rows
-  // [n_size .. MinimumSizeN-1] are gated to zero so the result is unaffected. This restores the
-  // proven-good large-N pacing and fixes the small-N multi-block hang. MinimumSizeN should equal
-  // one full N-tile, i.e. Height*(PipeRegs+1) (= 16 in the default TB geometry); if the array
-  // geometry is re-parameterized away from the default, thread it as a module parameter instead.
+  // Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
+  // N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
+  // redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
+  // are gated to zero so the result is unaffected. This is necessary to enable the controller to
+  // work properly in these corner cases.
   parameter int unsigned MinimumSizeN         = 16;
 
   parameter int unsigned NumStreamSources     = 3; // X, W, Y

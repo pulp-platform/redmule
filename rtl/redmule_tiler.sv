@@ -63,13 +63,13 @@ assign config_d.m_size          = config_i.m_size;
 assign config_d.k_size          = config_i.k_size;
 assign config_d.n_size          = config_i.n_size; // real N is carried downstream unchanged (used for operand gating)
 
-// Effective contraction size used ONLY for the W-row loop length / streamer length: any job with
+// Effective N size used ONLY for the W-row loop length / streamer length: any job with
 // N <= Height is promoted to MinimumSizeN so the W-load takes as long as a full N-tile, restoring
 // the large-N scheduler/z_buffer pacing that fixes the small-N multi-block hang. The X-column
 // tiling and the store geometry deliberately keep the real config_d.n_size here (X rows are only
 // n_size wide, so over-reading X would misalign the addresses); the X buffer is instead promoted to
 // a full D-deep tile in redmule_scheduler.sv (cntrl_x_buffer_o.slots) so it advances M-block rows in
-// step with the promoted contraction, and both padded operands are zeroed (X via x_cols_lftovr,
+// step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
 // W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
 logic [15:0] n_size_eff;
 assign n_size_eff = (config_i.n_size <= Height) ? MinimumSizeN[15:0] : config_i.n_size;
