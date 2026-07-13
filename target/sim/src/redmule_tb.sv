@@ -30,10 +30,7 @@ module redmule_tb
   // parameters
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 4; // matches the OpIdWidth used inside redmule_top's target decoder
-  // RedMulE TCDM data width. With MisalignedAccessSupport=1 the streamer expects
-  // the TCDM interface to be DataW+32 (extra word for realignment), see
-  // redmule_streamer.sv tcdm_size_check_dw. DataW here is 256 (see i_redmule_wrap).
-  localparam int unsigned DW = 256 + 32;
+  localparam int unsigned DW = 256 + 32; // TCDM data width including MisalignedAccessSupport=1
   localparam int unsigned MP = DW/32;
   // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
   // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no

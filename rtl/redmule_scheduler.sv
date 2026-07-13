@@ -386,8 +386,7 @@ module redmule_scheduler
   logic            y_config_fast_empty, y_config_fast_full;
 
   // Dedicated store-side (Z) tiling config, retired only when the last Z store
-  // retires (see i_z_config_fast_fifo) so the store geometry stays valid through
-  // the final leftover-K store burst.
+  // retires
   redmule_config_t z_config_fast;
   logic            z_config_fast_empty, z_config_fast_full;
 
@@ -457,9 +456,9 @@ module redmule_scheduler
     .pop_i      ( y_config_fast_pop   )
   );
 
-  // Store-side config FIFO: same contents as the others but retired on the last
-  // Z store (z_config_fast_pop), i.e. one tile later than y_config_fast (last Y
-  // load), so the leftover-K geometry is still valid when the final tile stores.
+  // Store-side config FIFO: retired on the last Z store (z_config_fast_pop), i.e.
+  // one tile later than y_config_fast (last Y load), so the leftover-K config is
+  // still valid when the final tile stores.
   logic z_config_fast_pop;
   assign z_config_fast_pop = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_rows_iter_en && ~z_config_fast_empty;
   redmule_config_fifo #(
@@ -648,12 +647,6 @@ module redmule_scheduler
     end
   end
 
-  // Latch the bias-push height at the start of each push and hold it stable for
-  // the whole push. y_height is combinational off the store-timed y_cols_iter_q,
-  // which can advance (on a store-empty) *mid-push* — most visibly with a small
-  // trailing K-leftover under N-tiling, where it flips D->w_cols_lftovr partway
-  // through a full tile's push and makes the counter overshoot, injecting extra
-  // bias columns into the next tile. Latching pins it to the current push's tile.
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_push_height_register
     if (~rst_ni) begin
       y_push_height <= '0;
@@ -672,9 +665,6 @@ module redmule_scheduler
   assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  // Store-side geometry: identical formula to y_width/y_height above, but driven
-  // by the store iterators + z_config_fast so the last leftover-K store latches
-  // the correct (leftover) width instead of a stale full width.
   assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
   assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 

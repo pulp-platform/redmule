@@ -48,10 +48,7 @@ module redmule_streamer
 
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
-// The load/store cast units sit on the TCDM data bus. With MisalignedAccessSupport
-// the HCI sink/source widen that bus to DataW+32 (the extra word carries the
-// realignment overflow), so the casts must span the full TCDM width or they drop
-// the realignment word (corrupting misaligned, e.g. odd-k_size, transfers).
+// Cast in/out modules operate on misaligned DataW
 localparam int unsigned CastDataW = DataW + (MisalignedAccessSupport ? 32 : 0);
 
 // Non-ECC variant of tcdm size params, used for all internal (non-ECC) interfaces
