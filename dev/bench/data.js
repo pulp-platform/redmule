@@ -1,0 +1,422 @@
+window.BENCHMARK_DATA = {
+  "lastUpdate": 1783930692157,
+  "repoUrl": "https://github.com/pulp-platform/redmule",
+  "entries": {
+    "Execution cycles": [
+      {
+        "commit": {
+          "author": {
+            "email": "FrancescoConti@users.noreply.github.com",
+            "name": "Francesco Conti",
+            "username": "FrancescoConti"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dca57a3758578d4c68af5a73cc6b76a34a5ca6a8",
+          "message": "Fix leftover cases (#61)\n\n* [scheduler] fix wrong results on trailing K-dimension leftovers\n\nThe Z store geometry (z_height/z_width -> z_strb) was derived from\ny_height/y_width, which pair store-timed iterators with leftover geometry\nread from y_config_fast. y_config_fast is retired at the last Y (bias)\nload, one tile ahead of the store pipeline, so the final leftover-K store\ntile read a stale full-width geometry and wrote a full-width byte strobe,\ncorrupting adjacent memory.\n\nGive the store datapath its own store-lifetime tiling config and iterators:\n- new i_z_config_fast_fifo, popped only when the last Z store retires\n- new z_cols_iter/z_rows_iter store iterators bounded by z_config_fast\n- z_height/z_width now latch z_height_next/z_width_next computed purely\n  from store-side state, decoupled from the y_* load path\n\nVerified: 16x16x24 and 32x32x24 now pass; full active regression unchanged.\nAdds 16x16x24 / 32x32x24 K-leftover cases to the regression matrix.\n\nNote: a *small* trailing K-leftover combined with N-tiling (e.g. 30x32x18)\nremains broken via a separate z-buffer store/push race; kept commented.\n\n* [scheduler] fix bias-push overshoot on small K-leftover + N-tiling\n\nThe bias-push counter (y_push_counter) and the z-buffer bias-push index\n(d_index) terminate on the combinational y_height, which is derived from\nthe store-timed y_cols_iter_q. When a small trailing K-leftover tile's\nstore completes *mid-push* of the next tile - which happens once N-tiling\n(x_cols_iter>=2) delays the result fill - y_cols_iter advances and\ny_height flips D->w_cols_lftovr partway through a full tile's push. The\npush counter then overshoots and injects w_cols_lftovr extra bias columns\ninto the next M-block's first tile, corrupting exactly its first\nw_cols_lftovr columns (all rows). This mirrors the store-geometry bug,\nhere on the bias-push side.\n\nLatch y_push_height at push start and hold it stable for the whole push;\nuse it for y_push_counter_d, y_push_clr and cntrl_z_buffer_o.y_height.\nNo-op when y_height would not change mid-push, so passing shapes are\nunaffected.\n\nVerified: full active regression + broad even-K-leftover x N-tiling x\nM-block sweep all pass. Re-enables M30_N32_K18 and adds M16_N32_K18.\n\nNote: odd K-leftovers remain broken via a separate 32-bit misalignment\nissue (MisalignedAccessSupport=0), unaffected by this change.\n\n* [streamer] size load/store cast units to the misaligned TCDM width\n\nWith MisalignedAccessSupport=1 the HCI sink/source widen the TCDM data bus\nto DataW+32 (the extra word carries the realignment overflow). The load and\nstore cast units (redmule_castin / redmule_castout) were instantiated with\n.DataW(DataW), so they truncated the top 32 bits and dropped the realignment\nword, while be/add were forwarded full-width. Misaligned (odd-k_size) stores\ntherefore wrote 0x0000 into the realigned bytes.\n\nSize both casts to the TCDM width via\n  localparam CastDataW = DataW + (MisalignedAccessSupport ? 32 : 0);\nNo-op when MisalignedAccessSupport=0 (CastDataW == DataW), so the default\naligned configuration is unchanged.\n\nThis removes the dropped-realignment-word corruption (136 -> 68 errors on a\n16x16x17 store); a separate first-M-block corruption under misaligned mode\nremains under investigation.\n\n* [regression] misalignment support necessary for odd sizes was not working with HCI <2.6.1\n\n* [regression] Increase number of regression tests\n\n* Add performance regression page\n\n* Tune down overzealous AI-generated comments",
+          "timestamp": "2026-07-13T09:49:20+02:00",
+          "tree_id": "0d2085533c0b9047247fd5850353c43fba3e4701",
+          "url": "https://github.com/pulp-platform/redmule/commit/dca57a3758578d4c68af5a73cc6b76a34a5ca6a8"
+        },
+        "date": 1783930691389,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "redmule_regression:M12_N30_K15",
+            "value": 190,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K1",
+            "value": 104,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K2",
+            "value": 91,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K1",
+            "value": 94,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K2",
+            "value": 95,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K1",
+            "value": 90,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K8",
+            "value": 117,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K1",
+            "value": 88,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K1",
+            "value": 71,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K1",
+            "value": 112,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K8",
+            "value": 81,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K2",
+            "value": 97,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K4",
+            "value": 75,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K17",
+            "value": 182,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K8",
+            "value": 111,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K2",
+            "value": 113,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K8",
+            "value": 78,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N48_K48",
+            "value": 1821,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M6_N32_K4",
+            "value": 115,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N32_K17",
+            "value": 443,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K8",
+            "value": 95,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K8",
+            "value": 101,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K2",
+            "value": 111,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N48_K25",
+            "value": 830,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K18",
+            "value": 263,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K2",
+            "value": 105,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32",
+            "value": 849,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M12_N30_K16",
+            "value": 191,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K13",
+            "value": 124,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K1",
+            "value": 110,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K2",
+            "value": 75,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K1",
+            "value": 106,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K17",
+            "value": 112,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K8",
+            "value": 113,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N32_K17",
+            "value": 577,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K2",
+            "value": 89,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K8",
+            "value": 85,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K4",
+            "value": 115,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K19",
+            "value": 852,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K2",
+            "value": 73,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N32_K33",
+            "value": 440,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K4",
+            "value": 113,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N18_K32",
+            "value": 387,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M128_N128_K128",
+            "value": 33081,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M30_N32_K18",
+            "value": 577,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K1",
+            "value": 78,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K4",
+            "value": 99,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K8",
+            "value": 103,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K1",
+            "value": 74,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M18_N32_K16",
+            "value": 255,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K2",
+            "value": 107,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K4",
+            "value": 107,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N20_K32",
+            "value": 387,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K4",
+            "value": 81,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K4",
+            "value": 97,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K4",
+            "value": 93,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M12_N16_K16",
+            "value": 127,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K1",
+            "value": 96,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K4",
+            "value": 91,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N32_K18",
+            "value": 307,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M36_N32_K32",
+            "value": 715,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K4",
+            "value": 74,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N32_K2",
+            "value": 241,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K4",
+            "value": 77,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K8",
+            "value": 97,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M30_N32_K17",
+            "value": 574,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N32_K24",
+            "value": 577,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K4",
+            "value": 109,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K2",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K8",
+            "value": 79,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K2",
+            "value": 79,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K16",
+            "value": 159,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K17",
+            "value": 262,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K8",
+            "value": 119,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K24",
+            "value": 189,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K15",
+            "value": 126,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M96_N96_K96",
+            "value": 14025,
+            "unit": "cycles"
+          }
+        ]
+      }
+    ]
+  }
+}
