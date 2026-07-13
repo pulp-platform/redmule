@@ -30,6 +30,14 @@ module redmule_tiler
   output redmule_config_t   config_o
 );
 
+// Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
+// N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
+// redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
+// are gated to zero so the result is unaffected. This is necessary to enable the controller to
+// work properly in these corner cases.
+// The minimum size is defined as MinimumSizeN = MinimumSizeNFactor * Height (e.g., 2*Height)
+localparam int unsigned MinimumSizeN = MinimumSizeNFactor * Height;
+
 logic clk_en;
 logic clk_int;
 
@@ -61,7 +69,18 @@ assign config_d.w_addr          = config_i.w_addr;
 assign config_d.z_addr          = config_i.z_addr;
 assign config_d.m_size          = config_i.m_size;
 assign config_d.k_size          = config_i.k_size;
-assign config_d.n_size          = config_i.n_size;
+assign config_d.n_size          = config_i.n_size; // real N is carried downstream unchanged (used for operand gating)
+
+// Effective N size used ONLY for the W-row loop length / streamer length: any job with
+// N <= Height is promoted to MinimumSizeN so the W-load takes as long as a full N-tile, restoring
+// the large-N scheduler/z_buffer pacing that fixes the small-N multi-block hang. The X-column
+// tiling and the store geometry deliberately keep the real config_d.n_size here (X rows are only
+// n_size wide, so over-reading X would misalign the addresses); the X buffer is instead promoted to
+// a full D-deep tile in redmule_scheduler.sv (cntrl_x_buffer_o.slots) so it advances M-block rows in
+// step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
+// W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
+logic [15:0] n_size_eff;
+assign n_size_eff = (config_i.n_size <= Height) ? MinimumSizeN[15:0] : config_i.n_size;
 assign config_d.gemm_ops        = config_i.gemm_ops;
 assign config_d.gemm_input_fmt  = config_i.gemm_input_fmt;
 assign config_d.gemm_output_fmt = config_i.gemm_output_fmt;
@@ -85,14 +104,14 @@ logic [15:0] w_rows_iter_lftovr,
              w_rows_iter_nolftovr;
 assign w_cols_iter_nolftovr = config_d.k_size/(Height*(PipeRegs + 1));
 assign w_rows_iter_lftovr = w_rows_iter_nolftovr + Height - config_d.w_rows_lftovr;
-assign w_rows_iter_nolftovr = config_d.n_size;
+assign w_rows_iter_nolftovr = n_size_eff; // promoted N: W-row loop runs for a full N-tile when N <= Height
 
 // Calculating the residuals along the input dimensions
 assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*Width);
 assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculating the residuals along the weight dimensions
-assign config_d.w_rows_lftovr = config_d.n_size - (Height*(config_d.n_size/Height));
+assign config_d.w_rows_lftovr = n_size_eff - (Height*(n_size_eff/Height)); // promoted N (0 when N <= Height -> full W-row loop)
 assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculate w_cols, x_cols, x_rows iterations

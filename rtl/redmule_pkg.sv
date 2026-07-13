@@ -16,6 +16,7 @@ package redmule_pkg;
   parameter int unsigned MaxDepth             = MaxDim * MaxPipeRegs;
   parameter int unsigned MaxDataW             = MaxDepth * 16;
   parameter int unsigned MisalignedAccessSupportDefault = 0; // default to 0 for compatibility with Snitch
+  parameter int unsigned MinimumSizeNFactor   = 2;
 
   parameter int unsigned NumStreamSources     = 3; // X, W, Y
 
