@@ -36,7 +36,7 @@ module redmule_tiler
 // are gated to zero so the result is unaffected. This is necessary to enable the controller to
 // work properly in these corner cases.
 // The minimum size is defined as MinimumSizeN = MinimumSizeNFactor * Height (e.g., 2*Height)
-localparam MinimumSizeN = MinimumSizeNFactor * Height;
+localparam int unsigned MinimumSizeN = MinimumSizeNFactor * Height;
 
 logic clk_en;
 logic clk_int;
