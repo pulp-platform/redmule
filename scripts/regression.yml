@@ -246,7 +246,7 @@ redmule_regression:
   M8_N32_K8:
     path: .
     command: make golden M=8 N=32 K=8 && make sw-clean sw-build M=8 N=32 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=8 N=32 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_8_32_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_8_32_8
-  # Small contraction N <= Height promoted to MinimumSizeN (previously HUNG on multi-block).
+  # Small N <= Height promoted to MinimumSizeN (previously HUNG on multi-block).
   M16_N8_K16: # N=Height, 2 M-blocks -> was the canonical hang
     path: .
     command: make golden M=16 N=8 K=16 && make sw-clean sw-build M=16 N=8 K=16 REDMULE_COMPLEX=0 Gcc= && make hw-run M=16 N=8 K=16 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_16_8_16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_16_8_16

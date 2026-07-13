@@ -30,6 +30,14 @@ module redmule_tiler
   output redmule_config_t   config_o
 );
 
+// Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
+// N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
+// redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
+// are gated to zero so the result is unaffected. This is necessary to enable the controller to
+// work properly in these corner cases.
+// The minimum size is defined as MinimumSizeN = MinimumSizeNFactor * Height (e.g., 2*Height)
+localparam MinimumSizeN = MinimumSizeNFactor * Height;
+
 logic clk_en;
 logic clk_int;
 

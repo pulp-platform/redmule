@@ -177,7 +177,7 @@ module redmule_scheduler
 
   // For N <= Height, the "internal N" is promoted to a full N-tile (MinimumSizeN steps) by the tiler
   // (see redmule_tiler.sv). The X buffer must then iterate a full D-deep tile so its refill / M-block
-  // row-advance stays in step with the promoted contraction; otherwise it would serve only
+  // row-advance stays in step with the promoted N; otherwise it would serve only
   // x_buffer_slots (= n_size rounded up to Height, = Height for N <= Height) columns and never advance
   // to the next M-block's X rows (the trailing output tile would reuse the first block's X).
   logic small_n_promoted_x;

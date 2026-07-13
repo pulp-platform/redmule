@@ -16,13 +16,7 @@ package redmule_pkg;
   parameter int unsigned MaxDepth             = MaxDim * MaxPipeRegs;
   parameter int unsigned MaxDataW             = MaxDepth * 16;
   parameter int unsigned MisalignedAccessSupportDefault = 0; // default to 0 for compatibility with Snitch
-
-  // Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
-  // N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
-  // redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
-  // are gated to zero so the result is unaffected. This is necessary to enable the controller to
-  // work properly in these corner cases.
-  parameter int unsigned MinimumSizeN         = 16;
+  parameter int unsigned MinimumSizeNFactor   = 2;
 
   parameter int unsigned NumStreamSources     = 3; // X, W, Y
 
