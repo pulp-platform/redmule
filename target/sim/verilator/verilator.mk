@@ -50,8 +50,8 @@ hw-run:
 	+STIM_INSTR=$(STIM_INSTR)           \
 	+STIM_DATA=$(STIM_DATA)             \
 	$(if $(filter 1,$(gui)),,+NOTRACE)
-ifeq ($(gui),1)
-	$(GtkWave) $(VerilatorWaves)
-endif
+#ifeq ($(gui),1)
+#	$(GtkWave) $(VerilatorWaves)
+#endif
 
 hw-all: hw-clean hw-script hw-build hw-run

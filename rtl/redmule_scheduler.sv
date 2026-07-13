@@ -385,10 +385,20 @@ module redmule_scheduler
   redmule_config_t y_config_fast;
   logic            y_config_fast_empty, y_config_fast_full;
 
+  // Dedicated store-side (Z) tiling config, retired only when the last Z store
+  // retires
+  redmule_config_t z_config_fast;
+  logic            z_config_fast_empty, z_config_fast_full;
+
   logic [15:0]                    y_cols_iter_d, y_cols_iter_q,
                                   y_rows_iter_d, y_rows_iter_q;
 
   logic                           y_cols_iter_en, y_rows_iter_en;
+
+  logic [15:0]                    z_cols_iter_d, z_cols_iter_q,
+                                  z_rows_iter_d, z_rows_iter_q;
+
+  logic                           z_cols_iter_en, z_rows_iter_en;
 
   logic [$clog2(NumPipeRegs+1)-1:0] z_wait_counter_d, z_wait_counter_q;
   logic [$clog2(D)-1:0]           z_avail_counter_d, z_avail_counter_q,
@@ -402,8 +412,9 @@ module redmule_scheduler
                                   z_avail_en, z_avail_clr,
                                   y_push_en, y_push_clr;
 
-  logic [$clog2(W):0]             y_width, z_width;
-  logic [$clog2(D):0]             y_height, z_height;
+  logic [$clog2(W):0]             y_width, z_width, z_width_next;
+  logic [$clog2(D):0]             y_height, z_height, z_height_next;
+  logic [$clog2(D):0]             y_push_height;
 
   logic y_config_pop;
   assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
@@ -443,6 +454,29 @@ module redmule_scheduler
     .push_i     ( config_valid_i      ),
     .data_o     ( y_config_fast       ),
     .pop_i      ( y_config_fast_pop   )
+  );
+
+  // Store-side config FIFO: retired on the last Z store (z_config_fast_pop), i.e.
+  // one tile later than y_config_fast (last Y load), so the leftover-K config is
+  // still valid when the final tile stores.
+  logic z_config_fast_pop;
+  assign z_config_fast_pop = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_rows_iter_en && ~z_config_fast_empty;
+  redmule_config_fifo #(
+    .FALL_THROUGH (0),
+    .DEPTH (2),
+    .dtype (redmule_config_t)
+  ) i_z_config_fast_fifo (
+    .clk_i      ( clk_i               ),
+    .rst_ni     ( rst_ni              ),
+    .flush_i    ( clear_i             ),
+    .testmode_i ( '0                  ),
+    .full_o     ( z_config_fast_full  ),
+    .empty_o    ( z_config_fast_empty ),
+    .usage_o    (                     ),
+    .data_i     ( config_i            ),
+    .push_i     ( config_valid_i      ),
+    .data_o     ( z_config_fast       ),
+    .pop_i      ( z_config_fast_pop   )
   );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
@@ -500,6 +534,40 @@ module redmule_scheduler
 
   assign y_rows_iter_en = y_cols_iter_q == y_config.w_cols_iter-1 && y_cols_iter_en;
   assign y_rows_iter_d  = y_rows_iter_q == y_config.x_rows_iter-1 ? '0 : y_rows_iter_q + 1;
+
+  // Store-side (Z) tile iterators. Mirror the Y iterators (advance on the same
+  // store-completion pulse flgs_z_buffer_i.empty) but are bounded by, and index
+  // into, the store-lifetime z_config_fast so the store geometry never reads a
+  // config that was retired by the leading load pipeline.
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_columns_iteration
+    if(~rst_ni) begin
+      z_cols_iter_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        z_cols_iter_q <= '0;
+      end else if (z_cols_iter_en) begin
+        z_cols_iter_q <= z_cols_iter_d;
+      end
+    end
+  end
+
+  assign z_cols_iter_en = flgs_z_buffer_i.empty;
+  assign z_cols_iter_d  = z_cols_iter_q == z_config_fast.w_cols_iter-1 ? '0 : z_cols_iter_q + 1;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_rows_iteration
+    if(~rst_ni) begin
+      z_rows_iter_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        z_rows_iter_q <= '0;
+      end else if (z_rows_iter_en) begin
+        z_rows_iter_q <= z_rows_iter_d;
+      end
+    end
+  end
+
+  assign z_rows_iter_en = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_cols_iter_en;
+  assign z_rows_iter_d  = z_rows_iter_q == z_config_fast.x_rows_iter-1 ? '0 : z_rows_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_wait_enable_register
     if(~rst_ni) begin
@@ -579,11 +647,26 @@ module redmule_scheduler
     end
   end
 
-  assign y_push_counter_d = y_push_counter_q == y_height-1 ? '0 : y_push_counter_q + 1;
-  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_height-1;
+  always_ff @(posedge clk_i or negedge rst_ni) begin : y_push_height_register
+    if (~rst_ni) begin
+      y_push_height <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        y_push_height <= '0;
+      end else if ((z_wait_en && ~stall_engine && z_wait_counter_q == NumPipeRegs-1) || start_computation) begin
+        y_push_height <= y_height;
+      end
+    end
+  end
+
+  assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
+  assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
   assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
+
+  assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
     if(~rst_ni) begin
@@ -592,7 +675,7 @@ module redmule_scheduler
       if (clear_i || cntrl_scheduler_i.rst) begin
         z_width <= '0;
       end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_width <= y_width;
+        z_width <= z_width_next;
       end
     end
   end
@@ -604,7 +687,7 @@ module redmule_scheduler
       if (clear_i || cntrl_scheduler_i.rst) begin
         z_height <= '0;
       end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_height <= y_height;
+        z_height <= z_height_next;
       end
     end
   end
@@ -618,7 +701,7 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.mask_y        = y_config_fast.gemm_selection;
 
   assign cntrl_z_buffer_o.y_width       = y_width;
-  assign cntrl_z_buffer_o.y_height      = y_height;
+  assign cntrl_z_buffer_o.y_height      = y_push_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
 

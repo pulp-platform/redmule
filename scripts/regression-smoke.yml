@@ -11,4 +11,4 @@
 redmule_regression_smoke:
   M32_N32_K32:
     path: .
-    command: make golden M=32 N=32 K=32 && make sw-clean sw-build M=32 N=32 K=32 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=32 K=32 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_32_32 | grep -q '\[TB\] - Success!'
+    command: make golden M=32 N=32 K=32 && make sw-clean sw-build M=32 N=32 K=32 REDMULE_COMPLEX=0 Gcc= && make hw-run M=32 N=32 K=32 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_32_32_32 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_32_32_32

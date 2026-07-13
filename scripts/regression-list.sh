@@ -28,4 +28,4 @@ N_PROC="${N_PROC:-4}"
 
 export Target
 
-python3 "$ScriptDir/bwruntests.py" --yaml -t $BASE_TIMEOUT -p "$N_PROC" -s "$REGR_FILE"
+python3 "$ScriptDir/bwruntests.py" --yaml -t $BASE_TIMEOUT -p "$N_PROC" --perf "$ScriptDir/perf.json" "$REGR_FILE"

@@ -98,6 +98,9 @@ The `tb/redmule_complex_tb.sv` provides an implementatio of a complex core as an
 
 ![](doc/redmule_complex_testbench.png)
 
+### Performance benchmarks
+Every regression run measures the HWPE job duration (in clock cycles) for each tested M/N/K configuration. On every push to `devel`, these results are published as historical trend charts at [pulp-platform.github.io/redmule/dev/bench](https://pulp-platform.github.io/redmule/dev/bench/).
+
 ## Programming model
 RedMulE is designed to reduce the effort required for the matrix multiplication tiling to the minimum. It features an internal hardware unit called "tiler" that needs very reduced input information (i.e. tesors dimensions, computing format, pointers to the input/output tensors and the operation to perform). Then, it is in charge of autonomously calculate the tiling of the tensors.
 ### HWPE memory-mapped programming

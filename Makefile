@@ -102,7 +102,7 @@ STIM_DATA=$(BUILD_DIR)/stim_data.txt
 
 # Build implicit rules
 $(STIM_INSTR) $(STIM_DATA): $(BIN)
-	objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
+	$(Gcc)$(ISA)$(XLEN)-unknown-elf-objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
 	$(PYTHON) scripts/parse_s19.py < $(BIN).s19 > $(BIN).txt
 	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
 
