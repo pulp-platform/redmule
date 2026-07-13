@@ -35,7 +35,14 @@ BUILD_DIR  ?= $(SW)/build/$(TEST_ID)
 ISA        ?= riscv
 ARCH       ?= rv
 XLEN       ?= 32
-XTEN       ?= imc_zicsr
+# Local PULP GCC toolchains are based on older GCC and bundle
+# Zicsr together with the I extension. For GitHub CI we use
+# a newer version of GCC
+ifeq ($(CI),true)
+    XTEN ?= imc_zicsr
+else
+    XTEN ?= imc
+endif
 PYTHON     ?= python3
 
 target ?= verilator
@@ -152,14 +159,15 @@ golden-clean:
 #
 # OP (gemm, matmul, addmax, ...) and fp_fmt (FP16, FP8) can also be overridden.
 # The recipe pins the backend to vsim (memory-mapped Questa flow) and resolves
-# the toolchain to the copies on PATH (bender, Questa, PULP GCC7 with the imc
-# ISA string). Override any of these on the command line, or call the underlying
+# the toolchain to the copies on PATH (bender, Questa, GCC). XTEN is picked
+# automatically (see the CI check above): imc locally, imc_zicsr in CI.
+# Override any of these on the command line, or call the underlying
 # golden / sw-build / hw-* targets directly, if your environment differs.
 # ---------------------------------------------------------------------------- #
 .PHONY: test
 test:
 	$(MAKE) golden OP=$(OP) fp_fmt=$(fp_fmt) M=$(M) N=$(N) K=$(K)
-	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc= XTEN=imc_zicsr
+	$(MAKE) sw-clean sw-build REDMULE_COMPLEX=0 Gcc=
 	$(MAKE) hw-run REDMULE_COMPLEX=0 target=vsim Bender=bender Questa= QUESTA=
 
 clean-all: sw-clean
@@ -175,6 +183,9 @@ NumCoresHalf := $(shell echo "$$(($(NumCores) / 2))")
 VendorDir ?= $(RootDir)vendor
 InstallDir ?= $(VendorDir)/install
 # Verilator
+# VerilatorInstallDir is only used as a fallback: target/sim/verilator/verilator.mk
+# defaults to a verilator already on PATH (system package, environment module, ...)
+# and only falls back to the vendored copy below if none is found.
 # Resolve to the latest tagged release unless the caller pins a version explicitly.
 VerilatorVersion ?= $(shell git ls-remote --tags --refs https://github.com/verilator/verilator.git \
 	| sed 's/.*refs\/tags\///' | grep -E '^v[0-9]+\.[0-9]+$$' | sort -V | tail -1)

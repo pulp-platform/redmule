@@ -234,12 +234,14 @@ The `scripts/setup-hwpe.sh` offers an example of bash script to export the requi
 
 #### Install requirements
 
-A fully-open-source simulation environment is available for RedMulE, based on GCC and Verilator. To install the needed tools, run:
+A fully-open-source simulation environment is available for RedMulE, based on GCC and Verilator. If `verilator` is already available on your `PATH` (e.g. installed system-wide, via a package manager, or through an environment module), it is picked up automatically and no separate Verilator install is needed. Otherwise, install the needed tools by running:
 ```bash
 make verilator # Installs verilator
 make riscv32-gcc # Installs GCC
 ```
 The compiler and Verilator are installed under a `vendor/install` directory.
+
+You can always force a specific `verilator` binary regardless of what is on `PATH` or vendored, by passing `Verilator=/path/to/verilator` to any `make` invocation.
 
 RedMulE relies on [Bender](https://github.com/pulp-platform/bender) to handle hardware dependencies. Install bender by executing:
 ```bash
