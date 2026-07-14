@@ -32,7 +32,11 @@ module redmule_tb
   // parameters
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 4; // matches the OpIdWidth used inside redmule_top's target decoder
-  localparam int unsigned DW = 256 + 32; // TCDM data width including MisalignedAccessSupport=1
+  // The datapath/TCDM width is constrained by the array Height by the tiler invariant
+  // DataW == Height*(NumPipeRegs+1)*16 (rtl/redmule_tiler.sv).
+  localparam int unsigned NumPipeRegs  = 1; // drives both the derivation and the wrapper port
+  localparam int unsigned RedmuleDataW = Height*(NumPipeRegs+1)*16; // = D*16
+  localparam int unsigned DW = RedmuleDataW + 32; // TCDM data width including MisalignedAccessSupport=1 (+32b word)
   localparam int unsigned MP = DW/32;
   // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
   // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no
@@ -166,12 +170,12 @@ module redmule_tb
                        other_r_valid    ;
 
   redmule_mm_wrap #(
-    .HCI_SIZE_tcdm           ( HciSizeTcdm ),
-    .DataW                   ( 256         ),
-    .MisalignedAccessSupport ( 1           ),
-    .Height                  ( Height      ),
-    .Width                   ( Width       ),
-    .NumPipeRegs             ( 1           )
+    .HCI_SIZE_tcdm           ( HciSizeTcdm  ),
+    .DataW                   ( RedmuleDataW ),
+    .MisalignedAccessSupport ( 1            ),
+    .Height                  ( Height       ),
+    .Width                   ( Width        ),
+    .NumPipeRegs             ( NumPipeRegs  )
   ) i_redmule_wrap (
     .clk_i       ( clk_i        ),
     .rst_ni      ( rst_ni       ),
