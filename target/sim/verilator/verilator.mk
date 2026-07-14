@@ -23,6 +23,9 @@ VerilatorObjDir := $(VerilatorPath)/$(ObjDirName)
 VerilatorAbsObjDir := $(VerilatorDir)/$(ObjDirName)
 VerilatorCompileScript := $(VerilatorDir)/compile.$(target).tcl
 VerilatorWaves := $(VerilatorDir)/redmule.vcd
+RedmuleHeight ?= 8
+RedmuleWidth ?= 8
+ProbStall ?= 0.05
 
 hw-clean:
 	rm -rf $(VerilatorAbsObjDir) $(VerilatorCompileScript) $(VerilatorWaves) $(VerilatorDir)/transcript
@@ -35,18 +38,17 @@ hw-script:
 	> $(VerilatorCompileScript)
 
 hw-build: hw-script
-	$(Verilator) --trace --timing --bbox-unsup \
+	OBJCACHE=ccache OPT_SLOW=-O0 OPT_FAST=-O0 OPT_GLOBAL=-O0 $(Verilator) --trace --timing --bbox-unsup \
 	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK -Wno-ENUMVALUE \
-	--x-assign unique --x-initial unique --top-module $(Module)_tb --Mdir $(VerilatorAbsObjDir) \
-	-CFLAGS "-DTbName=$(Vmodule)_tb -DWafeformPath=$(VerilatorWaves)" \
-	-sv -cc -f $(VerilatorCompileScript) --exe $(VerilatorSrc)/$(Module)_tb.cpp
-	make -C $(VerilatorAbsObjDir) -f $(Vmodule)_tb.mk $(Vmodule)_tb \
-	OBJCACHE=ccache OPT_SLOW=-O0 OPT_FAST=-O0 OPT_GLOBAL=-O0
+	--x-assign unique --x-initial unique --top-module $(Module)_tb_wrap --Mdir $(VerilatorAbsObjDir) \
+	-GHeight=$(RedmuleHeight) -GWidth=$(RedmuleWidth) -GPROB_STALL=$(ProbStall) \
+	-CFLAGS "-DTbName=$(Vmodule)_tb_wrap -DWafeformPath=$(VerilatorWaves)" --binary \
+	-sv -cc -f $(VerilatorCompileScript)
 
 hw-run:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR);                    \
-	$(VerilatorAbsObjDir)/$(Vmodule)_tb  \
+	$(VerilatorAbsObjDir)/$(Vmodule)_tb_wrap \
 	+STIM_INSTR=$(STIM_INSTR)           \
 	+STIM_DATA=$(STIM_DATA)             \
 	$(if $(filter 1,$(gui)),,+NOTRACE)

@@ -20,7 +20,9 @@ module redmule_tb
   parameter TCP = 1.0ns, // clock period, 1 GHz clock
   parameter TA  = 0.2ns, // application time
   parameter TT  = 0.8ns,  // test time
-  parameter real  PROB_STALL = 0
+  parameter int unsigned Height = 8,
+  parameter int unsigned Width  = 8,
+  parameter real  PROB_STALL    = 0.0
 )(
   input logic clk_i,
   input logic rst_ni,
@@ -167,8 +169,8 @@ module redmule_tb
     .HCI_SIZE_tcdm           ( HciSizeTcdm ),
     .DataW                   ( 256         ),
     .MisalignedAccessSupport ( 1           ),
-    .Height                  ( 8           ),
-    .Width                   ( 8           ),
+    .Height                  ( Height      ),
+    .Width                   ( Width       ),
     .NumPipeRegs             ( 1           )
   ) i_redmule_wrap (
     .clk_i       ( clk_i        ),
@@ -321,6 +323,9 @@ module redmule_tb
 
     if (!$value$plusargs("STIM_INSTR=%s", stim_instr)) stim_instr = "../../../sw/build/stim_instr.txt";
     if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
+    $display("Height = %d", Height);
+    $display("Width = %d", Width);
+    $display("PROB_STALL = %f", PROB_STALL);
 
     test_mode = 1'b0;
     core_boot_addr = 32'h1C000084;
