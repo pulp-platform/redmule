@@ -58,7 +58,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        scripts/regression-list.sh
+        scripts/ci-regression.sh
 
     - name: Store benchmark result
       if: github.event_name == 'push' && github.ref == 'refs/heads/devel'
