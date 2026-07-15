@@ -146,7 +146,10 @@ module redmule_ctrl
         end
       end
       REDMULE_COMPUTING: begin
-        if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i) begin
+        // busy_o gates clk_acc, so the job must not finish while stores are
+        // still queued in the streamer's store FIFO, or they freeze unsent.
+        if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i
+            && flgs_streamer_i.store_fifo_empty) begin
           next = REDMULE_FINISHED;
         end
       end
@@ -160,7 +163,7 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
-  assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done;
+  assign evt_o   = current == REDMULE_FINISHED;
   assign clear_o = target_clear_i || latch_clear || current == REDMULE_FINISHED;
 
 endmodule : redmule_ctrl

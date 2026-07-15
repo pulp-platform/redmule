@@ -55,9 +55,10 @@ f.write('fp16 Y[MID_CH*OUT_CH] = {'+dump.tensor_to_string(Y)+'};\n')
 print("\nComputing add-min..")
 for m in range(m_size):
   for k in range(k_size):
-    Z[m][k] = Y[m][k]
+    val = Y[m][k].float()
     for n in range(n_size):
-      Z[m][k] = torch.min(Z[m][k], torch.add(input = X[m][n], other = W[n][k]))
+      val = torch.min(val, X[m][n].float() + W[n][k].float())
+    Z[m][k] = val.half()
 
 print("\nZ is: ", Z, Z.shape, Z.dtype)
 f.write('fp16 Z[IN_CH*OUT_CH] = {'+dump.tensor_to_string(Z)+'};\n')

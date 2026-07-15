@@ -20,7 +20,9 @@ module redmule_tb
   parameter TCP = 1.0ns, // clock period, 1 GHz clock
   parameter TA  = 0.2ns, // application time
   parameter TT  = 0.8ns,  // test time
-  parameter real  PROB_STALL = 0
+  parameter int unsigned Height = 8,
+  parameter int unsigned Width  = 8,
+  parameter real  PROB_STALL    = 0.0
 )(
   input logic clk_i,
   input logic rst_ni,
@@ -30,7 +32,11 @@ module redmule_tb
   // parameters
   localparam int unsigned NC = 1;
   localparam int unsigned ID = 4; // matches the OpIdWidth used inside redmule_top's target decoder
-  localparam int unsigned DW = 256 + 32; // TCDM data width including MisalignedAccessSupport=1
+  // The datapath/TCDM width is constrained by the array Height by the tiler invariant
+  // DataW == Height*(NumPipeRegs+1)*16 (rtl/redmule_tiler.sv).
+  localparam int unsigned NumPipeRegs  = 1; // drives both the derivation and the wrapper port
+  localparam int unsigned RedmuleDataW = Height*(NumPipeRegs+1)*16; // = D*16
+  localparam int unsigned DW = RedmuleDataW + 32; // TCDM data width including MisalignedAccessSupport=1 (+32b word)
   localparam int unsigned MP = DW/32;
   // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
   // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no
@@ -164,12 +170,12 @@ module redmule_tb
                        other_r_valid    ;
 
   redmule_mm_wrap #(
-    .HCI_SIZE_tcdm           ( HciSizeTcdm ),
-    .DataW                   ( 256         ),
-    .MisalignedAccessSupport ( 1           ),
-    .Height                  ( 8           ),
-    .Width                   ( 8           ),
-    .NumPipeRegs             ( 1           )
+    .HCI_SIZE_tcdm           ( HciSizeTcdm  ),
+    .DataW                   ( RedmuleDataW ),
+    .MisalignedAccessSupport ( 1            ),
+    .Height                  ( Height       ),
+    .Width                   ( Width        ),
+    .NumPipeRegs             ( NumPipeRegs  )
   ) i_redmule_wrap (
     .clk_i       ( clk_i        ),
     .rst_ni      ( rst_ni       ),
@@ -321,6 +327,9 @@ module redmule_tb
 
     if (!$value$plusargs("STIM_INSTR=%s", stim_instr)) stim_instr = "../../../sw/build/stim_instr.txt";
     if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
+    $display("Height = %d", Height);
+    $display("Width = %d", Width);
+    $display("PROB_STALL = %f", PROB_STALL);
 
     test_mode = 1'b0;
     core_boot_addr = 32'h1C000084;

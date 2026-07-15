@@ -142,11 +142,22 @@ logic            dec_config_valid;
 
 logic config_fifo_empty, config_fifo_full;
 
+// i_control runs on clk_acc and drops busy_o as it enters REDMULE_FINISHED, so the clock must
+// survive one cycle longer than busy_o for it to step back to REDMULE_IDLE. Without this the FSM
+// freezes in REDMULE_FINISHED and evt_o/clear_o stay asserted until the next job is configured.
+logic busy_q;
+always_ff @(posedge clk_i or negedge rst_ni) begin : busy_delay
+  if (~rst_ni)
+    busy_q <= 1'b0;
+  else
+    busy_q <= busy_o;
+end
+
 tc_clk_gating i_acc_clock_gating (
-  .clk_i     ( clk_i                                          ),
-  .en_i      ( dec_config_valid | ~config_fifo_empty | busy_o ),
-  .test_en_i ( '0                                             ),
-  .clk_o     ( clk_acc                                        )
+  .clk_i     ( clk_i                                                   ),
+  .en_i      ( dec_config_valid | ~config_fifo_empty | busy_o | busy_q ),
+  .test_en_i ( '0                                                      ),
+  .clk_o     ( clk_acc                                                 )
 );
 
 /*--------------------------------------------------------------*/
@@ -729,6 +740,14 @@ always_ff @(posedge clk_acc) begin
     $display("[redmule]   receive_x = %b",           redmule_config.receive_x);
   end
 end
+`endif // SYNTHESIS
+
+`ifndef SYNTHESIS
+// clk_acc is gated by busy_o, so it must never fall with stores still
+// queued in the streamer's store FIFO, or they freeze there forever.
+assert property (@(posedge clk_i) disable iff (~rst_ni)
+  $fell(busy_o) |-> flgs_streamer.store_fifo_empty)
+  else $fatal(1, "[redmule] job finished with a non-empty store FIFO: Z stores lost");
 `endif // SYNTHESIS
 
 endmodule : redmule_top

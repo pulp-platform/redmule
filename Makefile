@@ -68,7 +68,6 @@ WORK_PATH = $(SIM_DIR)/work
 # Useful Parameters
 gui      ?= 0
 ipstools ?= 0
-P_STALL  ?= 0.0
 
 ifeq ($(verbose),1)
 	FLAGS += -DVERBOSE

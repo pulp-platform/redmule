@@ -8,6 +8,7 @@
 
 Questa ?=
 Module := redmule
+ProbStall ?= 0.05
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
@@ -42,14 +43,13 @@ hw-script:
 	$(common_targs) $(common_defs) \
 	$(sim_targs)                   \
 	> $(VsimCompileScript)
-	echo 'vopt $(CompileFlags) $(Tb) -o $(Tb)_opt' >> $(VsimCompileScript)
+	echo 'vopt $(CompileFlags) -floatparameters+$(Tb) $(Tb) -o $(Tb)_opt' >> $(VsimCompileScript)
 
 hw-build: hw-script
 	cd $(VsimDir); \
 	$(Questa) $(target) -c    \
 	+STIM_INSTR=$(STIM_INSTR) \
-	+STIM_INSTR=$(STIM_DATA)  \
-	+PROB_STALL=$(P_STALL)    \
+	+STIM_DATA=$(STIM_DATA)   \
 	-do 'quit -code [source $(VsimCompileScript)]'
 
 # Run each test inside its own per-test $(BUILD_DIR) (keyed by TEST_ID) so that
@@ -63,6 +63,7 @@ hw-run:
 	cd $(BUILD_DIR);              \
 	$(QUESTA) $(target) $(Tb)_opt \
 	$(VsimFlags)                  \
+	-gPROB_STALL=$(ProbStall)     \
 	+STIM_INSTR=$(STIM_INSTR)     \
 	+STIM_DATA=$(STIM_DATA)       \
 	-do "run -a"
