@@ -271,7 +271,11 @@ To run the available tests, just do:
 make sw-build
 make hw-run target=verilator (gui=1 to open the GtkWave tool or the Questasim Graphic User Interface depending on the value of `target`)
 ```
-It is possible to run the test introducing a parametric probability of stall by explicitly passing the `P_STALL` parameter while running the test (`P_STALL=0.1` means a stall probability of the 10%).
+It is possible to run the test introducing a parametric probability of TCDM stall by explicitly passing the `ProbStall` parameter (`ProbStall=0.1` means a stall probability of the 10%). With `target=vsim` it is an elaboration parameter, so pass it to `hw-run`; with `target=verilator` it is baked into the model, so pass it to `hw-build` instead:
+```bash
+make hw-run   target=vsim      ProbStall=0.1
+make hw-build target=verilator ProbStall=0.1 && make hw-run target=verilator
+```
 If the `scripts/setup-hwpe.sh` was sourced, the above commands will execute the `sw/redmule.c` example, while if the `scripts/setup-complex.sh` was source, the above commands will execute the `sw/redmule_complex.c` test.
 
 ### Golden Model Generation

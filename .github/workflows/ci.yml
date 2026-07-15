@@ -8,10 +8,17 @@ on: [push, pull_request]
 
 jobs:
   run-hwpe-tests:
-    name: run-hwpe-tests
+    name: run-hwpe-tests (ProbStall=${{ matrix.prob_stall }})
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      # The TCDM stall probability is a Verilator elaboration-time parameter
+      # (-GPROB_STALL), so each value needs its own model build: run the whole
+      # regression once without stalls and once with heavy stall injection.
+      matrix:
+        prob_stall: ["0.0", "0.25"]
     env:
       N_PROC: 8
       Target: verilator
@@ -29,7 +36,7 @@ jobs:
     - name: Set up ccache
       uses: hendrikmuhs/ccache-action@v1
       with:
-        key: ${{ runner.os }}-verilator-${{ env.VERILATOR_VERSION }}
+        key: ${{ runner.os }}-verilator-${{ env.VERILATOR_VERSION }}-pstall${{ matrix.prob_stall }}
         max-size: 2G
 
     - name: Install Verilator (prebuilt)
@@ -54,14 +61,16 @@ jobs:
 
     - name: Build verilator model
       run: |
-        make hw-build target=verilator
+        make hw-build target=verilator ProbStall=${{ matrix.prob_stall }} VerilatorJobs=4
 
     - name: Run Tests
       run: |
         scripts/ci-regression.sh
 
+    # Cycle counts are only meaningful for the stall-free model, and two
+    # concurrent auto-pushes would race on the benchmark branch.
     - name: Store benchmark result
-      if: github.event_name == 'push' && github.ref == 'refs/heads/devel'
+      if: matrix.prob_stall == '0.0' && github.event_name == 'push' && github.ref == 'refs/heads/devel'
       uses: benchmark-action/github-action-benchmark@v1
       with:
         name: Execution cycles
