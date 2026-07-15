@@ -34,6 +34,6 @@ sed -E 's/typedef[[:space:]]+struct([[:space:]])/typedef struct packed\1/g' regi
 HEADER='// Copyright 2025 ETH Zurich and University of Bologna.
 // Solderpad Hardware License, Version 0.51, see LICENSE for details.
 // SPDX-License-Identifier: SHL-0.51'
-for f in regif/redmule_regif.sv regif/redmule_regif_pkg.sv; do
+for f in regif/redmule_regif.sv regif/redmule_regif_pkg.sv ../../sw/hwpe_ctrl_target.h; do
   printf '%s\n' "$HEADER" | cat - "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 done
