@@ -144,6 +144,7 @@ module redmule_target_decoder
   assign config_o.gemm_ops        = gemm_op_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_ops.value);
   assign config_o.gemm_input_fmt  = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_input_fmt.value);
   assign config_o.gemm_output_fmt = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_output_fmt.value);
+  assign config_o.loopback_w      = 1'b0;
 
   // Operation ID counter:
   // op_id_counter_in_q:  Increments when operations are issued (tags for tracking)

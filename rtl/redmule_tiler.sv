@@ -109,16 +109,21 @@ assign config_d.n_size          = input_config_d.n_size;
 // step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
 // W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
 logic [15:0] n_size_eff;
-assign n_size_eff = (config_i.n_size <= Height) ? MinimumSizeN[15:0] : config_i.n_size;
-assign config_d.gemm_ops        = config_i.gemm_ops;
-assign config_d.gemm_input_fmt  = config_i.gemm_input_fmt;
-assign config_d.gemm_output_fmt = config_i.gemm_output_fmt;
-assign config_d.receive_w       = config_i.receive_w;
-assign config_d.send_w          = config_i.send_w;
-assign config_d.receive_x       = config_i.receive_x;
-assign config_d.send_x          = config_i.send_x;
+assign n_size_eff = (input_config_d.n_size <= Height) ? MinimumSizeN[15:0] : input_config_d.n_size;
+// Sourced from input_config_d (not config_i directly) so the loopback pass keeps
+// the job's original operation/format even after dec_config_q's read pointer has
+// advanced past its single valid entry (config_i can no longer be trusted once
+// the first pass's completion has popped it).
+assign config_d.gemm_ops        = input_config_d.gemm_ops;
+assign config_d.gemm_input_fmt  = input_config_d.gemm_input_fmt;
+assign config_d.gemm_output_fmt = input_config_d.gemm_output_fmt;
+assign config_d.receive_w       = input_config_d.receive_w;
+assign config_d.send_w          = input_config_d.send_w;
+assign config_d.loopback_w      = loopback_active;
+assign config_d.receive_x       = input_config_d.receive_x;
+assign config_d.send_x          = input_config_d.send_x;
 
-assign config_d.y_offs          = config_i.y_offs;
+assign config_d.y_offs          = input_config_d.y_offs;
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;

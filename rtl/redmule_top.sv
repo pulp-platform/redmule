@@ -623,7 +623,7 @@ redmule_config_fifo #(
   .data_i     ( dec_config        ),
   .push_i     ( dec_config_valid  ),
   .data_o     ( dec_config_q      ),
-  .pop_i      ( cfg_complete      )
+  .pop_i      ( cfg_complete && !redmule_config.loopback_w )
 );
 
 /*---------------------------------------------------------------*/
@@ -699,7 +699,7 @@ redmule_scheduler #(
 
 `ifndef SYNTHESIS 
 always_ff @(posedge clk_acc) begin
-  if (cfg_complete) begin
+  if (cfg_complete && !redmule_config.loopback_w) begin
     $display("[redmule] Configuration loaded at %t", $time);
     $display("[redmule]   x_addr = 0x%h",            redmule_config.x_addr);
     $display("[redmule]   w_addr = 0x%h",            redmule_config.w_addr);

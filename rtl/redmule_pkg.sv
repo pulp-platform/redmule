@@ -207,6 +207,7 @@ package redmule_pkg;
     fpu_fmt_e input_format;
     fpu_fmt_e computing_format;
     logic        gemm_selection;
+    logic        loopback_w;
     logic        send_w;
     logic        receive_w;
     logic        send_x;

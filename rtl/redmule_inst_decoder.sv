@@ -453,6 +453,7 @@ module redmule_inst_decoder
     // Decode instruction and extract configuration parameters from register file values
     always_comb begin : config_assignment
       config_d[i] = config_q[i];  // Default: retain previous configuration
+      config_d[i].loopback_w = 1'b0;
 
       unique case ({cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]})
         MCNFIG: begin
