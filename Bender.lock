@@ -79,7 +79,8 @@ packages:
     - redundancy_cells
     - register_interface
   hwpe-ctrl:
-    revision: 04bf88c85be202971a6b0d9a2107da59481fb04a
+    revision: dfcf1cb746709de206377388bbcb4a3571e24f7b
+    version: 3.1.1
     source:
       Git: https://github.com/pulp-platform/hwpe-ctrl.git
     dependencies:
