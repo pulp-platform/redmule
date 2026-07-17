@@ -80,12 +80,17 @@ package redmule_regif_pkg;
     } redmule_regif__hwpe_acquire__out_t;
 
     typedef struct packed {
-        logic [31:0] value;
-    } redmule_regif__hwpe_reserved__reserved__out_t;
+        logic value;
+    } redmule_regif__hwpe_autotrigger__autotrigger_n__out_t;
 
     typedef struct packed {
-        redmule_regif__hwpe_reserved__reserved__out_t reserved;
-    } redmule_regif__hwpe_reserved__out_t;
+        logic [30:0] value;
+    } redmule_regif__hwpe_autotrigger__r0__out_t;
+
+    typedef struct packed {
+        redmule_regif__hwpe_autotrigger__autotrigger_n__out_t autotrigger_n;
+        redmule_regif__hwpe_autotrigger__r0__out_t r0;
+    } redmule_regif__hwpe_autotrigger__out_t;
 
     typedef struct packed {
         logic [23:0] value;
@@ -110,9 +115,17 @@ package redmule_regif_pkg;
     } redmule_regif__hwpe_soft_clear__out_t;
 
     typedef struct packed {
+        logic [31:0] value;
+    } redmule_regif__hwpe_reserved__reserved__out_t;
+
+    typedef struct packed {
+        redmule_regif__hwpe_reserved__reserved__out_t reserved;
+    } redmule_regif__hwpe_reserved__out_t;
+
+    typedef struct packed {
         redmule_regif__hwpe_commit_trigger__out_t commit_trigger;
         redmule_regif__hwpe_acquire__out_t acquire;
-        redmule_regif__hwpe_reserved__out_t reserved0;
+        redmule_regif__hwpe_autotrigger__out_t autotrigger;
         redmule_regif__hwpe_running_job__out_t running_job;
         redmule_regif__hwpe_soft_clear__out_t soft_clear;
         redmule_regif__hwpe_reserved__out_t reserved1;
