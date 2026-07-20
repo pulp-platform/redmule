@@ -24,12 +24,14 @@ else
     Bender ?= bender
     Gcc    ?= 
 endif
+
 OP     ?= gemm
 fp_fmt ?= FP16
 M      ?= 24
 N      ?= 16
 K      ?= 16
-TEST_ID   ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)
+EnableReordering ?= 0
+TEST_ID   ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)$(if $(filter 1,$(EnableReordering)),_reord,)
 INC_DIR   ?= $(SW)/inc/$(TEST_ID)
 BUILD_DIR  ?= $(SW)/build/$(TEST_ID)
 ISA        ?= riscv

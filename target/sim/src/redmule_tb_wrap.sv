@@ -12,6 +12,8 @@ module redmule_tb_wrap
 #(
   parameter int unsigned Height = 8,
   parameter int unsigned Width  = 8,
+  parameter bit EnableReordering = 1'b0,
+  parameter int unsigned RobSlots = 16,
   parameter real  PROB_STALL    = 0.0
 );
 
@@ -25,9 +27,11 @@ module redmule_tb_wrap
     .TCP ( TCP ),
     .TA  ( TA  ),
     .TT  ( TT  ),
-    .Height     ( Height     ),
-    .Width      ( Width      ),
-    .PROB_STALL ( PROB_STALL )
+    .Height           ( Height           ),
+    .Width            ( Width            ),
+    .EnableReordering ( EnableReordering ),
+    .RobSlots         ( RobSlots         ),
+    .PROB_STALL       ( PROB_STALL       )
   ) i_redmule_tb (
     .clk_i          ( clk          ),
     .rst_ni         ( rst_n        ),

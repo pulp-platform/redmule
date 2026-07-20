@@ -292,3 +292,12 @@ redmule_regression:
   M33_N33_K33:
     path: .
     command: make golden M=33 N=33 K=33 && make sw-clean sw-build M=33 N=33 K=33 REDMULE_COMPLEX=0 Gcc= && make hw-run M=33 N=33 K=33 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_33_33_33 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_33_33_33
+  M48_N32_K32_REORD: # reordered path, aligned and multi-tile baseline
+    path: .
+    command: make golden M=48 N=32 K=32 EnableReordering=1 && make sw-clean sw-build M=48 N=32 K=32 REDMULE_COMPLEX=0 EnableReordering=1 Gcc= && make hw-run M=48 N=32 K=32 REDMULE_COMPLEX=0 EnableReordering=1 target=$Target | tee target/sim/$Target/transcript_48_32_32_reord && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_48_32_32_reord
+  M16_N32_K18_REORD: # reordered path with K-leftover and N-tiling
+    path: .
+    command: make golden M=16 N=32 K=18 EnableReordering=1 && make sw-clean sw-build M=16 N=32 K=18 REDMULE_COMPLEX=0 EnableReordering=1 Gcc= && make hw-run M=16 N=32 K=18 REDMULE_COMPLEX=0 EnableReordering=1 target=$Target | tee target/sim/$Target/transcript_16_32_18_reord && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_16_32_18_reord
+  M1_N32_K8_REORD: # reordered path on a tiny M edge case
+    path: .
+    command: make golden M=1 N=32 K=8 EnableReordering=1 && make sw-clean sw-build M=1 N=32 K=8 REDMULE_COMPLEX=0 EnableReordering=1 Gcc= && make hw-run M=1 N=32 K=8 REDMULE_COMPLEX=0 EnableReordering=1 target=$Target | tee target/sim/$Target/transcript_1_32_8_reord && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_1_32_8_reord

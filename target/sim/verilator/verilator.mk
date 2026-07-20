@@ -25,6 +25,7 @@ VerilatorCompileScript := $(VerilatorDir)/compile.$(target).tcl
 VerilatorWaves := $(VerilatorDir)/redmule.vcd
 RedmuleHeight ?= 8
 RedmuleWidth ?= 8
+EnableReordering ?= 0
 ProbStall ?= 0.05
 # Parallelism for hw-build. With --binary this covers both verilation and the
 # C++ compile of the model.
@@ -45,7 +46,7 @@ hw-build: hw-script
 	-Wall -Wno-fatal --Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP -Wno-BLKANDNBLK -Wno-ENUMVALUE \
 	-j $(VerilatorJobs) \
 	--x-assign unique --x-initial unique --top-module $(Module)_tb_wrap --Mdir $(VerilatorAbsObjDir) \
-	-GHeight=$(RedmuleHeight) -GWidth=$(RedmuleWidth) -GPROB_STALL=$(ProbStall) \
+	-GHeight=$(RedmuleHeight) -GWidth=$(RedmuleWidth) -GEnableReordering=$(EnableReordering) -GPROB_STALL=$(ProbStall) \
 	-CFLAGS "-DTbName=$(Vmodule)_tb_wrap -DWafeformPath=$(VerilatorWaves)" --binary \
 	-sv -cc -f $(VerilatorCompileScript)
 

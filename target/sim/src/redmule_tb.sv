@@ -22,6 +22,8 @@ module redmule_tb
   parameter TT  = 0.8ns,  // test time
   parameter int unsigned Height = 8,
   parameter int unsigned Width  = 8,
+  parameter bit EnableReordering = 1'b0,
+  parameter int unsigned RobSlots = 16,
   parameter real  PROB_STALL    = 0.0
 )(
   input logic clk_i,
@@ -38,16 +40,18 @@ module redmule_tb
   localparam int unsigned RedmuleDataW = Height*(NumPipeRegs+1)*16; // = D*16
   localparam int unsigned DW = RedmuleDataW + 32; // TCDM data width including MisalignedAccessSupport=1 (+32b word)
   localparam int unsigned MP = DW/32;
+  localparam int unsigned UW = EnableReordering ? $clog2(RobSlots) : hci_package::DEFAULT_UW;
   // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
   // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no
   // fallback), otherwise the internal OoO multiplexer sees BW=0 and fails to
-  // elaborate. Fields other than DW take the hci_core_intf defaults, matching
-  // the `redmule_tcdm` interface declared below (DW-only override).
+  // elaborate. The `redmule_tcdm` interface below must match these dimensions.
+  // When reordering is enabled, widen UW so the HCI-side ROB can track more
+  // outstanding transactions (ROB_NW = 2**UW in rtl/redmule_streamer.sv).
   localparam hci_size_parameter_t HciSizeTcdm = '{
     DW:  DW,
     AW:  hci_package::DEFAULT_AW,
     BW:  hci_package::DEFAULT_BW,
-    UW:  hci_package::DEFAULT_UW,
+    UW:  UW,
     IW:  hci_package::DEFAULT_IW,
     EW:  hci_package::DEFAULT_EW,
     EHW: hci_package::DEFAULT_EHW
@@ -72,7 +76,10 @@ module redmule_tb
   hwpe_stream_intf_tcdm tcdm [MP:0] (.clk(clk_i));
 
   // RedMulE modern interfaces
-  hci_core_intf #(.DW(DW))              redmule_tcdm (.clk(clk_i));
+  hci_core_intf #(
+    .DW ( DW ),
+    .UW ( UW )
+  ) redmule_tcdm (.clk(clk_i));
   hwpe_ctrl_intf_periph #(.ID_WIDTH(ID)) periph      (.clk(clk_i));
 
   logic [MP-1:0]       tcdm_gnt;
@@ -173,6 +180,7 @@ module redmule_tb
     .HCI_SIZE_tcdm           ( HciSizeTcdm  ),
     .DataW                   ( RedmuleDataW ),
     .MisalignedAccessSupport ( 1            ),
+    .EnableReordering        ( EnableReordering ),
     .Height                  ( Height       ),
     .Width                   ( Width        ),
     .NumPipeRegs             ( NumPipeRegs  )
@@ -329,6 +337,8 @@ module redmule_tb
     if (!$value$plusargs("STIM_DATA=%s", stim_data)) stim_data = "../../../sw/build/stim_data.txt";
     $display("Height = %d", Height);
     $display("Width = %d", Width);
+    $display("EnableReordering = %0d", EnableReordering);
+    $display("RobSlots = %0d", RobSlots);
     $display("PROB_STALL = %f", PROB_STALL);
 
     test_mode = 1'b0;
