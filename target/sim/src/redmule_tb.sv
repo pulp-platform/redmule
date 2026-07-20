@@ -228,7 +228,7 @@ module redmule_tb
   redmule_mm_wrap #(
     .HCI_SIZE_tcdm           ( HciSizeTcdm              ),
     .DataW                   ( RedmuleDataW             ),
-    .MisalignedAccessSupport (  1                       ),
+    .MisalignedAccessSupport ( EnableReordering ? 0 : 1 ),
     .EnableReordering        ( EnableReordering         ),
     .Height                  ( Height                   ),
     .Width                   ( Width                    ),
