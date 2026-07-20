@@ -41,6 +41,7 @@ module redmule_tb
   localparam int unsigned DW = RedmuleDataW + 32; // TCDM data width including MisalignedAccessSupport=1 (+32b word)
   localparam int unsigned MP = DW/32;
   localparam int unsigned UW = EnableReordering ? $clog2(RobSlots) : hci_package::DEFAULT_UW;
+  localparam int unsigned UserFifoDepth = 1 << UW;
   // HCI size parameter for RedMulE's TCDM port. It must be forwarded to
   // redmule_mm_wrap (redmule_top forwards it verbatim to the streamer, with no
   // fallback), otherwise the internal OoO multiplexer sees BW=0 and fails to
@@ -85,6 +86,15 @@ module redmule_tb
   logic [MP-1:0]       tcdm_gnt;
   logic [MP-1:0][31:0] tcdm_r_data;
   logic [MP-1:0]       tcdm_r_valid;
+  typedef logic [hci_package::iomsb(UW):0] hci_user_t;
+  typedef logic [hci_package::iomsb(hci_package::DEFAULT_IW):0] hci_id_t;
+  hci_user_t user_fifo_rdata;
+  hci_id_t id_fifo_rdata;
+  logic user_fifo_full, user_fifo_empty;
+  logic [$clog2(UserFifoDepth)-1:0] user_fifo_usage;
+  logic id_fifo_full, id_fifo_empty;
+  logic [$clog2(UserFifoDepth)-1:0] id_fifo_usage;
+  logic redmule_req_fire, redmule_rsp_fire;
 
   logic          instr_req;
   logic          instr_gnt;
@@ -155,7 +165,46 @@ module redmule_tb
   assign redmule_tcdm.r_data  = { >> {tcdm_r_data} };
   assign redmule_tcdm.r_valid = &tcdm_r_valid;
   assign redmule_tcdm.r_opc   = '0;
-  assign redmule_tcdm.r_user  = '0;
+  assign redmule_tcdm.r_user  = user_fifo_rdata;
+  assign redmule_tcdm.r_id    = id_fifo_rdata;
+  assign redmule_req_fire     = redmule_tcdm.req & redmule_tcdm.gnt;
+  assign redmule_rsp_fire     = redmule_tcdm.r_valid & redmule_tcdm.r_ready;
+
+  fifo_v3 #(
+    .FALL_THROUGH ( 1'b0          ),
+    .DEPTH        ( UserFifoDepth ),
+    .dtype        ( hci_user_t    )
+  ) i_user_fifo (
+    .clk_i      ( clk_i                ),
+    .rst_ni     ( rst_ni               ),
+    .flush_i    ( 1'b0                 ),
+    .testmode_i ( 1'b0                 ),
+    .full_o     ( user_fifo_full       ),
+    .empty_o    ( user_fifo_empty      ),
+    .usage_o    ( user_fifo_usage      ),
+    .data_i     ( redmule_tcdm.user    ),
+    .push_i     ( redmule_req_fire     ),
+    .data_o     ( user_fifo_rdata      ),
+    .pop_i      ( redmule_rsp_fire     )
+  );
+
+  fifo_v3 #(
+    .FALL_THROUGH ( 1'b0          ),
+    .DEPTH        ( UserFifoDepth ),
+    .dtype        ( hci_id_t      )
+  ) i_id_fifo (
+    .clk_i      ( clk_i             ),
+    .rst_ni     ( rst_ni            ),
+    .flush_i    ( 1'b0              ),
+    .testmode_i ( 1'b0              ),
+    .full_o     ( id_fifo_full      ),
+    .empty_o    ( id_fifo_empty     ),
+    .usage_o    ( id_fifo_usage     ),
+    .data_i     ( redmule_tcdm.id   ),
+    .push_i     ( redmule_req_fire  ),
+    .data_o     ( id_fifo_rdata     ),
+    .pop_i      ( redmule_rsp_fire  )
+  );
 
   // Core data-side port (last bank of the data memory).
   assign tcdm[MP].req  = data_req & (data_addr[31:24] != '0) & (data_addr[31:24] != 8'h80) & ~data_addr[HWPE_ADDR_BASE_BIT];
@@ -177,13 +226,13 @@ module redmule_tb
                        other_r_valid    ;
 
   redmule_mm_wrap #(
-    .HCI_SIZE_tcdm           ( HciSizeTcdm  ),
-    .DataW                   ( RedmuleDataW ),
-    .MisalignedAccessSupport ( 1            ),
-    .EnableReordering        ( EnableReordering ),
-    .Height                  ( Height       ),
-    .Width                   ( Width        ),
-    .NumPipeRegs             ( NumPipeRegs  )
+    .HCI_SIZE_tcdm           ( HciSizeTcdm              ),
+    .DataW                   ( RedmuleDataW             ),
+    .MisalignedAccessSupport (  1                       ),
+    .EnableReordering        ( EnableReordering         ),
+    .Height                  ( Height                   ),
+    .Width                   ( Width                    ),
+    .NumPipeRegs             ( NumPipeRegs              )
   ) i_redmule_wrap (
     .clk_i       ( clk_i        ),
     .rst_ni      ( rst_ni       ),
