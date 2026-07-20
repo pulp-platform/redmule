@@ -72,7 +72,7 @@ module redmule_regif (
         struct {
             logic commit_trigger;
             logic acquire;
-            logic reserved0;
+            logic autotrigger;
             logic status;
             logic running_job;
             logic soft_clear;
@@ -107,7 +107,7 @@ module redmule_regif (
         is_valid_rw = '1; // No valid RW check
         decoded_reg_strb.hwpe_ctrl.commit_trigger = cpuif_req_masked & (cpuif_addr == 32'h0);
         decoded_reg_strb.hwpe_ctrl.acquire = cpuif_req_masked & (cpuif_addr == 32'h4) & !cpuif_req_is_wr;
-        decoded_reg_strb.hwpe_ctrl.reserved0 = cpuif_req_masked & (cpuif_addr == 32'h8) & !cpuif_req_is_wr;
+        decoded_reg_strb.hwpe_ctrl.autotrigger = cpuif_req_masked & (cpuif_addr == 32'h8);
         decoded_reg_strb.hwpe_ctrl.status = cpuif_req_masked & (cpuif_addr == 32'hc) & !cpuif_req_is_wr;
         decoded_reg_strb.hwpe_ctrl.running_job = cpuif_req_masked & (cpuif_addr == 32'h10) & !cpuif_req_is_wr;
         decoded_reg_strb.hwpe_ctrl.soft_clear = cpuif_req_masked & (cpuif_addr == 32'h14);
@@ -142,6 +142,12 @@ module redmule_regif (
                     logic load_next;
                 } commit_trigger;
             } commit_trigger;
+            struct {
+                struct {
+                    logic next;
+                    logic load_next;
+                } autotrigger_n;
+            } autotrigger;
             struct {
                 struct {
                     logic [1:0] next;
@@ -229,6 +235,11 @@ module redmule_regif (
                     logic [1:0] value;
                 } commit_trigger;
             } commit_trigger;
+            struct {
+                struct {
+                    logic value;
+                } autotrigger_n;
+            } autotrigger;
             struct {
                 struct {
                     logic [1:0] value;
@@ -320,7 +331,30 @@ module redmule_regif (
     assign hwif_out.hwpe_ctrl.commit_trigger.commit_trigger.swacc = decoded_reg_strb.hwpe_ctrl.commit_trigger;
     assign hwif_out.hwpe_ctrl.commit_trigger.r0.value = 30'h0;
     assign hwif_out.hwpe_ctrl.acquire.acquire.swacc = decoded_reg_strb.hwpe_ctrl.acquire;
-    assign hwif_out.hwpe_ctrl.reserved0.reserved.value = 32'h0;
+    // Field: redmule_regif.hwpe_ctrl.autotrigger.autotrigger_n
+    always_comb begin
+        automatic logic [0:0] next_c;
+        automatic logic load_next_c;
+        next_c = field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value;
+        load_next_c = '0;
+        if(decoded_reg_strb.hwpe_ctrl.autotrigger && decoded_req_is_wr) begin // SW write
+            next_c = (field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value & ~decoded_wr_biten[0:0]) | (decoded_wr_data[0:0] & decoded_wr_biten[0:0]);
+            load_next_c = '1;
+        end
+        field_combo.hwpe_ctrl.autotrigger.autotrigger_n.next = next_c;
+        field_combo.hwpe_ctrl.autotrigger.autotrigger_n.load_next = load_next_c;
+    end
+    always_ff @(posedge clk or negedge arst_n) begin
+        if(~arst_n) begin
+            field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value <= 1'h0;
+        end else begin
+            if(field_combo.hwpe_ctrl.autotrigger.autotrigger_n.load_next) begin
+                field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value <= field_combo.hwpe_ctrl.autotrigger.autotrigger_n.next;
+            end
+        end
+    end
+    assign hwif_out.hwpe_ctrl.autotrigger.autotrigger_n.value = field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value;
+    assign hwif_out.hwpe_ctrl.autotrigger.r0.value = 31'h0;
     assign hwif_out.hwpe_ctrl.running_job.r0.value = 24'h0;
     // Field: redmule_regif.hwpe_ctrl.soft_clear.soft_clear
     always_comb begin
@@ -700,7 +734,8 @@ module redmule_regif (
             readback_data_var[31:0] = hwif_in.hwpe_ctrl.acquire.acquire.next;
         end
         if(rd_mux_addr == 32'h8) begin
-            readback_data_var[31:0] = 32'h0;
+            readback_data_var[0] = field_storage.hwpe_ctrl.autotrigger.autotrigger_n.value;
+            readback_data_var[31:1] = 31'h0;
         end
         if(rd_mux_addr == 32'hc) begin
             readback_data_var[31:0] = hwif_in.hwpe_ctrl.status.status0.next;
