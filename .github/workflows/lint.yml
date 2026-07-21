@@ -57,6 +57,52 @@ jobs:
         name: lint-sv-artifacts
         path: verible-verilog-lint.log
 
+  lint-verilator:
+    runs-on: ubuntu-latest
+    env:
+      REDMULE_COMPLEX: 0
+      VERILATOR_VERSION: "5.046"
+    steps:
+    -
+      name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    -
+      name: Install Verilator (prebuilt)
+      uses: veryl-lang/setup-verilator@v1
+      with:
+        version: ${{ env.VERILATOR_VERSION }}
+    -
+      name: Install bender
+      run: make bender
+    -
+      name: Add installed tools to PATH
+      run: echo "$(pwd)/vendor/install/cargo/bin" >> $GITHUB_PATH
+    -
+      name: Run Verilator lint (width/latch/loop checks gated as errors)
+      run: |
+        make hw-script target=verilator
+        # ENUMVALUE/MODDUP/BLKANDNBLK are pre-existing, intentional patterns in this
+        # design (see verilator.mk) and default to fatal errors that would otherwise
+        # abort elaboration before it reaches the checks below.
+        verilator --lint-only -Wall \
+          -Wno-ENUMVALUE -Wno-MODDUP -Wno-BLKANDNBLK \
+          --top-module redmule_tb_wrap \
+          -GHeight=8 -GWidth=8 -GPROB_STALL=0.0 \
+          -Werror-WIDTHTRUNC -Werror-LATCH -Werror-UNOPTFLAT \
+          target/sim/verilator/lint_waiver.vlt \
+          -f target/sim/verilator/compile.verilator.tcl \
+          2>&1 | tee verilator-lint.log
+        exit ${PIPESTATUS[0]}
+    -
+      name: Upload Verilator Lint Artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-verilator-artifacts
+        path: verilator-lint.log
+
   lint-cxx:
     runs-on: ubuntu-latest
     steps:
