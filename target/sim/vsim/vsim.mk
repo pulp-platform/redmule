@@ -9,13 +9,15 @@
 Questa ?=
 Module := redmule
 ProbStall ?= 0.05
+RedmuleHeight ?= 8
+RedmuleWidth ?= 8
 EnableReordering ?= 0
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
 
 Tb := redmule_tb_wrap
-CompileFlags := +acc -permissive -suppress 2583 -suppress 13314
+CompileFlags := +acc -permissive -suppress 2583 -suppress 13314 -suppress 3852
 
 ifeq ($(REDMULE_COMPLEX),1)
 	TbType := redmule_complex_tb
@@ -31,7 +33,7 @@ else
 	VsimFlags += -c
 endif
 
-VsimFlags += -suppress 3009
+VsimFlags += -suppress 3009 -suppress 3852
 
 hw-clean:
 	rm -rf $(VsimCompileScript) $(VsimDir)/transcript $(VsimDir)/modelsim.ini $(VsimDir)/*.wlf $(VsimDir)/work
@@ -64,6 +66,8 @@ hw-run:
 	cd $(BUILD_DIR);                       \
 	$(QUESTA) $(target) $(Tb)_opt          \
 	$(VsimFlags)                           \
+	-gHeight=$(RedmuleHeight)              \
+	-gWidth=$(RedmuleWidth)                \
 	-gEnableReordering=$(EnableReordering) \
 	-gPROB_STALL=$(ProbStall)              \
 	+STIM_INSTR=$(STIM_INSTR)              \
