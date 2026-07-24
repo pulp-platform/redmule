@@ -107,7 +107,7 @@ For further details see source code.
 regs Kusti, 23.10.2004
 */
 
-void putf(char *null, char c) {
+void putf(void *null, char c) {
   *(volatile int *) (0x80000004) = (int)c;
 }
 
@@ -559,6 +559,7 @@ void tfp_format(void *putp, putcf putf__, const char *fmt, va_list va)
                 lng = 2;
 # endif
 #endif
+                __attribute__((fallthrough));
 #endif
             case 'x':
             case 'X':

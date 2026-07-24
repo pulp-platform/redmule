@@ -17,10 +17,10 @@
 
 int main() {
 
-  uint8_t *x = x_inp;
-  uint8_t *w = w_inp;
-  uint8_t *y = y_inp;
-  uint8_t *z = z_oup; // golden_out //1c010000
+  uint16_t *x = x_inp;
+  uint16_t *w = w_inp;
+  uint16_t *y = y_inp;
+  uint16_t *z = z_oup; // golden_out //1c010000
 
   uint16_t m_size = M_SIZE;
   uint16_t n_size = N_SIZE;
@@ -78,7 +78,7 @@ int main() {
   // Wait for end of computation
   asm volatile("wfi" ::: "memory");
 
-  errors = redmule16_compare_int(y, golden, m_size * k_size / 2);
+  errors = redmule16_compare_int((uint32_t *)y, golden, m_size * k_size / 2, 0);
 
   *(int *)0x80000000 = errors;
 
