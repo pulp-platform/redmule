@@ -23,6 +23,7 @@ jobs:
       N_PROC: 8
       Target: verilator
       REDMULE_COMPLEX: 0
+      ProbStall: ${{ matrix.prob_stall }}
       Verilator: verilator
       VERILATOR_VERSION: "5.046"
       CCACHE_BASEDIR: ${{ github.workspace }}
