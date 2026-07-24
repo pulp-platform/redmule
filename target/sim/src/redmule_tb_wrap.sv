@@ -11,7 +11,7 @@ module redmule_tb_wrap
   import redmule_pkg::*;
 #(
   parameter int unsigned Height = 8,
-  parameter int unsigned Width  = 8,
+  parameter int unsigned Width  = 32,
   parameter bit EnableReordering = 1'b0,
   parameter int unsigned RobSlots = 16,
   parameter real  PROB_STALL    = 0.0
