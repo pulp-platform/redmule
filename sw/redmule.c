@@ -20,6 +20,10 @@
 #include "z_output.h"
 #define ERR 0x0000
 
+#ifndef W_COLS_OFFSET
+#define W_COLS_OFFSET 0
+#endif
+
 int main() {
 
   uint16_t m_size = M_SIZE;
@@ -54,8 +58,8 @@ int main() {
   int pace_ops = 1;
   // int pace_ops = 0;
 
-  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size, 0,
-              (uint8_t)gemm_ops, float_fmt);
+  redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
+              (uint16_t)W_COLS_OFFSET, (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
   printf("Triggering accelerator and going to sleep...\n");
