@@ -693,7 +693,8 @@ redmule_scheduler #(
   .sync_o
 );
 
-`ifndef SYNTHESIS 
+`ifndef SYNTHESIS
+`ifdef REDMULE_VERBOSE
 always_ff @(posedge clk_acc) begin
   if (cfg_complete) begin
     $display("[redmule] Configuration loaded at %t", $time);
@@ -740,6 +741,7 @@ always_ff @(posedge clk_acc) begin
     $display("[redmule]   receive_x = %b",           redmule_config.receive_x);
   end
 end
+`endif // REDMULE_VERBOSE
 `endif // SYNTHESIS
 
 `ifndef SYNTHESIS
