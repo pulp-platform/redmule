@@ -24,17 +24,22 @@ else
     Bender ?= bender
     Gcc    ?= 
 endif
-OP     ?= gemm
-fp_fmt ?= FP16
-M      ?= 24
-N      ?= 16
-K      ?= 16
-TEST_ID   ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)
-INC_DIR   ?= $(SW)/inc/$(TEST_ID)
-BUILD_DIR  ?= $(SW)/build/$(TEST_ID)
-ISA        ?= riscv
-ARCH       ?= rv
-XLEN       ?= 32
+
+OP          ?= gemm
+fp_fmt      ?= FP16
+M           ?= 24
+N           ?= 16
+K           ?= 16
+WColsOffset ?= 0
+EnableReordering ?= 0
+
+TEST_ID     ?= $(OP)_$(fp_fmt)_$(M)x$(N)x$(K)$(if $(filter-out 0,$(WColsOffset)),_w_cols_offset_$(WColsOffset),)$(if $(filter 1,$(REDMULE_COMPLEX)),_cplx,)$(if $(filter 1,$(EnableReordering)),_reord,)
+INC_DIR     ?= $(SW)/inc/$(TEST_ID)
+BUILD_DIR   ?= $(SW)/build/$(TEST_ID)
+ISA         ?= riscv
+ARCH        ?= rv
+XLEN        ?= 32
+
 # Local PULP GCC toolchains are based on older GCC and bundle
 # Zicsr together with the I extension. For GitHub CI we use
 # a newer version of GCC
@@ -76,6 +81,8 @@ endif
 ifeq ($(debug),1)
 	FLAGS += -DDEBUG
 endif
+
+FLAGS += -DW_COLS_OFFSET=$(WColsOffset)
 
 # Include directories
 INC += -I$(SW)

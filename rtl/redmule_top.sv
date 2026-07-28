@@ -16,6 +16,7 @@ module redmule_top
 #(
   parameter int unsigned  DataW                   = MaxDataW, // TCDM port dimension (in bits)
   parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault, // set to 1 to support misaligned accesses on TCDM
+  parameter bit           EnableReordering        = 1'b0, // set to 1 to enable ROB-based reordering of outstanding TCDM transactions
   parameter fp_format_e   FpFormat                = FP16, // Data format (default is FP16)
   parameter int unsigned  Height                  = MaxDim, // Number of PEs within a row
   parameter int unsigned  Width                   = MaxDim, // Number of parallel rows
@@ -188,6 +189,9 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( cl
 redmule_streamer #(
   .DataW                   ( DataW                   ),
   .MisalignedAccessSupport ( MisalignedAccessSupport ),
+  .EnableReordering        ( EnableReordering       ),
+  .Height                  ( Height                  ),
+  .NumPipeRegs             ( NumPipeRegs             ),
   .EccChunkSize            ( EccChunkSize            ),
   .FpFormat                ( FpFormat                ),
   .FpFmtConfig             ( FpFmtConfig             ),
@@ -561,7 +565,7 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
     .rst_ni             ( rst_ni                                 ),
     .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
     .config_ready_i     ( ~config_fifo_full                      ),
-    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .op_done_i          ( evt_o                                  ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .x_issue_req_i      ( x_issue_req_i                          ),
@@ -591,7 +595,7 @@ else begin : mm_ctrl_intf_gen
     .clear_i            ( '0                                     ), // ORed internally with target_clear
     .target_clear_o     ( target_clear                           ),
     .config_ready_i     ( ~config_fifo_full                      ),
-    .op_done_i          ( flgs_streamer.z_stream_sink_flags.done ),
+    .op_done_i          ( evt_o                                  ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .target             ( target                                 )
@@ -619,7 +623,7 @@ redmule_config_fifo #(
   .data_i     ( dec_config        ),
   .push_i     ( dec_config_valid  ),
   .data_o     ( dec_config_q      ),
-  .pop_i      ( cfg_complete      )
+  .pop_i      ( cfg_complete && !redmule_config.loopback_w )
 );
 
 /*---------------------------------------------------------------*/
@@ -696,7 +700,7 @@ redmule_scheduler #(
 `ifndef SYNTHESIS
 `ifdef REDMULE_VERBOSE
 always_ff @(posedge clk_acc) begin
-  if (cfg_complete) begin
+  if (cfg_complete && !redmule_config.loopback_w) begin
     $display("[redmule] Configuration loaded at %t", $time);
     $display("[redmule]   x_addr = 0x%h",            redmule_config.x_addr);
     $display("[redmule]   w_addr = 0x%h",            redmule_config.w_addr);
@@ -711,6 +715,7 @@ always_ff @(posedge clk_acc) begin
     $display("[redmule]   gemm_output_fmt = %s",     redmule_config.gemm_output_fmt.name());
     $display("[redmule]   x_cols_iter = 0x%h",       redmule_config.x_cols_iter);
     $display("[redmule]   x_rows_iter = 0x%h",       redmule_config.x_rows_iter);
+    $display("[redmule]   w_cols_offset = 0x%h",     redmule_config.w_cols_offset);
     $display("[redmule]   w_cols_iter = 0x%h",       redmule_config.w_cols_iter);
     $display("[redmule]   w_rows_iter = 0x%h",       redmule_config.w_rows_iter);
     $display("[redmule]   x_cols_lftovr = 0x%h",     redmule_config.x_cols_lftovr);

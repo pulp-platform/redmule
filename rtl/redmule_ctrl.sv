@@ -15,7 +15,8 @@ module redmule_ctrl
   parameter int unsigned Height = MaxDim,
   parameter int unsigned Width = MaxDim,
   parameter int unsigned PipeRegs = MaxPipeRegs-1,
-  parameter int unsigned FpWidth = 16
+  parameter int unsigned FpWidth = 16,
+  parameter bit          EnableReordering = 1'b0
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -44,12 +45,15 @@ module redmule_ctrl
 
   logic        latch_clear;
   logic        tiler_setback, tiler_valid;
+  logic        fifo_z_empty;
+  logic        set_offset_q, set_offset_d, loopback_reset;
 
   typedef enum logic [2:0] {
     REDMULE_LATCH_RST,
     REDMULE_IDLE,
     REDMULE_STARTING,
     REDMULE_COMPUTING,
+    REDMULE_LOOPBACK,
     REDMULE_FINISHED
   } redmule_ctrl_state_e;
 
@@ -68,6 +72,7 @@ module redmule_ctrl
     .rst_ni      ( rst_ni         ),
     .clear_i     ( target_clear_i ),
     .setback_i   ( tiler_setback  ),
+    .loopback_i  ( loopback_reset ),
     .start_cfg_i ( start_cfg_i    ),
     .valid_o     ( tiler_valid    ),
     .busy_o      ( tiler_busy_o   ),
@@ -89,6 +94,18 @@ module redmule_ctrl
        current <= REDMULE_LATCH_RST;
     end else begin
       current <= next;
+    end
+  end
+
+  // Set offset flag
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if(~rst_ni) begin
+       set_offset_q <= 1'b0;
+    end else begin
+      if (target_clear_i || latch_clear || current == REDMULE_FINISHED || loopback_reset)
+        set_offset_q <= 1'b0;
+      else
+        set_offset_q <= set_offset_d;
     end
   end
 
@@ -117,25 +134,40 @@ module redmule_ctrl
 
   assign cntrl_scheduler_o.first_load = current == REDMULE_STARTING;
   assign tiler_setback                = tiler_valid;
-  assign busy_o                       = slave_start | (current != REDMULE_LATCH_RST && current != REDMULE_IDLE && current != REDMULE_FINISHED);
-  assign flush_o                      = current == REDMULE_FINISHED;
-  assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED;
+  // Keep the accelerator clocked while in FINISHED so the FSM can take the
+  // final transition back to IDLE before busy deasserts.
+  assign busy_o                       = slave_start | (current != REDMULE_LATCH_RST && current != REDMULE_IDLE);
+  assign loopback_reset               = current == REDMULE_COMPUTING && next == REDMULE_LOOPBACK;
+  assign flush_o                      = current == REDMULE_FINISHED || loopback_reset;
+  assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED || loopback_reset;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
   assign latch_clear                  = current == REDMULE_LATCH_RST;
+  assign fifo_z_empty                 = EnableReordering ? flgs_streamer_i.store_fifo_empty : 1'b1;
 
   always_comb begin : controller_fsm
     cntrl_flags_o.idle = 1'b0;
     next = current;
+    set_offset_d = set_offset_q;
 
     case (current)
       REDMULE_LATCH_RST: begin
         cntrl_flags_o.idle = 1'b1;
+        set_offset_d = 1'b0;
         next = REDMULE_IDLE;
       end
 
       REDMULE_IDLE: begin
         cntrl_flags_o.idle = 1'b1;
+        set_offset_d = config_i.w_cols_offset != '0;
         if ((slave_start & tiler_valid) || test_mode_i) begin
+          next = REDMULE_STARTING;
+        end
+      end
+
+      REDMULE_LOOPBACK: begin
+        cntrl_flags_o.idle = 1'b1;
+        set_offset_d = 1'b0;
+        if (tiler_valid) begin
           next = REDMULE_STARTING;
         end
       end
@@ -145,12 +177,17 @@ module redmule_ctrl
           next = REDMULE_COMPUTING;
         end
       end
+
       REDMULE_COMPUTING: begin
         // busy_o gates clk_acc, so the job must not finish while stores are
         // still queued in the streamer's store FIFO, or they freeze unsent.
         if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i
             && flgs_streamer_i.store_fifo_empty) begin
-          next = REDMULE_FINISHED;
+          if (set_offset_q) begin
+            next = REDMULE_LOOPBACK;
+          end else begin
+            next = REDMULE_FINISHED;
+          end
         end
       end
 
@@ -163,7 +200,9 @@ module redmule_ctrl
   /*---------------------------------------------------------------------------------------------*/
   /*                            Other combinational assigmnets                                   */
   /*---------------------------------------------------------------------------------------------*/
-  assign evt_o   = current == REDMULE_FINISHED;
-  assign clear_o = target_clear_i || latch_clear || current == REDMULE_FINISHED;
+
+  assign evt_o   = flgs_streamer_i.z_stream_sink_flags.done && ~set_offset_q;
+
+  assign clear_o = target_clear_i || latch_clear || current == REDMULE_FINISHED || loopback_reset;
 
 endmodule : redmule_ctrl

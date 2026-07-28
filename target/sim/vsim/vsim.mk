@@ -9,6 +9,7 @@
 Questa ?=
 Module := redmule
 ProbStall ?= 0.05
+EnableReordering ?= 0
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
@@ -60,12 +61,13 @@ hw-build: hw-script
 hw-run:
 	mkdir -p $(BUILD_DIR)
 	ln -sfn $(VsimDir)/work $(BUILD_DIR)/work
-	cd $(BUILD_DIR);              \
-	$(QUESTA) $(target) $(Tb)_opt \
-	$(VsimFlags)                  \
-	-gPROB_STALL=$(ProbStall)     \
-	+STIM_INSTR=$(STIM_INSTR)     \
-	+STIM_DATA=$(STIM_DATA)       \
+	cd $(BUILD_DIR);                       \
+	$(QUESTA) $(target) $(Tb)_opt          \
+	$(VsimFlags)                           \
+	-gEnableReordering=$(EnableReordering) \
+	-gPROB_STALL=$(ProbStall)              \
+	+STIM_INSTR=$(STIM_INSTR)              \
+	+STIM_DATA=$(STIM_DATA)                \
 	-do "run -a"
 
 hw-all: hw-clean hw-script hw-build hw-run

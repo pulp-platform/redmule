@@ -63,7 +63,7 @@ module redmule_inst_decoder
   // Per-hart FIFO status flags for instruction and register packets
   logic [XifNumHarts-1:0] issue_fifo_full,  register_fifo_full,
                           issue_fifo_empty, register_fifo_empty;
-  
+
   // Hart ID of the currently executing operation (tracked through pipeline)
   logic [HartIdWidth-1:0] current_hartid_d, current_hartid_q;
 
@@ -166,7 +166,7 @@ module redmule_inst_decoder
 
   // Output configuration from the winning hart to the RedMule tiler/controller
   assign config_o = config_d[winner];
-  
+
   // Configuration valid only for MARITH instructions when both FIFOs have data and CPU is ready
   // (MCNFIG updates config but doesn't trigger execution)
   assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH;
@@ -453,6 +453,7 @@ module redmule_inst_decoder
     // Decode instruction and extract configuration parameters from register file values
     always_comb begin : config_assignment
       config_d[i] = config_q[i];  // Default: retain previous configuration
+      config_d[i].loopback_w = 1'b0;
 
       unique case ({cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]})
         MCNFIG: begin
@@ -466,6 +467,7 @@ module redmule_inst_decoder
           config_d[i].send_w          = cur_register[i].rs[1][19];     // Broadcast W to external stream
           config_d[i].gemm_ops        = cur_register[i].rs[1][20] ? MATMUL : GEMM;
           config_d[i].y_offs          = cur_register[i].rs[2][31:0];   // Y buffer offset for bias addition
+          config_d[i].w_cols_offset   = '0;                            // XIF path does not currently expose W column offsets
         end
         MARITH: begin
           // Matrix arithmetic: extract memory addresses from rs1, rs2, rs3

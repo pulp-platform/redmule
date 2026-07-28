@@ -5,6 +5,7 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 // Andrea Belano <andrea.belano2@unibo.it>
 // Arpan Suravi Prasad<prasadar@iis.ee.ethz.ch>
+// Marco Bertuletti <mbertuletti@iis.ee.ethz.ch>
 //
 
 `include "hci_helpers.svh"
@@ -17,6 +18,17 @@ module redmule_streamer
 #(
   parameter  int unsigned           DataW        = MaxDataW,
   parameter  int unsigned           MisalignedAccessSupport = MisalignedAccessSupportDefault,
+  // Set to 1 to reorder responses of outstanding transactions on the X, W, and Y
+  // load channels (hci_core_rob) and arbitrate the shared TCDM port out-of-order
+  // (hci_core_mux_ooo). Requires a memory system that completes accepted requests
+  // in issue order, but possibly with variable (multi-cycle) latency. When 0, the
+  // streamer keeps the original fixed-priority, single-outstanding-request scheme.
+  parameter  bit                    EnableReordering = 1'b0,
+  // Height/NumPipeRegs size the load-side response FIFO (RESP_FIFO_DEPTH) of
+  // hci_core_source when EnableReordering is set, matching the engine's
+  // in-flight response latency.
+  parameter  int unsigned           Height       = MaxDim ,
+  parameter  int unsigned           NumPipeRegs  = MaxPipeRegs-1,
   parameter  int unsigned           FpFormat     = FP16    ,
   parameter  int unsigned           EccChunkSize = 32      ,
   parameter fpnew_pkg::fmt_logic_t  FpFmtConfig  = 6'b001101,
@@ -90,7 +102,7 @@ hci_core_intf #(
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
   .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
-) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
+) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
 
 hci_core_intf #(
 `ifndef SYNTHESIS
@@ -104,7 +116,7 @@ hci_core_intf #(
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
   .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
-) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
+) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
   logic [`HCI_SIZE_GET_DW(tcdm)/EccChunkSize-1:0] data_single_err, data_multi_err;
@@ -142,6 +154,72 @@ hci_core_intf #(
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
   .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
 ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
+
+// LD/ST arbitration onto the shared TCDM port.
+//  * EnableReordering = 0: fixed-priority, single-outstanding-request arbiter
+//    (redmule_mux) followed by a 1-cycle-latency r_valid filter, as before.
+//  * EnableReordering = 1: each of the X/W/Y load channels gets its own
+//    hci_core_rob so several requests can be in flight at once on that channel;
+//    the (already in-order) Z/store and spare channels pass through unchanged.
+//    All channels are then arbitrated out-of-order (hci_core_mux_ooo).
+if (EnableReordering) begin : gen_outstanding_ldst_mux
+
+  // Number of unique user-IDs the ROB and the out-of-order mux can track;
+  localparam int unsigned UW     = `HCI_SIZE_GET_UW(ldst_tcdm);
+  localparam int unsigned ROB_NW = 1 << UW;
+
+  hci_core_intf #(
+  `ifndef SYNTHESIS
+    .WAIVE_RSP3_ASSERT ( 1'b1 ),
+    .WAIVE_RSP5_ASSERT ( 1'b1 ),
+    .WAIVE_RQ3_ASSERT  ( 1'b1 ),
+    .WAIVE_RQ4_ASSERT  ( 1'b1 ),
+  `endif
+    .DW  ( `HCI_SIZE_GET_DW(ldst_tcdm)  ),
+    .AW  ( `HCI_SIZE_GET_AW(ldst_tcdm)  ),
+    .BW  ( `HCI_SIZE_GET_BW(ldst_tcdm)  ),
+    .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
+    .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
+    .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
+    .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  ) virt_tcdm_rob [0:NumStreamSources] ( .clk ( clk_i ) );
+
+  for (genvar i = 0; i < NumStreamSources; i++) begin : gen_channel_rob
+    hci_core_rob #(
+      .ROB_NW               ( ROB_NW                     ),
+      .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+    ) i_streamer_rob (
+      .clk_i  ( clk_i            ),
+      .rst_ni ( rst_ni           ),
+      .in     ( virt_tcdm[i]     ),
+      .out    ( virt_tcdm_rob[i] )
+    );
+  end
+
+  // The Z/store channel does not need reordering: pass it through to the
+  // out-of-order mux unchanged.
+  hci_core_assign i_rob_bypass ( .tcdm_target (virt_tcdm[NumStreamSources]), .tcdm_initiator (virt_tcdm_rob[NumStreamSources]) );
+
+  logic [NumStreamSources:0][$clog2(NumStreamSources+1)-1:0] priority_encoding;
+  assign priority_encoding[0] = 0;
+  assign priority_encoding[1] = 1;
+  assign priority_encoding[2] = 2;
+  assign priority_encoding[3] = 3;
+
+  hci_core_mux_ooo #(
+    .NB_CHAN              ( NumStreamSources+1         ),
+    .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+  ) i_mux (
+    .clk_i            ( clk_i             ),
+    .rst_ni           ( rst_ni            ),
+    .clear_i          ( clear_i           ),
+    .priority_force_i ( 1'b1              ),
+    .priority_i       ( priority_encoding ),
+    .in               ( virt_tcdm_rob     ),
+    .out              ( ldst_tcdm         )
+  );
+
+end else begin : gen_fixed_priority_ldst_mux
 
 if (MuxPriority == MUX_PRIORITY_STATIC) begin : static_mux_gen
   redmule_mux #(
@@ -191,6 +269,9 @@ hci_core_r_id_filter #(
   .tcdm_target    ( ldst_tcdm_pre_r_id    ),
   .tcdm_initiator ( ldst_tcdm             )
 );
+
+
+end
 
 /************************************ Store Channel *************************************/
 /* The store channel of the streamer connects the incoming stream interface (Z stream)  *
@@ -278,7 +359,7 @@ flags_fifo_t store_fifo_flags;
 
 // HCI store fifo.
 hci_core_fifo #(
-  .FIFO_DEPTH                      ( 2                     ),
+  .FIFO_DEPTH                      ( EnableReordering ? Height*(NumPipeRegs+1) : 2 ),
   .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_store_fifo (
   .clk_i          ( clk_i            ),
@@ -372,18 +453,29 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
   hci_core_assign i_load_assign ( .tcdm_target (load_fifo_d[i]), .tcdm_initiator (virt_tcdm[i]) );
 
-  hci_core_fifo #(
-    .FIFO_DEPTH  ( 4  ), // to avoid protocol violations, as the consumer has a throughput
-                         // of 1 packet over 4 cycles, we need a depth of 4 elements.
-    .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
-  ) i_load_tcdm_fifo (
-    .clk_i          ( clk_i          ),
-    .rst_ni         ( rst_ni         ),
-    .clear_i        ( clear_i        ),
-    .flags_o        (                ),
-    .tcdm_target    ( load_fifo_q[i] ),
-    .tcdm_initiator ( load_fifo_d[i] )
-  );
+  // hci_core_fifo can retract a request it already raised without a grant
+  // (a documented RQ-4 protocol violation, harmless when grants are never
+  // delayed) whenever its response-side fill level changes while a request
+  // is pending - which happens routinely once the ROB lets requests wait
+  // for a grant across many cycles. The ROB already buffers/reorders on
+  // this channel, so the FIFO's buffering is redundant here: skip it and
+  // wire the cast unit straight to the ROB when outstanding is enabled.
+  if (EnableReordering) begin : gen_no_load_tcdm_fifo
+    hci_core_assign i_load_tcdm_bypass ( .tcdm_target (load_fifo_q[i]), .tcdm_initiator (load_fifo_d[i]) );
+  end else begin : gen_load_tcdm_fifo
+    hci_core_fifo #(
+      .FIFO_DEPTH  ( 4  ), // to avoid protocol violations, as the consumer has a throughput
+                           // of 1 packet over 4 cycles, we need a depth of 4 elements.
+      .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+    ) i_load_tcdm_fifo (
+      .clk_i          ( clk_i          ),
+      .rst_ni         ( rst_ni         ),
+      .clear_i        ( clear_i        ),
+      .flags_o        (                ),
+      .tcdm_target    ( load_fifo_q[i] ),
+      .tcdm_initiator ( load_fifo_d[i] )
+    );
+  end
 
   // Load cast unit
   // This unit uses only the data bus of the TCDM interface. The other buses
@@ -435,7 +527,8 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
 
   hci_core_source       #(
     .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
+    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) ),
+    .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 0 )
   ) i_stream_source      (
     .clk_i               ( clk_i           ),
     .rst_ni              ( rst_ni          ),

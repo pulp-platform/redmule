@@ -87,6 +87,7 @@ module redmule_regif (
             logic marith1;
             logic marith2;
             logic mopcnt;
+            logic mcnfig3;
         } hwpe_job_dep;
         struct {
             logic reserved;
@@ -120,7 +121,8 @@ module redmule_regif (
         decoded_reg_strb.hwpe_job_dep.marith1 = cpuif_req_masked & (cpuif_addr == 32'h30);
         decoded_reg_strb.hwpe_job_dep.marith2 = cpuif_req_masked & (cpuif_addr == 32'h34);
         decoded_reg_strb.hwpe_job_dep.mopcnt = cpuif_req_masked & (cpuif_addr == 32'h38) & !cpuif_req_is_wr;
-        decoded_reg_strb.hwpe_job_indep.reserved = cpuif_req_masked & (cpuif_addr == 32'h3c) & !cpuif_req_is_wr;
+        decoded_reg_strb.hwpe_job_dep.mcnfig3 = cpuif_req_masked & (cpuif_addr == 32'h3c);
+        decoded_reg_strb.hwpe_job_indep.reserved = cpuif_req_masked & (cpuif_addr == 32'h40) & !cpuif_req_is_wr;
         decoded_err = '0;
     end
 
@@ -224,6 +226,12 @@ module redmule_regif (
                     logic load_next;
                 } z_addr;
             } marith2;
+            struct {
+                struct {
+                    logic [31:0] next;
+                    logic load_next;
+                } w_cols_offset;
+            } mcnfig3;
         } hwpe_job_dep;
     } field_combo_t;
     field_combo_t field_combo;
@@ -301,6 +309,11 @@ module redmule_regif (
                     logic [31:0] value;
                 } z_addr;
             } marith2;
+            struct {
+                struct {
+                    logic [31:0] value;
+                } w_cols_offset;
+            } mcnfig3;
         } hwpe_job_dep;
     } field_storage_t;
     field_storage_t field_storage;
@@ -705,6 +718,29 @@ module redmule_regif (
         end
     end
     assign hwif_out.hwpe_job_dep.marith2.z_addr.value = field_storage.hwpe_job_dep.marith2.z_addr.value;
+    // Field: redmule_regif.hwpe_job_dep.mcnfig3.w_cols_offset
+    always_comb begin
+        automatic logic [31:0] next_c;
+        automatic logic load_next_c;
+        next_c = field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value;
+        load_next_c = '0;
+        if(decoded_reg_strb.hwpe_job_dep.mcnfig3 && decoded_req_is_wr) begin // SW write
+            next_c = (field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value & ~decoded_wr_biten[31:0]) | (decoded_wr_data[31:0] & decoded_wr_biten[31:0]);
+            load_next_c = '1;
+        end
+        field_combo.hwpe_job_dep.mcnfig3.w_cols_offset.next = next_c;
+        field_combo.hwpe_job_dep.mcnfig3.w_cols_offset.load_next = load_next_c;
+    end
+    always_ff @(posedge clk or negedge arst_n) begin
+        if(~arst_n) begin
+            field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value <= 32'h0;
+        end else begin
+            if(field_combo.hwpe_job_dep.mcnfig3.w_cols_offset.load_next) begin
+                field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value <= field_combo.hwpe_job_dep.mcnfig3.w_cols_offset.next;
+            end
+        end
+    end
+    assign hwif_out.hwpe_job_dep.mcnfig3.w_cols_offset.value = field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value;
     assign hwif_out.hwpe_job_indep.reserved.reserved.value = 32'h0;
 
     //--------------------------------------------------------------------------
@@ -783,6 +819,9 @@ module redmule_regif (
             readback_data_var[31:0] = hwif_in.hwpe_job_dep.mopcnt.op_id_cnt.next;
         end
         if(rd_mux_addr == 32'h3c) begin
+            readback_data_var[31:0] = field_storage.hwpe_job_dep.mcnfig3.w_cols_offset.value;
+        end
+        if(rd_mux_addr == 32'h40) begin
             readback_data_var[31:0] = 32'h0;
         end
         readback_data = readback_data_var;

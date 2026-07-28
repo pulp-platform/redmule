@@ -22,6 +22,7 @@ module redmule_tiler
   input  logic              rst_ni     ,
   input  logic              clear_i    ,
   input  logic              setback_i  ,
+  input  logic              loopback_i ,
   input  logic              start_cfg_i,
   output logic              valid_o    ,
   output logic              busy_o     ,
@@ -41,7 +42,9 @@ localparam int unsigned MinimumSizeN = MinimumSizeNFactor * Height;
 logic clk_en;
 logic clk_int;
 
+redmule_config_t input_config_d, input_config_q;
 redmule_config_t config_d, config_q;
+logic loopback_active_q, loopback_active;
 
 always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   if (~rst_ni) begin
@@ -49,7 +52,7 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   end else begin
     if (clear_i || setback_i) begin
       clk_en <= 1'b0;
-    end else if (start_cfg_i && ready_i) begin
+    end else if ((start_cfg_i && ready_i) || loopback_i) begin
       clk_en <= 1'b1;
     end
   end
@@ -64,12 +67,38 @@ tc_clk_gating i_tiler_clockg (
 
 assign busy_o = clk_en || ~ready_i;
 
-assign config_d.x_addr          = config_i.x_addr;
-assign config_d.w_addr          = config_i.w_addr;
-assign config_d.z_addr          = config_i.z_addr;
-assign config_d.m_size          = config_i.m_size;
-assign config_d.k_size          = config_i.k_size;
-assign config_d.n_size          = config_i.n_size; // real N is carried downstream unchanged (used for operand gating)
+
+// Store loopback
+assign loopback_active = (loopback_i || loopback_active_q);
+always_ff @(posedge clk_i, negedge rst_ni) begin: loopback_ff
+  if (~rst_ni) begin
+    loopback_active_q <= 1'b0;
+  end else begin
+    loopback_active_q <= !(clear_i || setback_i) && loopback_active;
+  end
+end
+
+always_ff @(posedge clk_i or negedge rst_ni) begin : input_config_ff
+  if (~rst_ni) begin
+    input_config_q <= '0;
+  end else if (clear_i) begin
+    input_config_q <= '0;
+  end else if (start_cfg_i && ready_i) begin
+    input_config_q <= config_i;
+  end
+end
+
+assign input_config_d           = loopback_active ? input_config_q : config_i;
+assign config_d.x_addr          = input_config_d.x_addr;
+assign config_d.w_addr          = loopback_active ? input_config_d.w_addr :
+                                  input_config_d.w_addr + input_config_d.w_cols_offset * (FpWidth/8);
+assign config_d.z_addr          = loopback_active ? input_config_d.z_addr :
+                                  input_config_d.z_addr + input_config_d.w_cols_offset * (FpWidth/8);
+assign config_d.y_addr          = loopback_active ? input_config_d.z_addr + input_config_d.y_offs :
+                                  input_config_d.z_addr + input_config_d.y_offs + input_config_d.w_cols_offset * (FpWidth/8);
+assign config_d.m_size          = input_config_d.m_size;
+assign config_d.k_size          = input_config_d.k_size;
+assign config_d.n_size          = input_config_d.n_size;
 
 // Effective N size used ONLY for the W-row loop length / streamer length: any job with
 // N <= Height is promoted to MinimumSizeN so the W-load takes as long as a full N-tile, restoring
@@ -80,17 +109,22 @@ assign config_d.n_size          = config_i.n_size; // real N is carried downstre
 // step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
 // W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
 logic [15:0] n_size_eff;
-assign n_size_eff = (config_i.n_size <= Height) ? MinimumSizeN[15:0] : config_i.n_size;
-assign config_d.gemm_ops        = config_i.gemm_ops;
-assign config_d.gemm_input_fmt  = config_i.gemm_input_fmt;
-assign config_d.gemm_output_fmt = config_i.gemm_output_fmt;
-assign config_d.receive_w       = config_i.receive_w;
-assign config_d.send_w          = config_i.send_w;
-assign config_d.receive_x       = config_i.receive_x;
-assign config_d.send_x          = config_i.send_x;
-
-assign config_d.y_offs          = config_i.y_offs;
-assign config_d.y_addr          = config_i.z_addr + config_i.y_offs;
+assign n_size_eff = (input_config_d.n_size <= Height) ? MinimumSizeN[15:0] : input_config_d.n_size;
+// Sourced from input_config_d (not config_i directly) so the loopback pass keeps
+// the job's original operation/format even after dec_config_q's read pointer has
+// advanced past its single valid entry (config_i can no longer be trusted once
+// the first pass's completion has popped it).
+assign config_d.gemm_ops        = input_config_d.gemm_ops;
+assign config_d.gemm_input_fmt  = input_config_d.gemm_input_fmt;
+assign config_d.gemm_output_fmt = input_config_d.gemm_output_fmt;
+assign config_d.receive_w       = input_config_d.receive_w;
+assign config_d.send_w          = input_config_d.send_w;
+assign config_d.loopback_w      = loopback_active;
+assign config_d.receive_x       = input_config_d.receive_x;
+assign config_d.send_x          = input_config_d.send_x;
+// Convert the user-programmed column offset into whole RedMulE output tiles.
+assign config_d.w_cols_offset   = loopback_active ? '0 : input_config_d.w_cols_offset;
+assign config_d.y_offs          = input_config_d.y_offs;
 
 // Calculating the number of iterations alng the two dimensions of the X matrix
 logic [15:0] x_rows_iter_nolftovr;
@@ -102,7 +136,8 @@ assign x_cols_iter_nolftovr = config_d.n_size/(Height*(PipeRegs + 1));
 logic [15:0] w_cols_iter_nolftovr;
 logic [15:0] w_rows_iter_lftovr,
              w_rows_iter_nolftovr;
-assign w_cols_iter_nolftovr = config_d.k_size/(Height*(PipeRegs + 1));
+assign w_cols_iter_nolftovr = loopback_active ? (input_config_d.w_cols_offset/(Height*(PipeRegs + 1))) : 
+                              (config_d.k_size - input_config_d.w_cols_offset)/(Height*(PipeRegs + 1));
 assign w_rows_iter_lftovr = w_rows_iter_nolftovr + Height - config_d.w_rows_lftovr;
 assign w_rows_iter_nolftovr = n_size_eff; // promoted N: W-row loop runs for a full N-tile when N <= Height
 
@@ -112,10 +147,13 @@ assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(Height*
 
 // Calculating the residuals along the weight dimensions
 assign config_d.w_rows_lftovr = n_size_eff - (Height*(n_size_eff/Height)); // promoted N (0 when N <= Height -> full W-row loop)
-assign config_d.w_cols_lftovr = config_d.k_size - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
+assign config_d.w_cols_lftovr = loopback_active ? input_config_d.w_cols_offset - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1))) :
+                                (config_d.k_size - input_config_d.w_cols_offset) - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
-// Calculate w_cols, x_cols, x_rows iterations
+// Calculate w_cols iterations
 assign config_d.w_cols_iter = config_d.w_cols_lftovr != '0 ? w_cols_iter_nolftovr + 1 : w_cols_iter_nolftovr;
+
+// Calculate w_rows, x_cols, x_rows iterations
 assign config_d.w_rows_iter = config_d.w_rows_lftovr != '0 ? w_rows_iter_lftovr       : w_rows_iter_nolftovr;
 assign config_d.x_cols_iter = config_d.x_cols_lftovr != '0 ? x_cols_iter_nolftovr + 1 : x_cols_iter_nolftovr;
 assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftovr + 1 : x_rows_iter_nolftovr;
@@ -124,7 +162,7 @@ assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftov
 logic [31:0] x_rows_by_w_cols_iter_d, x_rows_by_w_cols_iter_q;
 logic        x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
 
-assign x_rows_by_w_cols_iter_d = start_cfg_i ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
+assign x_rows_by_w_cols_iter_d = (start_cfg_i || loopback_i) ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
@@ -138,7 +176,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
-assign x_rows_by_w_cols_iter_valid_d = start_cfg_i;
+assign x_rows_by_w_cols_iter_valid_d = (start_cfg_i || loopback_i);
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
@@ -263,7 +301,7 @@ assign config_d.gemm_selection   = config_d.gemm_ops == MATMUL ? 1'b0 : 1'b1;
 assign config_d.x_d1_stride = ((4*FpWidth)/AddrWidth)*(((DataW/FpWidth)*x_cols_iter_nolftovr) + config_d.x_cols_lftovr);
 assign config_d.x_rows_offs = Width*config_d.x_d1_stride;
 assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter_q[31:0];
-assign config_d.w_d0_stride = ((4*FpWidth)/AddrWidth)*(((DataW/FpWidth)*w_cols_iter_nolftovr) + config_d.w_cols_lftovr);
+assign config_d.w_d0_stride = ((4*FpWidth)/AddrWidth)*((DataW/FpWidth) * (config_d.k_size)/(Height*(PipeRegs + 1)));
 assign config_d.yz_tot_len  = Width*x_rows_by_w_cols_iter_q[15:0];
 assign config_d.yz_d0_stride = config_d.w_d0_stride;
 assign config_d.yz_d2_stride = Width*config_d.w_d0_stride;

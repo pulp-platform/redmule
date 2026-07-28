@@ -8,7 +8,7 @@ package redmule_regif_pkg;
 
     localparam REDMULE_REGIF_DATA_WIDTH = 32;
     localparam REDMULE_REGIF_MIN_ADDR_WIDTH = 32;
-    localparam REDMULE_REGIF_SIZE = 'h40;
+    localparam REDMULE_REGIF_SIZE = 'h44;
 
     typedef struct packed {
         logic [31:0] next;
@@ -221,12 +221,21 @@ package redmule_regif_pkg;
     } redmule_regif__marith2__out_t;
 
     typedef struct packed {
+        logic [31:0] value;
+    } redmule_regif__mcnfig3__w_cols_offset__out_t;
+
+    typedef struct packed {
+        redmule_regif__mcnfig3__w_cols_offset__out_t w_cols_offset;
+    } redmule_regif__mcnfig3__out_t;
+
+    typedef struct packed {
         redmule_regif__mcnfig0__out_t mcnfig0;
         redmule_regif__mcnfig1__out_t mcnfig1;
         redmule_regif__mcnfig2__out_t mcnfig2;
         redmule_regif__marith0__out_t marith0;
         redmule_regif__marith1__out_t marith1;
         redmule_regif__marith2__out_t marith2;
+        redmule_regif__mcnfig3__out_t mcnfig3;
     } redmule_regif__hwpe_ctrl_job_dep__out_t;
 
     typedef struct packed {

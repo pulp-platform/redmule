@@ -19,7 +19,7 @@ dependencies:
   hwpe-ctrl         : { git: "https://github.com/pulp-platform/hwpe-ctrl.git"         , version: 3.1.1                                } 
   hci               : { git: "https://github.com/pulp-platform/hci.git"               , version: 2.6.1                                }
   fpnew             : { git: "https://github.com/pulp-platform/cvfpu.git"             , rev: "pulp-v0.1.3"                            }
-  common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.21.0                               }
+  common_cells      : { git: "https://github.com/pulp-platform/common_cells.git"      , version: 1.38.0                               }
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11                               }
 
 sources:

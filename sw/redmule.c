@@ -5,11 +5,13 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+#include <stdint.h>
+
 #include "archi_redmule.h"
 #include "hal_redmule.h"
 #include "redmule_utils.h"
-#include <stdint.h>
 
+#include "tensor_dim.h"
 #include "golden.h"
 #include "w_input.h"
 #include "x_input.h"
@@ -18,17 +20,21 @@
 #include "z_output.h"
 #define ERR 0x0000
 
+#ifndef W_COLS_OFFSET
+#define W_COLS_OFFSET 0
+#endif
+
 int main() {
 
   uint16_t m_size = M_SIZE;
   uint16_t n_size = N_SIZE;
   uint16_t k_size = K_SIZE;
 
-  uint8_t *x = x_inp;
-  uint8_t *w = w_inp;
-  uint8_t *y = y_inp;
+  uint16_t *x = x_inp;
+  uint16_t *w = w_inp;
+  uint16_t *y = y_inp;
 
-  uint8_t *z = z_oup; // golden_out //1c010000
+  uint16_t *z = z_oup; // golden_out //1c010000
 
   uint8_t float_fmt = (SRC_FMT == FP8)       ? (uint8_t)Float8
                       : (SRC_FMT == FP8ALT)  ? (uint8_t)Float8Alt
@@ -53,7 +59,7 @@ int main() {
   // int pace_ops = 0;
 
   redmule_cfg((unsigned int)x, (unsigned int)w, (unsigned int)y, m_size, n_size, k_size,
-              (uint8_t)gemm_ops, float_fmt);
+              (uint16_t)W_COLS_OFFSET, (uint8_t)gemm_ops, float_fmt);
 
   // Start RedMulE operation and sleeping until the end of computation
   printf("Triggering accelerator and going to sleep...\n");
@@ -69,11 +75,11 @@ int main() {
 
   if (float_fmt == Float16 || float_fmt == Float16Alt)
     if (gemm_ops == PACE)
-      errors = redmule16_compare_int(y, golden, K_SIZE/2, 0);
+      errors = redmule16_compare_int((uint32_t *)y, golden, K_SIZE/2, 0);
     else
-      errors = redmule16_compare_int(y, golden, m_size * k_size / 2, ERR);
+      errors = redmule16_compare_int((uint32_t *)y, golden, m_size * k_size / 2, ERR);
   else if (float_fmt == Float8 || float_fmt == Float8Alt)
-    errors = redmule8_compare_int(y, golden, m_size * k_size / 4, ERR);
+    errors = redmule8_compare_int((uint32_t *)y, golden, m_size * k_size / 4, ERR);
 
   *(int *)0x80000000 = errors;
 
