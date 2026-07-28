@@ -7,8 +7,8 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  run-hwpe-tests:
-    name: run-hwpe-tests (ProbStall=${{ matrix.prob_stall }})
+  hwpe-tests:
+    name: hwpe-tests (ProbStall=${{ matrix.prob_stall }})
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,6 +78,21 @@ jobs:
         output-file-path: scripts/perf.json
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
+
+  # Aggregate gate with a fixed name: the matrix above reports one check per
+  # ProbStall value, so branch rulesets cannot pin a stable context to it.
+  # This is the job the ruleset requires -- keep its name in sync with the
+  # required status check.
+  run-hwpe-tests:
+    name: run-hwpe-tests
+    runs-on: ubuntu-latest
+    needs: hwpe-tests
+    if: always()
+    steps:
+    - name: Check matrix result
+      run: |
+        echo "hwpe-tests result: ${{ needs.hwpe-tests.result }}"
+        [ "${{ needs.hwpe-tests.result }}" = "success" ]
 
   # run-complex-tests:
   #   name: run-complex-tests
