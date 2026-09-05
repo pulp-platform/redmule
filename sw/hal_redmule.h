@@ -12,8 +12,8 @@
 #define REDMULE_ADDR_BASE REDMULE_BASE_ADD
 #define REDMULE_ADDR_SPACE 0x00000100
 
-#define HWPE_WRITE(value, offset) *(int *)(REDMULE_ADDR_BASE + offset) = value
-#define HWPE_READ(offset) *(int *)(REDMULE_ADDR_BASE + offset)
+#define HWPE_WRITE(value, offset) *(uint32_t *)(REDMULE_ADDR_BASE + offset) = value
+#define HWPE_READ(offset) *(uint32_t *)(REDMULE_ADDR_BASE + offset)
 
 static inline void redmule_x_add_set(unsigned int value) {
   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
@@ -54,12 +54,11 @@ static inline unsigned int redmule_get_meta_uncorrectable_count() {
 
 static inline void hwpe_trigger_job() { HWPE_WRITE(0, REDMULE_TRIGGER); }
 
-static inline int hwpe_acquire_job() { return HWPE_READ(REDMULE_ACQUIRE); }
+static inline int hwpe_acquire_job() { return (int)HWPE_READ(REDMULE_ACQUIRE); }
 
 static inline unsigned int hwpe_get_status() { return HWPE_READ(REDMULE_STATUS); }
 
 static inline void hwpe_soft_clear() {
-  volatile int i;
   HWPE_WRITE(0, REDMULE_SOFT_CLEAR);
 }
 
@@ -74,10 +73,10 @@ void redmule_cfg(unsigned int x, unsigned int w, unsigned int z, uint16_t m_size
   uint32_t mcfg_reg1 = 0;
   uint32_t arith_reg = 0;
 
-  mcfg_reg0 = (k_size << 16) | (m_size << 0);
-  mcfg_reg1 = (w_col_off << 16) | (n_size << 0);
+  mcfg_reg0 = ((uint32_t)k_size << 16) | ((uint32_t)m_size << 0);
+  mcfg_reg1 = ((uint32_t)w_col_off << 16) | ((uint32_t)n_size << 0);
 
-  arith_reg = (gemm_op << 10) | (gemm_fmt << 7);
+  arith_reg = ((uint32_t)gemm_op << 10) | ((uint32_t)gemm_fmt << 7);
 
   redmule_x_add_set((unsigned int)x);
   redmule_w_add_set((unsigned int)w);
