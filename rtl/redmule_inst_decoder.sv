@@ -136,7 +136,7 @@ module redmule_inst_decoder
   // Construct result packet to write back to CPU register file
   always_comb begin : x_result_assignment
     // Result valid when both instruction and register data available for winning hart
-    x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner];
+    x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_i : 1'b1);
     x_result_o.hartid = cur_issue[winner].hartid;
     x_result_o.id     = cur_issue[winner].id;
     x_result_o.rd     = cur_issue[winner].instr[11:7];  // Destination register
@@ -264,7 +264,7 @@ module redmule_inst_decoder
       end else begin
         if (clear_i) begin
           op_id_counter_in_q[i] <= 0;
-        end else if (winner == i && x_result_ready_i && x_result_valid_o && {cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]} == MARITH) begin
+        end else if (winner == i && x_result_ready_i && x_result_valid_o && pop_enable && {cur_issue[i].instr[26:25],cur_issue[i].instr[14:12],cur_issue[i].instr[6:0]} == MARITH) begin
           op_id_counter_in_q[i] <= op_id_counter_in_q[i] + 1;
         end
       end
