@@ -302,7 +302,7 @@ assign config_d.x_d1_stride = ((4*FpWidth)/AddrWidth)*(((DataW/FpWidth)*x_cols_i
 assign config_d.x_rows_offs = Width*config_d.x_d1_stride;
 assign config_d.w_tot_len   = x_rows_by_w_cols_by_w_rows_iter_q[31:0];
 assign config_d.w_d0_stride = ((4*FpWidth)/AddrWidth)*((DataW/FpWidth) * (config_d.k_size)/(Height*(PipeRegs + 1)));
-assign config_d.yz_tot_len  = Width*x_rows_by_w_cols_iter_q[15:0];
+assign config_d.yz_tot_len  = ((config_d.x_rows_lftovr != '0 && config_d.x_rows_iter == 1) ? config_d.x_rows_lftovr : Width) * x_rows_by_w_cols_iter_q[15:0];
 assign config_d.yz_d0_stride = config_d.w_d0_stride;
 assign config_d.yz_d2_stride = Width*config_d.w_d0_stride;
 assign config_d.tot_x_read   = x_rows_by_w_cols_by_x_cols_iter_q[31:0];

@@ -274,7 +274,7 @@ module redmule_memory_scheduler
     // for the Y stream source
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = y_config.y_addr;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = y_config.yz_tot_len;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = (y_config.x_rows_lftovr != '0 && y_config.x_rows_iter == 1) ? y_config.x_rows_lftovr : W;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride = y_config.yz_d0_stride;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len = y_config.w_cols_iter;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
@@ -287,7 +287,7 @@ module redmule_memory_scheduler
     // the Z stream sink
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = z_config.z_addr;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = z_config.yz_tot_len;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = W;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = (z_config.x_rows_lftovr != '0 && z_config.x_rows_iter == 1) ? z_config.x_rows_lftovr : W;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride = z_config.yz_d0_stride;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len = z_config.w_cols_iter;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;

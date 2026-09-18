@@ -683,10 +683,10 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  assign y_width  = y_rows_iter_q == y_config_fast.x_rows_iter-1 && y_config_fast.x_rows_lftovr != '0 ? y_config_fast.x_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_width_next  = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_config_fast.x_rows_lftovr != '0 ? z_config_fast.x_rows_lftovr : W;
   assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
