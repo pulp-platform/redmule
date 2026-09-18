@@ -101,6 +101,7 @@ logic                       w_shift;
 logic                       w_load;
 logic                       reg_enable,
                             gate_en;
+logic                       last_x;
 logic                       cfg_complete;
 logic [31:0]                x_cols_offs,
                             x_rows_offs;
@@ -566,6 +567,7 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
     .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
     .config_ready_i     ( ~config_fifo_full                      ),
     .op_done_i          ( evt_o                                  ),
+    .prevent_next_i     ( last_x                                 ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .x_issue_req_i      ( x_issue_req_i                          ),
@@ -693,6 +695,7 @@ redmule_scheduler #(
   .cntrl_w_buffer_o    ( w_buffer_ctrl       ),
   .cntrl_z_buffer_o    ( z_buffer_ctrl       ),
   .flgs_scheduler_o    ( flgs_scheduler      ),
+  .last_x_o            ( last_x              ),
   .sync_i,
   .sync_o
 );

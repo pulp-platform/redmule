@@ -58,6 +58,7 @@ module redmule_scheduler
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
   output flgs_scheduler_t                 flgs_scheduler_o   ,
+  output logic                            last_x_o           ,
 
   /*********************************************************/
   /*                   Synchronization                     */
@@ -174,6 +175,8 @@ module redmule_scheduler
   end
 
   assign x_done_en = /*flgs_streamer_i.x_stream_source_flags.ready_start &&*/ x_rows_iter_en && x_rows_iter_q == x_config.x_rows_iter-1 && x_w_iters_q == x_config.w_cols_iter-1 && x_cols_iter_q == x_config.x_cols_iter-1;
+
+  assign last_x_o = x_rows_iter_en && x_rows_iter_d == x_config.x_rows_iter-1;
 
   // For N <= Height, the "internal N" is promoted to a full N-tile (MinimumSizeN steps) by the tiler
   // (see redmule_tiler.sv). The X buffer must then iterate a full D-deep tile so its refill / M-block
