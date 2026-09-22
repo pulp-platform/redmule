@@ -169,7 +169,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       x_done <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || (~x_done && x_config_full || x_done && config_valid_i)) begin  // This works because DEPTH = 2
+      if (clear_i || cntrl_scheduler_i.rst || (~x_done && (x_config_full || config_valid_i) || x_done && (config_valid_i || ~x_config_empty))) begin
         x_done <= '0;
       end else if (x_done_en) begin
         x_done <= '1;
@@ -351,7 +351,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       w_done <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || (~w_done && w_config_full || w_done && config_valid_i)) begin
+      if (clear_i || cntrl_scheduler_i.rst || (~w_done && (w_config_full || config_valid_i) || w_done && (config_valid_i || ~w_config_empty))) begin
         w_done <= '0;
       end else if (w_done_en) begin
         w_done <= '1;
@@ -744,7 +744,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       waits_cnt <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst)
+      if (clear_i || cntrl_scheduler_i.rst || current_state == IDLE)
         waits_cnt <= '0;
       else if (waits_cnt_en)
         waits_cnt <= waits_cnt == NumPipeRegs ? '0 : waits_cnt + 1;
@@ -933,6 +933,8 @@ module redmule_scheduler
       IDLE: begin
         if (cntrl_scheduler_i.first_load) begin
           next_state = PRELOAD;
+        end else if (computing && (~w_config_empty || config_valid_i)) begin
+          next_state = LOAD_W;
         end
       end
 
@@ -952,7 +954,7 @@ module redmule_scheduler
       // in this state we should check that everything is ready to be loaded and
       // if something's amiss stall the engine
       LOAD_W: begin
-        if (w_done && z_avail_clr) begin
+        if (w_done && z_avail_clr && w_config_empty && ~config_valid_i) begin
           next_state = IDLE;
         end else if (~stall_engine) begin
           next_state = WAIT;
