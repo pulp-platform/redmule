@@ -58,6 +58,9 @@ module redmule_scheduler
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
   output flgs_scheduler_t                 flgs_scheduler_o   ,
+  output logic                            w_done_en_o        ,
+  output logic                            x_done_en_o        ,
+  output logic                            scheduler_ready_o  ,
   output logic                            last_x_o           ,
 
   /*********************************************************/
@@ -175,6 +178,7 @@ module redmule_scheduler
   end
 
   assign x_done_en = /*flgs_streamer_i.x_stream_source_flags.ready_start &&*/ x_rows_iter_en && x_rows_iter_q == x_config.x_rows_iter-1 && x_w_iters_q == x_config.w_cols_iter-1 && x_cols_iter_q == x_config.x_cols_iter-1;
+  assign x_done_en_o = x_done_en;
 
   assign last_x_o = x_rows_iter_en && x_rows_iter_d == x_config.x_rows_iter-1;
 
@@ -370,6 +374,7 @@ module redmule_scheduler
   assign w_zero_cnt_d = w_done && current_state == LOAD_W && ~stall_engine && w_zero_cnt_q != H ? w_zero_cnt_q + 1 : w_zero_cnt_q;
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == w_config.x_rows_iter-1;
+  assign w_done_en_o = w_done_en;
 
   // When N <= Height the tiler promotes the W-row loop to MinimumSizeN (a full N-tile) so the
   // W-load pacing is not too fast, causing races and hangs. The extra padded N rows
@@ -499,6 +504,8 @@ module redmule_scheduler
     .data_o     ( z_config_fast       ),
     .pop_i      ( z_config_fast_pop   )
   );
+
+  assign scheduler_ready_o = ~(x_config_full | w_config_full | y_config_full | y_config_fast_full | z_config_fast_full);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
     if(~rst_ni) begin

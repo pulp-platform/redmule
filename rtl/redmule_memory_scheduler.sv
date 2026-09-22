@@ -25,6 +25,10 @@ module redmule_memory_scheduler
   input  flgs_streamer_t         flgs_streamer_i  ,
   input  cntrl_scheduler_t       cntrl_scheduler_i,
   input  cntrl_flags_t           cntrl_flags_i    ,
+  input  logic                   w_done_en_i      ,
+  input  logic                   x_done_en_i      ,
+  output logic                   fifos_ready_o    ,
+  output logic                   w_done_o         ,
   output logic                   z_fifo_empty_o   ,
   output logic                   z_fifo_full_o    ,
   output logic                   x_done_o         ,
@@ -57,7 +61,9 @@ module redmule_memory_scheduler
 
   logic            y_fifo_pop;
 
-  assign x_done_o = tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done;
+  assign x_done_o      = x_config.receive_x ? x_done_en_i : (tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done);
+  assign w_done_o      = w_config.receive_w ? w_done_en_i : flgs_streamer_i.w_stream_source_flags.done;
+  assign fifos_ready_o = ~(z_config_full | w_config_full | x_config_full | y_config_full);
 
   redmule_config_fifo #(
     .FALL_THROUGH (0),
@@ -82,17 +88,17 @@ module redmule_memory_scheduler
     .DEPTH (2),
     .dtype (redmule_config_t)
   ) i_w_config_fifo (
-    .clk_i      ( clk_i                                      ),
-    .rst_ni     ( rst_ni                                     ),
-    .flush_i    ( clear_i | cntrl_scheduler_i.rst            ),
-    .testmode_i ( '0                                         ),
-    .full_o     ( w_config_full                              ),
-    .empty_o    ( w_config_empty                             ),
-    .usage_o    (                                            ),
-    .data_i     ( config_i                                   ),
-    .push_i     ( config_valid_i                             ),
-    .data_o     ( w_config                                   ),
-    .pop_i      ( flgs_streamer_i.w_stream_source_flags.done )
+    .clk_i      ( clk_i                           ),
+    .rst_ni     ( rst_ni                          ),
+    .flush_i    ( clear_i | cntrl_scheduler_i.rst ),
+    .testmode_i ( '0                              ),
+    .full_o     ( w_config_full                   ),
+    .empty_o    ( w_config_empty                  ),
+    .usage_o    (                                 ),
+    .data_i     ( config_i                        ),
+    .push_i     ( config_valid_i                  ),
+    .data_o     ( w_config                        ),
+    .pop_i      ( w_done_o                        )
   );
 
   redmule_config_fifo #(

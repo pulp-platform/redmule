@@ -33,7 +33,6 @@ module redmule_inst_decoder
   input  logic            clear_i,
   input  logic            config_ready_i,
   input  logic            op_done_i,
-  input  logic            prevent_next_i,
   output logic            config_valid_o,
   output redmule_config_t config_o,
   input  x_issue_req_t    x_issue_req_i,
@@ -94,10 +93,6 @@ module redmule_inst_decoder
   // Control signal to enable popping from instruction FIFOs (delayed for MARITH until tiler ready)
   logic pop_enable;
 
-  // Control signal to prevent send a new config when the tiler is not really ready.
-  logic [1:0] prevent_next_d, prevent_next_q;
-  logic config_ready_real;
-
   // Decode incoming instruction to determine if it's a legal RedMule custom instruction
   // Checks funct2[26:25], funct3[14:12], and opcode[6:0] fields
   always_comb begin : legal_inst_assignment
@@ -141,7 +136,7 @@ module redmule_inst_decoder
   // Construct result packet to write back to CPU register file
   always_comb begin : x_result_assignment
     // Result valid when both instruction and register data available for winning hart
-    x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_real : 1'b1);
+    x_result_valid_o  = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_i : 1'b1);
     x_result_o.hartid = cur_issue[winner].hartid;
     x_result_o.id     = cur_issue[winner].id;
     x_result_o.rd     = cur_issue[winner].instr[11:7];  // Destination register
@@ -174,7 +169,7 @@ module redmule_inst_decoder
 
   // Configuration valid only for MARITH instructions when both FIFOs have data and CPU is ready
   // (MCNFIG updates config but doesn't trigger execution)
-  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH && ~(|prevent_next_d);
+  assign config_valid_o = ~issue_fifo_empty[winner] && ~register_fifo_empty[winner] && x_result_ready_i && {cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH;
 
   // Signal readiness to accept new instruction issue based on target hart's FIFO availability
   always_comb begin : x_issue_ready_assignment
@@ -208,7 +203,7 @@ module redmule_inst_decoder
     end else begin
       if (clear_i) begin
         rr_counter_q <= '0;
-      end else if (config_ready_real && config_valid_o) begin
+      end else if (config_ready_i && config_valid_o) begin
         rr_counter_q <= rr_counter_d;
       end
     end
@@ -254,7 +249,7 @@ module redmule_inst_decoder
     .empty_o    (                                  ),
     .usage_o    (                                  ),
     .data_i     ( winner                           ),          // Push winning hart ID
-    .push_i     ( config_ready_real && config_valid_o ),          // On operation issue
+    .push_i     ( config_ready_i && config_valid_o ),          // On operation issue
     .data_o     ( current_hartid_q                 ),          // Hart of completing op
     .pop_i      ( op_done_i                        )           // On operation completion
   );
@@ -291,30 +286,10 @@ module redmule_inst_decoder
     end
   end
 
-  always_ff @(posedge clk_i, negedge rst_ni) begin : prevent_next_req
-    if(~rst_ni) begin
-      prevent_next_q <= '0;
-    end else begin
-      prevent_next_q <= prevent_next_d;
-    end
-  end
-
-  always_comb begin
-    prevent_next_d = prevent_next_q;
-    if (prevent_next_i == 1'b1 && op_done_i == 1'b0) begin
-      prevent_next_d = prevent_next_q + 1;
-    end
-    if (prevent_next_i == 1'b0 && op_done_i == 1'b1) begin
-      prevent_next_d = prevent_next_q - 1;
-    end
-  end
-
-  assign config_ready_real = config_ready_i && ~(|prevent_next_d);
-
   // Control when to pop instruction/register FIFOs:
-  // - MARITH: delay pop until config accepted by tiler (config_ready_real && config_valid_o)
+  // - MARITH: delay pop until config accepted by tiler (config_ready_i && config_valid_o)
   // - Others: pop immediately since they don't require tiler resources
-  assign pop_enable = ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_real && config_valid_o : 1'b1);
+  assign pop_enable = ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == MARITH ? config_ready_i && config_valid_o : 1'b1);
 
   for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
     logic [XifIdWidth-1:0] commit_id_d, commit_id_q,

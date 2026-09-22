@@ -219,7 +219,8 @@ redmule_streamer #(
 
 
 redmule_config_t x_sel_config, w_sel_config;
-logic x_done;
+logic x_done, w_done;
+logic x_sel_config_full, w_sel_config_full;
 
 redmule_config_fifo #(
   .FALL_THROUGH (0),
@@ -230,7 +231,7 @@ redmule_config_fifo #(
   .rst_ni     ( rst_ni                                   ),
   .flush_i    ( clear                                    ),
   .testmode_i ( '0                                       ),
-  .full_o     (                                          ),
+  .full_o     ( x_sel_config_full                        ),
   .empty_o    (                                          ),
   .usage_o    (                                          ),
   .data_i     ( redmule_config                           ),
@@ -248,13 +249,13 @@ redmule_config_fifo #(
   .rst_ni     ( rst_ni                                   ),
   .flush_i    ( clear                                    ),
   .testmode_i ( '0                                       ),
-  .full_o     (                                          ),
+  .full_o     ( w_sel_config_full                        ),
   .empty_o    (                                          ),
   .usage_o    (                                          ),
   .data_i     ( redmule_config                           ),
   .push_i     ( cfg_complete                             ),
   .data_o     ( w_sel_config                             ),
-  .pop_i      ( flgs_streamer.w_stream_source_flags.done )
+  .pop_i      ( w_done                                   )
 );
 
 logic w_sel;
@@ -263,15 +264,15 @@ logic w_send;
 assign w_sel  = w_sel_config.receive_w;
 assign w_send = w_sel_config.send_w;
 
-assign w_buffer_d.valid   = ((w_sel) ? w_stream_i.valid : w_stream_str.valid) && ((w_send) ? w_stream_o.ready && w_buffer_d.ready : 1'b1);
+assign w_buffer_d.valid   = ((w_sel) ? w_stream_i.valid : w_stream_str.valid) && ((w_send) ? w_stream_o.ready : 1'b1);
 assign w_buffer_d.data    = (w_sel) ? w_stream_i.data  : w_stream_str.data;
 assign w_buffer_d.strb    = (w_sel) ? w_stream_i.strb  : w_stream_str.strb;
-assign w_stream_str.ready = (w_sel) ? 1'b0             : w_buffer_d.ready && ((w_send) ? w_stream_o.ready : 1'b1);
-assign w_stream_i.ready   = (w_sel) ? w_buffer_d.ready : 1'b0;
+assign w_stream_str.ready = (w_sel) ? 1'b0             : (w_buffer_d.ready && ((w_send) ? w_stream_o.ready : 1'b1));
+assign w_stream_i.ready   = (w_sel) ? (w_buffer_d.ready && ((w_send) ? w_stream_o.ready : 1'b1)) : 1'b0;
 
-assign w_stream_o.valid = (w_send) ? w_buffer_d.valid : 1'b0;
-assign w_stream_o.data  = (w_send) ? w_buffer_d.data : '0;
-assign w_stream_o.strb  = (w_send) ? w_buffer_d.strb : '0;
+assign w_stream_o.valid   = (w_send) ? (((w_sel) ? w_stream_i.valid : w_stream_str.valid) && w_buffer_d.ready) : 1'b0;
+assign w_stream_o.data    = (w_send) ? w_buffer_d.data : '0;
+assign w_stream_o.strb    = (w_send) ? w_buffer_d.strb : '0;
 
 logic x_sel;
 logic x_send;
@@ -279,15 +280,15 @@ logic x_send;
 assign x_sel  = x_sel_config.receive_x;
 assign x_send = x_sel_config.send_x;
 
-assign x_buffer_d.valid   = ((x_sel) ? x_stream_i.valid : x_stream_str.valid) && ((x_send) ? x_stream_o.ready && x_buffer_d.ready : 1'b1);
+assign x_buffer_d.valid   = ((x_sel) ? x_stream_i.valid : x_stream_str.valid) && ((x_send) ? x_stream_o.ready : 1'b1);
 assign x_buffer_d.data    = (x_sel) ? x_stream_i.data  : x_stream_str.data;
 assign x_buffer_d.strb    = (x_sel) ? x_stream_i.strb  : x_stream_str.strb;
-assign x_stream_str.ready = (x_sel) ? 1'b0             : x_buffer_d.ready && ((x_send) ? x_stream_o.ready : 1'b1);
-assign x_stream_i.ready   = (x_sel) ? x_buffer_d.ready : 1'b0;
+assign x_stream_str.ready = (x_sel) ? 1'b0             : (x_buffer_d.ready && ((x_send) ? x_stream_o.ready : 1'b1));
+assign x_stream_i.ready   = (x_sel) ? (x_buffer_d.ready && ((x_send) ? x_stream_o.ready : 1'b1)) : 1'b0;
 
-assign x_stream_o.valid = (x_send) ? x_buffer_d.valid : 1'b0;
-assign x_stream_o.data  = (x_send) ? x_buffer_d.data : '0;
-assign x_stream_o.strb  = (x_send) ? x_buffer_d.strb : '0;
+assign x_stream_o.valid   = (x_send) ? (((x_sel) ? x_stream_i.valid : x_stream_str.valid) && x_buffer_d.ready) : 1'b0;
+assign x_stream_o.data    = (x_send) ? x_buffer_d.data : '0;
+assign x_stream_o.strb    = (x_send) ? x_buffer_d.strb : '0;
 
 hwpe_stream_fifo #(
   .DATA_WIDTH     ( DataW         ),
@@ -513,6 +514,12 @@ logic z_priority;
 assign z_priority = z_buffer_flgs.z_priority & !z_fifo_flgs.empty;
 
 logic z_fifo_empty, z_fifo_full;
+logic mem_fifos_ready;
+logic scheduler_fifos_ready;
+logic w_done_en, x_done_en;
+logic fifos_ready;
+
+assign fifos_ready = mem_fifos_ready && scheduler_fifos_ready && ~x_sel_config_full && ~w_sel_config_full;
 
 redmule_memory_scheduler #(
   .DW ( DataW  ),
@@ -528,6 +535,10 @@ redmule_memory_scheduler #(
   .flgs_streamer_i   ( flgs_streamer   ),
   .cntrl_scheduler_i ( cntrl_scheduler ),
   .cntrl_flags_i     ( cntrl_flags     ),
+  .w_done_en_i       ( w_done_en       ),
+  .x_done_en_i       ( x_done_en       ),
+  .fifos_ready_o     ( mem_fifos_ready ),
+  .w_done_o          ( w_done          ),
   .z_fifo_empty_o    ( z_fifo_empty    ),
   .z_fifo_full_o     ( z_fifo_full     ),
   .x_done_o          ( x_done          ),
@@ -567,7 +578,6 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
     .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
     .config_ready_i     ( ~config_fifo_full                      ),
     .op_done_i          ( evt_o                                  ),
-    .prevent_next_i     ( last_x                                 ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .x_issue_req_i      ( x_issue_req_i                          ),
@@ -652,7 +662,7 @@ redmule_ctrl #(
   .config_o          ( redmule_config                    ),
   .reg_enable_i      ( reg_enable                        ),
   .fifo_empty_i      ( z_fifo_empty                      ),
-  .fifo_ready_i      ( ~z_fifo_full                      ),
+  .fifo_ready_i      ( fifos_ready                       ),
   .start_cfg_i       ( ~config_fifo_empty                ),
   .cfg_complete_o    ( cfg_complete                      ),
   .w_loaded_i        ( flgs_scheduler.w_loaded           ),
@@ -672,30 +682,33 @@ redmule_scheduler #(
   .Width       ( Width       ),
   .NumPipeRegs ( NumPipeRegs )
 ) i_scheduler (
-  .clk_i               ( clk_acc             ),
-  .rst_ni              ( rst_ni              ),
-  .test_mode_i         ( test_mode_i         ),
-  .clear_i             ( target_clear        ),
-  .x_valid_i           ( x_buffer_fifo.valid ),
-  .w_valid_i           ( w_buffer_fifo.valid ),
-  .y_valid_i           ( y_buffer_fifo.valid ),
-  .z_ready_i           ( z_buffer_q.ready    ),
-  .engine_flush_i      ( engine_flush        ),
-  .config_i            ( redmule_config      ),
-  .config_valid_i      ( cfg_complete        ),
-  .flgs_streamer_i     ( flgs_streamer       ),
-  .flgs_x_buffer_i     ( x_buffer_flgs       ),
-  .flgs_w_buffer_i     ( w_buffer_flgs       ),
-  .flgs_z_buffer_i     ( z_buffer_flgs       ),
-  .flgs_engine_i       ( flgs_engine         ),
-  .cntrl_scheduler_i   ( cntrl_scheduler     ),
-  .reg_enable_o        ( reg_enable          ),
-  .cntrl_engine_o      ( cntrl_engine        ),
-  .cntrl_x_buffer_o    ( x_buffer_ctrl       ),
-  .cntrl_w_buffer_o    ( w_buffer_ctrl       ),
-  .cntrl_z_buffer_o    ( z_buffer_ctrl       ),
-  .flgs_scheduler_o    ( flgs_scheduler      ),
-  .last_x_o            ( last_x              ),
+  .clk_i               ( clk_acc               ),
+  .rst_ni              ( rst_ni                ),
+  .test_mode_i         ( test_mode_i           ),
+  .clear_i             ( target_clear          ),
+  .x_valid_i           ( x_buffer_fifo.valid   ),
+  .w_valid_i           ( w_buffer_fifo.valid   ),
+  .y_valid_i           ( y_buffer_fifo.valid   ),
+  .z_ready_i           ( z_buffer_q.ready      ),
+  .engine_flush_i      ( engine_flush          ),
+  .config_i            ( redmule_config        ),
+  .config_valid_i      ( cfg_complete          ),
+  .flgs_streamer_i     ( flgs_streamer         ),
+  .flgs_x_buffer_i     ( x_buffer_flgs         ),
+  .flgs_w_buffer_i     ( w_buffer_flgs         ),
+  .flgs_z_buffer_i     ( z_buffer_flgs         ),
+  .flgs_engine_i       ( flgs_engine           ),
+  .cntrl_scheduler_i   ( cntrl_scheduler       ),
+  .reg_enable_o        ( reg_enable            ),
+  .cntrl_engine_o      ( cntrl_engine          ),
+  .cntrl_x_buffer_o    ( x_buffer_ctrl         ),
+  .cntrl_w_buffer_o    ( w_buffer_ctrl         ),
+  .cntrl_z_buffer_o    ( z_buffer_ctrl         ),
+  .flgs_scheduler_o    ( flgs_scheduler        ),
+  .w_done_en_o         ( w_done_en             ),
+  .x_done_en_o         ( x_done_en             ),
+  .scheduler_ready_o   ( scheduler_fifos_ready ),
+  .last_x_o            ( last_x                ),
   .sync_i,
   .sync_o
 );
