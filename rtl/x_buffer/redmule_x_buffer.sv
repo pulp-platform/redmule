@@ -321,8 +321,6 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buffer_write_address
   end
 end
 
-assign next_wrow_ready_o = pad_read_en;
-
 // Output assignment
 // verilog_lint: waive-start generate-label
 generate

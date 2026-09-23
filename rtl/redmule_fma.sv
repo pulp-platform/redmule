@@ -283,8 +283,8 @@ module redmule_fma #(
   // Biased product exponent is the sum of encoded exponents minus the bias.
   assign exponent_product = (info_a.is_zero || info_b.is_zero)
                             ? 2 - signed'(BIAS) // in case the product is zero, set minimum exp.
-                            : signed'(exponent_a + info_a.is_subnormal
-                                      + exponent_b + info_b.is_subnormal
+                            : signed'(exponent_a + signed'(info_a.is_subnormal)
+                                      + exponent_b + signed'(info_b.is_subnormal)
                                       - signed'(BIAS));
   // Exponent difference is the addend exponent minus the product exponent
   assign exponent_difference = exponent_addend - exponent_product;
