@@ -182,7 +182,8 @@ module redmule_ctrl
         // busy_o gates clk_acc, so the job must not finish while stores are
         // still queued in the streamer's store FIFO, or they freeze unsent.
         if (flgs_streamer_i.z_stream_sink_flags.ready_start && fifo_empty_i
-            && flgs_streamer_i.store_fifo_empty) begin
+            && flgs_streamer_i.store_fifo_empty
+            && ~start_cfg_i && ~slave_start && ~cfg_complete_o) begin
           if (set_offset_q) begin
             next = REDMULE_LOOPBACK;
           end else begin

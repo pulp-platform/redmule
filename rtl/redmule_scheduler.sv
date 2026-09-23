@@ -205,7 +205,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       x_shift_cnt_q <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || (flgs_x_buffer_i.full && flgs_x_buffer_i.empty))
+      if (clear_i || cntrl_scheduler_i.rst || (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) || current_state == IDLE)
         x_shift_cnt_q <= '0;
       else if (x_shift_cnt_en)
         x_shift_cnt_q <= x_shift_cnt_d;
@@ -215,7 +215,7 @@ module redmule_scheduler
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_shift_offset
     if(~rst_ni) begin
       x_shift_offs_q <= '0;
-    end else if(clear_i) begin
+    end else if(clear_i || current_state == IDLE) begin
       x_shift_offs_q <= '0;
     end else if (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) begin
       x_shift_offs_q <= x_shift_cnt_q + x_shift_offs_q;
@@ -226,6 +226,12 @@ module redmule_scheduler
   assign x_shift_cnt_d  = x_shift_cnt_q == H-1 ? '0 : x_shift_cnt_q + 1;
 
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
+
+  /************************
+   * W Iteration counters *
+   ************************/
+  redmule_config_t w_config;
+  logic            w_config_empty, w_config_full;
 
   /******************************
    *     X Reload Control       *
@@ -257,19 +263,13 @@ module redmule_scheduler
     end
   end
 
-  assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full;
+  assign x_reload_en  = start || x_cols_iter_en || x_empty && ~flgs_x_buffer_i.full || (current_state == IDLE && ~w_config_empty && ~flgs_x_buffer_i.full);
   assign x_reload_rst = flgs_x_buffer_i.full && ~x_reload_en;
 
   assign cntrl_x_buffer_o.pad_setup   = current_state == PRELOAD && next_state == LOAD_W;
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
-  assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && (x_shift_cnt_q == H-1 || flgs_x_buffer_i.empty)) && flgs_x_buffer_i.full && ~stall_engine;
+  assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && (x_shift_cnt_q == H-1 || flgs_x_buffer_i.empty || first_load)) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en; // Looks unused!
-
-  /************************
-   * W Iteration counters *
-   ************************/
-  redmule_config_t w_config;
-  logic            w_config_empty, w_config_full;
 
   logic [15:0]        w_cols_iter_d, w_cols_iter_q,
                       w_rows_iter_d, w_rows_iter_q,
@@ -363,7 +363,7 @@ module redmule_scheduler
     if (~rst_ni) begin
       w_zero_cnt_q <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
+      if (clear_i || cntrl_scheduler_i.rst || current_state == IDLE || ~w_done) begin
         w_zero_cnt_q <= '0;
       end else begin
         w_zero_cnt_q <= w_zero_cnt_d;
@@ -852,7 +852,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       first_load <= '1;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
+      if (clear_i || cntrl_scheduler_i.rst || current_state == IDLE) begin
         first_load <= '1;
       end else if (current_state == LOAD_W && ~stall_engine) begin
         first_load <= '0;
@@ -934,7 +934,9 @@ module redmule_scheduler
         if (cntrl_scheduler_i.first_load) begin
           next_state = PRELOAD;
         end else if (computing && (~w_config_empty || config_valid_i)) begin
-          next_state = LOAD_W;
+          if (flgs_x_buffer_i.full && (~y_config.gemm_selection || flgs_z_buffer_i.loaded)) begin
+            next_state = LOAD_W;
+          end
         end
       end
 
