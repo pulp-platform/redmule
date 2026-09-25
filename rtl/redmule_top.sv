@@ -578,6 +578,7 @@ if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
     .clear_i            ( '0                                     ), // TODO: fixme, not having a software-based clear mechanism is a bad idea.
     .config_ready_i     ( ~config_fifo_full                      ),
     .op_done_i          ( evt_o                                  ),
+    .prevent_next_i     ( last_x                                 ),
     .config_valid_o     ( dec_config_valid                       ),
     .config_o           ( dec_config                             ),
     .x_issue_req_i      ( x_issue_req_i                          ),
