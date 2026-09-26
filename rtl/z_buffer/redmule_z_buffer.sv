@@ -172,7 +172,7 @@ end
 
 assign store_shift_d = store_shift_q == ctrl_i.z_width-1 ? '0 : store_shift_q + 1;
 
-assign flags_o.empty = (store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready) || (current_state == LOADED && d_index == ctrl_i.y_height-1 && ctrl_i.y_push_enable && ctrl_i.first_load);
+assign flags_o.empty = store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready;
 
 // Counter to track the rows that have to be loaded
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
