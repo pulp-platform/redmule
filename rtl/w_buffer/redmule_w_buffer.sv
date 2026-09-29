@@ -57,7 +57,7 @@ for (genvar d = 0; d < D; d++) begin : gen_zero_padding
   assign w_data[d] = (d < ctrl_i.width && w_row < ctrl_i.height) ? w_buffer_i[(d+1)*BITW-1:d*BITW] : '0;
 end
 
-assign buf_write_en   = ctrl_i.load;
+assign buf_write_en   = ctrl_i.load && (ctrl_i.height != '0);
 assign buf_write_addr = w_row;
 
 redmule_w_buffer_scm #(
@@ -80,7 +80,7 @@ redmule_w_buffer_scm #(
   .rdata_o          ( w_buffer_q      )
 );
 
-assign flags_o.w_ready = buf_write_en;
+assign flags_o.w_ready = ctrl_i.load;
 
 for (genvar h = 0; h < H; h++) begin : gen_r_addr_registers
   always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -132,7 +132,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : row_load_counter
   end else begin
     if (clear_i || w_row == H )
       w_row <= '0;
-    else if (ctrl_i.load)
+    else if (buf_write_en)
       w_row <= w_row + 1;
     else
       w_row <= w_row;

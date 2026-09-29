@@ -86,7 +86,8 @@ module redmule_scheduler
         start_computation,
         computing,
         x_refill,
-        pushing_y;
+        pushing_y,
+        z_avail_clr;
 
   /************************
    * X Iteration counters *
@@ -194,6 +195,28 @@ module redmule_scheduler
                                  : (x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_buffer_slots : D);
   assign cntrl_x_buffer_o.width  = x_rows_iter_q == x_config.x_rows_iter-1 && x_config.x_rows_lftovr != '0 ? x_config.x_rows_lftovr : W;
 
+  /************************
+   * W Iteration counters *
+   ************************/
+  redmule_config_t w_config;
+  logic            w_config_empty, w_config_full;
+
+  logic [15:0]        w_cols_iter_d, w_cols_iter_q,
+                      w_rows_iter_d, w_rows_iter_q,
+                      w_mat_iters_d, w_mat_iters_q;
+
+  logic               w_done;
+
+  logic               w_cols_iter_en, w_rows_iter_en,
+                      w_mat_iters_en, w_done_en;
+
+  logic [$clog2(H):0] w_zero_cnt_d, w_zero_cnt_q;
+
+  logic        w_stride_cnt;
+
+  logic small_n_promoted;
+  assign small_n_promoted = (w_config.n_size <= H);
+
   /******************************
    *      X Shift Control       *
    ******************************/
@@ -205,7 +228,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       x_shift_cnt_q <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) || current_state == IDLE)
+      if (clear_i || cntrl_scheduler_i.rst || (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) || current_state == IDLE || (w_done && z_avail_clr))
         x_shift_cnt_q <= '0;
       else if (x_shift_cnt_en)
         x_shift_cnt_q <= x_shift_cnt_d;
@@ -215,23 +238,17 @@ module redmule_scheduler
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_shift_offset
     if(~rst_ni) begin
       x_shift_offs_q <= '0;
-    end else if(clear_i || current_state == IDLE) begin
+    end else if(clear_i || current_state == IDLE || (w_done && z_avail_clr)) begin
       x_shift_offs_q <= '0;
     end else if (flgs_x_buffer_i.full && flgs_x_buffer_i.empty) begin
       x_shift_offs_q <= x_shift_cnt_q + x_shift_offs_q;
     end
   end
 
-  assign x_shift_cnt_en = (current_state == LOAD_W) && ~stall_engine;
+  assign x_shift_cnt_en = (current_state == LOAD_W) && ~stall_engine && ~w_done;
   assign x_shift_cnt_d  = x_shift_cnt_q == H-1 ? '0 : x_shift_cnt_q + 1;
 
   assign cntrl_x_buffer_o.h_shift = x_shift_cnt_en;
-
-  /************************
-   * W Iteration counters *
-   ************************/
-  redmule_config_t w_config;
-  logic            w_config_empty, w_config_full;
 
   /******************************
    *     X Reload Control       *
@@ -270,19 +287,6 @@ module redmule_scheduler
   assign cntrl_x_buffer_o.load        = (x_reload_q && ~x_reload_rst) && x_valid_i;
   assign cntrl_x_buffer_o.rst_w_index = (current_state == LOAD_W && (x_shift_cnt_q == H-1 || flgs_x_buffer_i.empty || first_load)) && flgs_x_buffer_i.full && ~stall_engine;
   assign cntrl_x_buffer_o.last_x      = x_done_en; // Looks unused!
-
-  logic [15:0]        w_cols_iter_d, w_cols_iter_q,
-                      w_rows_iter_d, w_rows_iter_q,
-                      w_mat_iters_d, w_mat_iters_q;
-
-  logic               w_done;
-
-  logic               w_cols_iter_en, w_rows_iter_en,
-                      w_mat_iters_en, w_done_en;
-
-  logic [$clog2(H):0] w_zero_cnt_d, w_zero_cnt_q;
-
-  logic        w_stride_cnt;
 
   redmule_config_fifo #(
     .FALL_THROUGH (0),
@@ -382,8 +386,6 @@ module redmule_scheduler
   // N index >= real n_size are gated to zero. Since real N <= H, all valid rows fall in
   // the first Height-deep buffer pass (w_rows_iter_q < H, valid depth = n_size); the second pass
   // (w_rows_iter_q >= H) is fully invalid (valid depth = 0).
-  logic small_n_promoted;
-  assign small_n_promoted = (w_config.n_size <= H);
   assign cntrl_w_buffer_o.height = small_n_promoted
                                  ? (w_rows_iter_q < H ? w_config.n_size[$clog2(MaxDim)-1:0] : '0)
                                  : (w_rows_iter_q >= w_config.w_rows_iter-(NumPipeRegs+1) && w_config.w_rows_lftovr != '0 ? w_config.w_rows_lftovr : H);
@@ -435,7 +437,7 @@ module redmule_scheduler
   logic                           y_pushed_q;
 
   logic                           z_wait_en, z_wait_clr,
-                                  z_avail_en, z_avail_clr,
+                                  z_avail_en,
                                   y_push_en, y_push_clr;
 
   logic [$clog2(W):0]             y_width, z_width, z_width_next;
@@ -852,7 +854,7 @@ module redmule_scheduler
     if(~rst_ni) begin
       first_load <= '1;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || current_state == IDLE) begin
+      if (clear_i || cntrl_scheduler_i.rst || current_state == IDLE || (w_done && z_avail_clr)) begin
         first_load <= '1;
       end else if (current_state == LOAD_W && ~stall_engine) begin
         first_load <= '0;

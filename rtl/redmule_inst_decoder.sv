@@ -306,9 +306,11 @@ module redmule_inst_decoder
   always_comb begin
     prevent_next_d = prevent_next_q;
     if (prevent_next_i == 1'b1 && op_done_i == 1'b0) begin
+      if (prevent_next_q < 2'd3)
         prevent_next_d = prevent_next_q + 1'b1;
     end
     if (prevent_next_i == 1'b0 && op_done_i == 1'b1) begin
+      if (|prevent_next_q)
         prevent_next_d = prevent_next_q - 1'b1;
     end
   end
