@@ -43,6 +43,7 @@ module redmule_streamer
 localparam int unsigned DW  = `HCI_SIZE_GET_DW(tcdm);
 localparam int unsigned UW  = `HCI_SIZE_GET_UW(tcdm);
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
+localparam int unsigned FD  = `HCI_SIZE_GET_FD(tcdm);
 
 // this localparam is reused for all internal, non-ecc HCI interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
@@ -52,7 +53,8 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   UW:  UW,
   IW:  DEFAULT_IW,
   EW:  DEFAULT_EW,
-  EHW: DEFAULT_EHW
+  EHW: DEFAULT_EHW,
+  FD:  FD
 };
 
 // this localparam is reused for the  internal ecc HCI interface
@@ -63,7 +65,8 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ecc_ldst_tcdm) = '{
   UW:  UW,
   IW:  DEFAULT_IW,
   EW:  EW,
-  EHW: DEFAULT_EHW
+  EHW: DEFAULT_EHW,
+  FD:  FD
 };
 
 // Here the dynamic mux for virtual_tcdm interfaces
@@ -74,7 +77,8 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) ldst_tcdm ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -83,7 +87,8 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -92,7 +97,8 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ), // waive RSP-5 on memory-side of HCI FIFO
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -102,7 +108,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) yz_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
@@ -142,7 +149,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) yz_tcdm [0:1] ( .clk ( clk_i ) );
 
 // Virtual internal TCDM interface splitting the upstream TCDM
@@ -154,7 +162,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) virt_tcdm [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 
@@ -227,7 +236,8 @@ hci_core_r_valid_filter #(
 
 // Sink module that turns the incoming Z stream into TCDM.
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) zstream2cast ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .FD ( FD ) ) zstream2cast ( .clk ( clk_i ) );
 hci_core_sink         #(
   .MISALIGNED_ACCESSES ( REALIGN                      ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
@@ -250,10 +260,12 @@ hci_core_intf #(
   .WAIVE_RSP5_ASSERT ( 1'b1 ),  // waive RSP-5 on memory-side of HCI FIFO
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) z_fifo_d ( .clk ( clk_i ) );
 hci_core_intf #( .DW ( DW ),
-                 .UW ( UW ) ) z_fifo_q ( .clk ( clk_i ) );
+                 .UW ( UW ),
+                 .FD ( FD ) ) z_fifo_q ( .clk ( clk_i ) );
 
 logic cast;
 assign cast = (ctrl_i.input_cast_src_fmt == fpnew_pkg::FP16) ? 1'b0: 1'b1;
@@ -335,7 +347,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -345,7 +358,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW )
+  .UW ( UW ),
+  .FD ( FD )
 ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -355,7 +369,8 @@ hci_core_intf #(
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
 `endif
   .DW ( DW ),
-  .UW ( UW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
+  .UW ( UW ),
+  .FD ( FD ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DATAW ) ) out_stream [NumStreamSources-1:0] ( .clk( clk_i ) );
 
