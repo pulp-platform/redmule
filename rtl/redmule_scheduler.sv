@@ -546,6 +546,7 @@ module redmule_scheduler
   logic check_w_valid, check_w_valid_en;
   logic check_x_full, check_x_full_en;
   logic check_y_loaded, check_y_loaded_en;
+  logic check_z_stored, check_z_stored_en;
 
   // Check if the next w row is valid
   assign check_w_valid     = w_valid_i;
@@ -561,6 +562,10 @@ module redmule_scheduler
   assign check_y_loaded    = flgs_z_buffer_i.loaded;
   assign check_y_loaded_en = z_wait_counter_q == PIPE_REGS && ~w_done;
 
+  // After the last W row no Y load holds the results: wait for the buffer to finish storing
+  assign check_z_stored    = ~flgs_z_buffer_i.z_priority;
+  assign check_z_stored_en = z_wait_counter_q == PIPE_REGS && w_done;
+
   /******************************
    *           FLAGS            *
    ******************************/
@@ -568,7 +573,8 @@ module redmule_scheduler
   assign stall_engine = current_state == LOAD_W && (
                           ~check_w_valid  && check_w_valid_en  ||
                           ~check_x_full   && check_x_full_en   ||
-                          ~check_y_loaded && check_y_loaded_en
+                          ~check_y_loaded && check_y_loaded_en ||
+                          ~check_z_stored && check_z_stored_en
                         );
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : first_load_register
