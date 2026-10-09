@@ -148,12 +148,17 @@ assign priority_encoding[2] = 2;
 assign priority_encoding[3] = 3;
 
 hci_core_fifo #(
-  .FIFO_DEPTH ( ARRAY_WIDTH ),
+  .FIFO_DEPTH ( StoreFifoDepth ),
   .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_z_fifo (
   .clk_i  ( clk_i   ),
   .rst_ni ( rst_ni  ),
-  .clear_i         ( clear_i          ),
+  // Not emptied by the (soft) clear. A job is reported done when its last
+  // store has entered this FIFO; the stores still in it must reach the memory
+  // even if the next job is set up, with a soft clear, in the meantime. Each
+  // entry is a complete request (address, data, strobes), so it does not
+  // depend on the configuration being cleared.
+  .clear_i         ( 1'b0             ),
   .flags_o         ( z_fifo_flags     ),
   .tcdm_target     ( virt_tcdm[3]     ),
   .tcdm_initiator  ( virt_tcdm_rob[3] )

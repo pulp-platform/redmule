@@ -14,6 +14,8 @@ package redmule_pkg;
   parameter int unsigned            ARRAY_HEIGHT = `ifdef ARRAY_HEIGHT `ARRAY_HEIGHT `else 4 `endif;
   parameter int unsigned            PIPE_REGS    = `ifdef PIPE_REGS `PIPE_REGS `else 3 `endif;
   parameter int unsigned            ARRAY_WIDTH  = `ifdef ARRAY_WIDTH `ARRAY_WIDTH `else (ARRAY_HEIGHT*PIPE_REGS) `endif; // Superior limit, smaller values are allowed.
+  // Depth of the store FIFO in memory words
+  parameter int unsigned            StoreFifoDepth = ARRAY_WIDTH;
   parameter int unsigned            MemDw        = 32;
   parameter int unsigned            NumByte      = MemDw/8;
   parameter int unsigned            DATA_W       = ARRAY_HEIGHT*(PIPE_REGS+1)*16; // TCDM port dimension (in bits)
