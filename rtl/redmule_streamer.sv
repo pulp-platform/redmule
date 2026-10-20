@@ -59,7 +59,9 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
 
 // hci-core interface within the streamer
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ3_ASSERT  ( 1'b1 ),
+`endif
   .DW  ( DW  ),
   .AW  ( DEFAULT_AW  ),
   .BW  ( DEFAULT_BW  ),
@@ -82,9 +84,11 @@ hci_variablelatency_tocore #(
 // Y   -> virt_tcdm[2]
 // Z   -> virt_tcdm[3]
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ3_ASSERT  ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif  
   .DW ( DW ),
   .AW ( DEFAULT_AW ),
   .BW ( DEFAULT_BW ),
@@ -93,9 +97,11 @@ hci_core_intf #(
   .EW ( EW ),
   .EHW ( EHW ) ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 hci_core_intf #(
+`ifndef SYNTHESIS  
   .WAIVE_RQ3_ASSERT  ( 1'b1 ),
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif  
   .DW ( DW ),
   .AW ( DEFAULT_AW ),
   .BW ( DEFAULT_BW ),
@@ -175,8 +181,10 @@ hci_core_mux_ooo #(
  * side (virt_tcdm[NumStreamSources]) of the LD/ST multiplexer.                         */
 
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif
   .DW  ( DW ),
   .AW  ( DEFAULT_AW ),
   .BW  ( DEFAULT_BW ),
@@ -204,8 +212,10 @@ hci_core_sink #(
 
 // Store interface.
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif  
   .DW  ( DW ),
   .AW  ( DEFAULT_AW ),
   .BW  ( DEFAULT_BW ),
@@ -269,8 +279,10 @@ hci_core_assign i_store_assign ( .tcdm_target (z_store), .tcdm_initiator (virt_t
  * incoming TCDM protocls into stream.                                                        */
 
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif
   .DW ( DW ),
   .AW ( DEFAULT_AW ),
   .BW ( DEFAULT_BW ),
@@ -279,8 +291,10 @@ hci_core_intf #(
   .EW ( EW ),
   .EHW ( EHW ) ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 hci_core_intf #(
+`ifndef SYNTHESIS
   .WAIVE_RQ4_ASSERT  ( 1'b1 ),
   .WAIVE_RSP3_ASSERT ( 1'b1 ),
+`endif
   .DW ( DW ),
   .AW ( DEFAULT_AW ),
   .BW ( DEFAULT_BW ),
