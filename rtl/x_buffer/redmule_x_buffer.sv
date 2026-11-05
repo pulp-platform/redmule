@@ -270,8 +270,11 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buf_write_counter
     else begin
       if ((current_state == PAD_EMPTY || current_state == FAST_FILL && ~first_block) && ctrl_i.h_shift)
         buf_write_cnt <= buf_write_cnt + 1;
+      // The first FAST_FILL can only fill the 2*H-entry double buffer: the remaining pad
+      // entries (slots > 2*H when NumPipeRegs > 1) are written in FILL, one per h_shift,
+      // otherwise they would overwrite entries the engine is still reading.
       else if (ctrl_i.pad_setup)
-        buf_write_cnt <= ctrl_i.slots;
+        buf_write_cnt <= (ctrl_i.slots > 2*H) ? 2*H : ctrl_i.slots;
     end
   end
 end
