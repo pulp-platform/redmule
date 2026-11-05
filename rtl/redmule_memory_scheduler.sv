@@ -128,7 +128,8 @@ module redmule_memory_scheduler
   // Here we initialize the streamer source signals
   // for the X stream source
   assign cntrl_streamer_o.x_stream_source_ctrl.req_start = !cntrl_flags_i.idle && flgs_streamer_i.x_stream_source_flags.ready_start &&
-                                                           (cntrl_scheduler_i.first_load || tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ]);
+                                                           (cntrl_scheduler_i.first_load && flgs_streamer_i.z_stream_sink_flags.ready_start ||
+                                                            tot_x_read_q < reg_file_i.hwpe_params[TOT_X_READ]);
   assign cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[X_ADDR]
                                                                     + x_rows_offs_q + x_cols_offs_q;
   assign cntrl_streamer_o.x_stream_source_ctrl.addressgen_ctrl.tot_len = num_x_reads;
@@ -153,7 +154,8 @@ module redmule_memory_scheduler
 
   // Here we initialize the streamer source signals
   // for the Y stream source
-  assign cntrl_streamer_o.y_stream_source_ctrl.req_start = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start;
+  assign cntrl_streamer_o.y_stream_source_ctrl.req_start = cntrl_scheduler_i.first_load && reg_file_i.hwpe_params[OP_SELECTION][0] && flgs_streamer_i.y_stream_source_flags.ready_start &&
+                                                           flgs_streamer_i.z_stream_sink_flags.ready_start;
   assign cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = reg_file_i.hwpe_params[Z_ADDR];
   assign cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = reg_file_i.hwpe_params[Z_TOT_LEN];
   assign cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
