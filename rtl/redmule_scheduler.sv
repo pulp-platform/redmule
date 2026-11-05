@@ -430,8 +430,8 @@ module redmule_scheduler
                                   z_avail_en, z_avail_clr,
                                   y_push_en, y_push_clr;
 
-  logic [$clog2(W):0]             y_width, z_width, z_width_next;
-  logic [$clog2(D):0]             y_height, z_height, z_height_next;
+  logic [$clog2(W):0]             y_width, z_width;
+  logic [$clog2(D):0]             y_height, z_height;
   logic [$clog2(D):0]             y_push_height;
 
   logic y_config_pop;
@@ -684,12 +684,9 @@ module redmule_scheduler
   assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
-  assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
-
-  // Width and height of the tile in the Z buffer: those of tile (z_rows_iter_q, z_cols_iter_q).
-  assign z_width  = z_width_next;
-  assign z_height = z_height_next;
+  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q)
+  assign z_width  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i && y_config_fast.gemm_selection;
