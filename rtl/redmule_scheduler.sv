@@ -553,14 +553,11 @@ module redmule_scheduler
   assign y_rows_iter_en = y_cols_iter_q == y_config.w_cols_iter-1 && y_cols_iter_en;
   assign y_rows_iter_d  = y_rows_iter_q == y_config.x_rows_iter-1 ? '0 : y_rows_iter_q + 1;
 
-  // Store-side (Z) tile iterators: the tile in the Z buffer (filled, then stored). They advance
-  // on each completed store only (flgs_z_buffer_i.stored), and are bounded by, and index into,
-  // the store-lifetime z_config_fast so the store geometry never reads a config that was retired
-  // by the leading load pipeline. Not on flgs_z_buffer_i.empty: in a GEMM it also pulses once when
-  // the first Y tile is pushed, which a MATMUL never does, so the iterators (and z_width/z_height
-  // with them) would trail the stores by one tile in a MATMUL: with K > D and not a multiple of D,
-  // a K leftover tile stored D wide over the next row of Z, and the next row block's first tile
-  // stored leftover-wide.
+  // Z tile iterators. (z_rows_iter_q, z_cols_iter_q) is the tile currently held in the Z buffer,
+  // i.e. the next one to be stored, and z_width/z_height below are its size. The iterators advance
+  // on each completed store (flgs_z_buffer_i.stored). Their bounds come from z_config_fast, which
+  // stays valid until the job's last store, so the store side never reads a config that the load
+  // side has already retired.
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_columns_iteration
     if(~rst_ni) begin
       z_cols_iter_q <= '0;
