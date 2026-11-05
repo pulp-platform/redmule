@@ -15,6 +15,9 @@ VsimCompileScript := $(VsimDir)/compile.$(target).tcl
 VsimWaves := $(VsimDir)/wave.tcl
 
 Tb := redmule_tb_wrap
+# Array size of hw-run (vopt -floatparameters: no rebuild); empty: the default of redmule_tb_wrap (8x8).
+RedmuleHeight ?=
+RedmuleWidth ?=
 CompileFlags := +acc -permissive -suppress 2583 -suppress 13314
 
 ifeq ($(REDMULE_COMPLEX),1)
@@ -66,6 +69,8 @@ hw-run:
 	$(VsimFlags)                           \
 	-gEnableReordering=$(EnableReordering) \
 	-gPROB_STALL=$(ProbStall)              \
+	$(if $(RedmuleHeight),-gHeight=$(RedmuleHeight)) \
+	$(if $(RedmuleWidth),-gWidth=$(RedmuleWidth))    \
 	+STIM_INSTR=$(STIM_INSTR)              \
 	+STIM_DATA=$(STIM_DATA)                \
 	-do "run -a"

@@ -310,3 +310,6 @@ redmule_regression:
   M48_N32_K32_W_OFFSET7: # offset on W columns
     path: .
     command: make golden M=48 N=32 K=32 WColsOffset=7 && make sw-clean sw-build M=48 N=32 K=32 REDMULE_COMPLEX=0 WColsOffset=7 Gcc= && make hw-run M=48 N=32 K=32 REDMULE_COMPLEX=0 WColsOffset=7 target=$Target | tee target/sim/$Target/transcript_48_32_32_w_cols_offset_7 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_48_32_32_w_cols_offset_7
+  M32_N64_K24_MATMUL: # MATMUL with K over D (16) and not a multiple of it: last K tile of a row block
+    path: .
+    command: make golden OP=matmul M=32 N=64 K=24 && make sw-clean sw-build OP=matmul M=32 N=64 K=24 REDMULE_COMPLEX=0 Gcc= && make hw-run OP=matmul M=32 N=64 K=24 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_matmul_32_64_24 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_matmul_32_64_24

@@ -430,8 +430,8 @@ module redmule_scheduler
                                   z_avail_en, z_avail_clr,
                                   y_push_en, y_push_clr;
 
-  logic [$clog2(W):0]             y_width, z_width, z_width_next;
-  logic [$clog2(D):0]             y_height, z_height, z_height_next;
+  logic [$clog2(W):0]             y_width, z_width;
+  logic [$clog2(D):0]             y_height, z_height;
   logic [$clog2(D):0]             y_push_height;
 
   logic y_config_pop;
@@ -553,10 +553,11 @@ module redmule_scheduler
   assign y_rows_iter_en = y_cols_iter_q == y_config.w_cols_iter-1 && y_cols_iter_en;
   assign y_rows_iter_d  = y_rows_iter_q == y_config.x_rows_iter-1 ? '0 : y_rows_iter_q + 1;
 
-  // Store-side (Z) tile iterators. Mirror the Y iterators (advance on the same
-  // store-completion pulse flgs_z_buffer_i.empty) but are bounded by, and index
-  // into, the store-lifetime z_config_fast so the store geometry never reads a
-  // config that was retired by the leading load pipeline.
+  // Z tile iterators. (z_rows_iter_q, z_cols_iter_q) is the tile currently held in the Z buffer,
+  // i.e. the next one to be stored, and z_width/z_height below are its size. The iterators advance
+  // on each completed store (flgs_z_buffer_i.stored). Their bounds come from z_config_fast, which
+  // stays valid until the job's last store, so the store side never reads a config that the load
+  // side has already retired.
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_columns_iteration
     if(~rst_ni) begin
       z_cols_iter_q <= '0;
@@ -569,7 +570,7 @@ module redmule_scheduler
     end
   end
 
-  assign z_cols_iter_en = flgs_z_buffer_i.empty;
+  assign z_cols_iter_en = flgs_z_buffer_i.stored;
   assign z_cols_iter_d  = z_cols_iter_q == z_config_fast.w_cols_iter-1 ? '0 : z_cols_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_rows_iteration
@@ -683,32 +684,9 @@ module redmule_scheduler
   assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
-  assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
-    if(~rst_ni) begin
-      z_width <= '0;
-    end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
-        z_width <= '0;
-      end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_width <= z_width_next;
-      end
-    end
-  end
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin : z_height_register
-    if(~rst_ni) begin
-      z_height <= '0;
-    end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
-        z_height <= '0;
-      end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_height <= z_height_next;
-      end
-    end
-  end
+  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q)
+  assign z_width  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i && y_config_fast.gemm_selection;

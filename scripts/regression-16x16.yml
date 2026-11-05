@@ -1,0 +1,13 @@
+# Copyright 2026 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Regression tests that need a 16x16 array (D = 32). verilator: build the model with
+#   make hw-build target=verilator RedmuleHeight=16 RedmuleWidth=16
+# vsim: the size is a run-time parameter (RedmuleHeight / RedmuleWidth of hw-run).
+# Run with REGR_FILE=scripts/regression-16x16.yml scripts/regression-list.sh.
+
+redmule_regression_16x16:
+  M32_N64_K48_MATMUL_16x16: # MATMUL with K over D (32) and not a multiple of it
+    path: .
+    command: make golden OP=matmul M=32 N=64 K=48 && make sw-clean sw-build OP=matmul M=32 N=64 K=48 REDMULE_COMPLEX=0 Gcc= && make hw-run OP=matmul M=32 N=64 K=48 REDMULE_COMPLEX=0 RedmuleHeight=16 RedmuleWidth=16 target=$Target | tee target/sim/$Target/transcript_matmul_32_64_48_16x16 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_matmul_32_64_48_16x16

@@ -101,6 +101,7 @@ package redmule_pkg;
 
   typedef struct packed {
     logic y_pushed;
+    logic stored;  // the last row of a Z tile stored (the store half of empty)
     logic empty;
     logic full;
     logic loaded;
