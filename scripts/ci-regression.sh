@@ -19,6 +19,11 @@ fi
 ScriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 BASE_TIMEOUT=500
+# Random memory stalls stretch the large tests well beyond the nominal runtime
+# (e.g. M128_N128_K128 on 8x32x3 takes ~330-410 s at ProbStall=0.25).
+if awk -v p="${ProbStall:-0}" 'BEGIN { exit !(p + 0 > 0) }'; then
+    BASE_TIMEOUT=900
+fi
 REGR_FILE="${REGR_FILE:-$ScriptDir/regression.yml}"
 # Number of tests to run concurrently. Each test now builds into its own
 # per-TEST_ID folder and only reads the shared, already-compiled RTL work

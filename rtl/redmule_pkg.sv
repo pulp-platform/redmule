@@ -97,6 +97,7 @@ package redmule_pkg;
     logic [$clog2(MaxDepth)-1:0] y_height;
     logic [$clog2(MaxDim):0]     z_width;
     logic [$clog2(MaxDepth)-1:0] z_height;
+    logic [$clog2(MaxDim):0]     z_rows;  // valid (in-bounds) M rows of the tile being stored
   } z_buffer_ctrl_t;
 
   typedef struct packed {
