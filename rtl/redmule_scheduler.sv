@@ -434,7 +434,8 @@ module redmule_scheduler
                                   z_avail_en, z_avail_clr,
                                   y_push_en, y_push_clr;
 
-  logic [$clog2(W):0]             y_width, z_width, z_width_next;
+  logic [$clog2(W):0]             y_width, z_width, z_width_next,
+                                  z_rows, z_rows_next;
   logic [$clog2(D):0]             y_height, z_height, z_height_next;
   logic [$clog2(D):0]             y_push_height;
 
@@ -684,11 +685,27 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  // The Y load and Z store row counts are always W (d0_len = W in redmule_memory_scheduler.sv).
+  // The rows of the last z_rows_iter that fall outside Z are masked on the store side via
+  // z_rows (byte enables cleared in redmule_z_buffer.sv), so they never write past the end of Z.
+  assign y_width  = W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_width_next  = W;
   assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
+  assign z_rows_next   = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_config_fast.x_rows_lftovr != '0 ? z_config_fast.x_rows_lftovr : W;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_rows_register
+    if(~rst_ni) begin
+      z_rows <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst) begin
+        z_rows <= '0;
+      end else if (flgs_z_buffer_i.empty || start_computation) begin
+        z_rows <= z_rows_next;
+      end
+    end
+  end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
     if(~rst_ni) begin
@@ -726,6 +743,7 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.y_height      = y_push_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
+  assign cntrl_z_buffer_o.z_rows        = z_rows;
 
   /**********************************
    *           Counters             *

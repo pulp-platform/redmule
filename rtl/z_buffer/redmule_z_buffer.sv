@@ -228,10 +228,16 @@ end
 assign z_height_tmp = ctrl_i.z_height - 'd1;
 assign z_height = z_height_tmp[$clog2(D)-1:0];
 
+// The Z stream always stores whole Width-row tiles. On the last, partial M-block the rows
+// beyond the end of Z (store_shift_q >= z_rows) are still issued to keep the stream
+// aligned, but with all byte enables cleared so they never modify memory.
+// store_shift_q is the row presented on z_buffer_o (the SCM read address follows it).
 always_comb begin : z_strb_assignment
   z_strb_o = '0;
-  for (int i = 0; i <= z_height; i++) begin
-    z_strb_o[i*BITW/8+:BITW/8] = '1;
+  if (store_shift_q < ctrl_i.z_rows) begin
+    for (int i = 0; i <= z_height; i++) begin
+      z_strb_o[i*BITW/8+:BITW/8] = '1;
+    end
   end
 end
 
