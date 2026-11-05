@@ -270,8 +270,10 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : buf_write_counter
     else begin
       if ((current_state == PAD_EMPTY || current_state == FAST_FILL && ~first_block) && ctrl_i.h_shift)
         buf_write_cnt <= buf_write_cnt + 1;
+      // The scm buffer feeds the array. It contains 2*H entries. In FAST_FILL we fill them up.
+      // The remaining entries (slots > 2*H) are written in FILL, one per h_shift.
       else if (ctrl_i.pad_setup)
-        buf_write_cnt <= ctrl_i.slots;
+        buf_write_cnt <= (ctrl_i.slots > 2*H) ? 2*H : ctrl_i.slots;
     end
   end
 end
