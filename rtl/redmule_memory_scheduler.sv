@@ -55,7 +55,7 @@ module redmule_memory_scheduler
   logic            store_empty_rise;
   logic            store_empty_rise_cnt;
 
-  logic            y_fifo_pop;
+  logic            y_fifo_pop, y_fifo_pop_matmul;
 
   assign x_done_o = tot_x_read_q == x_config.tot_x_read-1 && flgs_streamer_i.x_stream_source_flags.done;
 
@@ -110,7 +110,7 @@ module redmule_memory_scheduler
     .data_i     ( config_i                                                                                                        ),
     .push_i     ( config_valid_i                                                                                                  ),
     .data_o     ( y_config                                                                                                        ),
-    .pop_i      ( y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : store_empty_rise_cnt && store_empty_rise ) // In case of a MATMUL followed by a GEMM, load Y only after the first 2 Z chunks have been completely stored
+    .pop_i      ( y_fifo_pop                                                                                                      )
   );
 
   redmule_config_fifo #(
@@ -143,7 +143,7 @@ module redmule_memory_scheduler
     if (~rst_ni) begin
       store_empty_rise_cnt <= '0;
     end else begin
-      if (clear_i || cntrl_scheduler_i.rst || flgs_streamer_i.y_stream_source_flags.done) begin
+      if (clear_i || cntrl_scheduler_i.rst || flgs_streamer_i.y_stream_source_flags.done || y_fifo_pop_matmul) begin
         store_empty_rise_cnt <= '0;
       end else if (store_empty_rise && ~y_config_empty) begin
         store_empty_rise_cnt <= 1'b1;
@@ -151,7 +151,15 @@ module redmule_memory_scheduler
     end
   end
 
-  assign y_fifo_pop = y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : (store_empty_rise_cnt && store_empty_rise) || (store_empty_rise && flgs_streamer_i.z_stream_sink_flags.ready_start);
+  // Y config FIFO pop: one per job, as every job (MATMUL included) pushes one config.
+  // - GEMM: when the Y load is done.
+  // - MATMUL (no Y load): on the second store-FIFO empty rise of the job, so that, in case of a
+  //   MATMUL followed by a GEMM, Y is loaded only after the first 2 Z chunks have been completely
+  //   stored. The counter is cleared by this pop, so the next MATMUL counts its own two rises
+  //   again. Gated by ~y_config_empty: once the MATMUL config has been popped, data_o still shows
+  //   it, and the later store-FIFO empty rises of the job must not pop again.
+  assign y_fifo_pop_matmul = ~y_config_empty && ~y_config.gemm_selection && store_empty_rise_cnt && store_empty_rise;
+  assign y_fifo_pop        = ~y_config_empty && (y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : y_fifo_pop_matmul);
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;
