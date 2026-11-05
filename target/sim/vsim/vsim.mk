@@ -11,6 +11,7 @@ Module := redmule
 ProbStall ?= 0.05
 RedmuleHeight ?= 8
 RedmuleWidth ?= 8
+RedmulePipeRegs ?= 1
 EnableReordering ?= 0
 VsimDir := $(SimDir)/$(target)
 VsimCompileScript := $(VsimDir)/compile.$(target).tcl
@@ -68,6 +69,7 @@ hw-run:
 	$(VsimFlags)                           \
 	-gHeight=$(RedmuleHeight)              \
 	-gWidth=$(RedmuleWidth)                \
+	-gNumPipeRegs=$(RedmulePipeRegs)       \
 	-gEnableReordering=$(EnableReordering) \
 	-gPROB_STALL=$(ProbStall)              \
 	+STIM_INSTR=$(STIM_INSTR)              \
