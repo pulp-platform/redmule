@@ -193,6 +193,16 @@ for i in range(m_size):
 f_z.write("};")
 f_z.close()
 
+# The Z destination: a MATMUL reads no Y, but the test writes Z over the y_inp buffer. Filled with a
+# sentinel (0xbeef, not a value RedMulE computes here) so that any element RedMulE leaves unwritten,
+# or writes outside its row, shows up in the comparison.
+f_y = open(''+inc_path+'/y_input.h', "w")
+f_y.write(''+header+'')
+f_y.write('uint16_t y_inp ['+z_dim+'] = {\n')
+f_y.write(', '.join(['0xbeef'] * (m_size * k_size)))
+f_y.write('\n};')
+f_y.close()
+
 # Writing tensors' dimensions
 f_d = open(''+inc_path+'/tensor_dim.h', "w")
 f_d.write(''+header+'')

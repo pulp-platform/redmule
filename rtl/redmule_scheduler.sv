@@ -553,10 +553,14 @@ module redmule_scheduler
   assign y_rows_iter_en = y_cols_iter_q == y_config.w_cols_iter-1 && y_cols_iter_en;
   assign y_rows_iter_d  = y_rows_iter_q == y_config.x_rows_iter-1 ? '0 : y_rows_iter_q + 1;
 
-  // Store-side (Z) tile iterators. Mirror the Y iterators (advance on the same
-  // store-completion pulse flgs_z_buffer_i.empty) but are bounded by, and index
-  // into, the store-lifetime z_config_fast so the store geometry never reads a
-  // config that was retired by the leading load pipeline.
+  // Store-side (Z) tile iterators: the tile in the Z buffer (filled, then stored). They advance
+  // on each completed store only (flgs_z_buffer_i.stored), and are bounded by, and index into,
+  // the store-lifetime z_config_fast so the store geometry never reads a config that was retired
+  // by the leading load pipeline. Not on flgs_z_buffer_i.empty: in a GEMM it also pulses once when
+  // the first Y tile is pushed, which a MATMUL never does, so the iterators (and z_width/z_height
+  // with them) would trail the stores by one tile in a MATMUL: with K > D and not a multiple of D,
+  // a K leftover tile stored D wide over the next row of Z, and the next row block's first tile
+  // stored leftover-wide.
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_columns_iteration
     if(~rst_ni) begin
       z_cols_iter_q <= '0;
@@ -569,7 +573,7 @@ module redmule_scheduler
     end
   end
 
-  assign z_cols_iter_en = flgs_z_buffer_i.empty;
+  assign z_cols_iter_en = flgs_z_buffer_i.stored;
   assign z_cols_iter_d  = z_cols_iter_q == z_config_fast.w_cols_iter-1 ? '0 : z_cols_iter_q + 1;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_rows_iteration
@@ -686,29 +690,9 @@ module redmule_scheduler
   assign z_width_next  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
   assign z_height_next = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
-  always_ff @(posedge clk_i or negedge rst_ni) begin : z_width_register
-    if(~rst_ni) begin
-      z_width <= '0;
-    end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
-        z_width <= '0;
-      end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_width <= z_width_next;
-      end
-    end
-  end
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin : z_height_register
-    if(~rst_ni) begin
-      z_height <= '0;
-    end else begin
-      if (clear_i || cntrl_scheduler_i.rst) begin
-        z_height <= '0;
-      end else if (flgs_z_buffer_i.empty || start_computation) begin
-        z_height <= z_height_next;
-      end
-    end
-  end
+  // Width and height of the tile in the Z buffer: those of tile (z_rows_iter_q, z_cols_iter_q).
+  assign z_width  = z_width_next;
+  assign z_height = z_height_next;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i && y_config_fast.gemm_selection;

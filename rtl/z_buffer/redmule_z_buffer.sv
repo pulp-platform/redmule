@@ -172,7 +172,10 @@ end
 
 assign store_shift_d = store_shift_q == ctrl_i.z_width-1 ? '0 : store_shift_q + 1;
 
-assign flags_o.empty = (store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready) || (current_state == LOADED && d_index == ctrl_i.y_height-1 && ctrl_i.y_push_enable && ctrl_i.first_load);
+// stored: a Z tile completely stored, once per tile. empty: stored, or, in a GEMM only, the first
+// tile of Y pushed into the array (one more pulse than stores, for the Y-side iterators).
+assign flags_o.stored = store_shift_q == ctrl_i.z_width-1 && store_en && ctrl_i.ready;
+assign flags_o.empty = flags_o.stored || (current_state == LOADED && d_index == ctrl_i.y_height-1 && ctrl_i.y_push_enable && ctrl_i.first_load);
 
 // Counter to track the rows that have to be loaded
 always_ff @(posedge clk_i or negedge rst_ni) begin : row_loaded_counter
