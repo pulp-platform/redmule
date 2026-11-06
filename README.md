@@ -135,19 +135,41 @@ The `sw/hal_redmule.h` also contains other useful APIs for programming RedMulE, 
 The `sw/redmule.c` provides an example of code for programming RedMulE through its memory-mapped interface.
 
 ### Tensor co-processor with ISA extension
-The offloading mechanism through the dedicated ISA tensor extension requires the same information as in the memory-mapped case, meaning the pointers to the tensors, their dimensions, the encoding format, and the operation selection. All these pieces of information must be encapsulated into two dedicated ISA instructions: a `mcnfig` instruction and a `marith` instruction.
+The offloading mechanism through the dedicated ISA tensor extension requires the same information as in the memory-mapped case, meaning the pointers to the tensors, their dimensions, the encoding format, and the operation selection. All these pieces of information are encapsulated into two dedicated ISA instructions: `mcnfig` (configuration) and `marith` (arithmetic/offload). The optional `mopcnt` instruction reports the number of completed operations.
+
+The instruction decoder matches the `funct2` field (bits `[26:25]`), the `funct3` field (bits `[14:12]`), and the opcode (bits `[6:0]`). The correct encodings are:
+
+| Instruction | `funct2` `[26:25]` | `funct3` `[14:12]` | Opcode `[6:0]` | RISC-V custom slot |
+|-------------|--------------------|--------------------|----------------|--------------------|
+| `mcnfig`    | `00`               | `000`              | `0001011` (`0x0B`) | `custom 0` |
+| `marith`    | `00`               | `000`              | `0101011` (`0x2B`) | `custom 1` |
+| `mopcnt`    | `00`               | `010`              | `0001011` (`0x0B`) | `custom 0` |
+
+For an XIF wrapper instantiation, use the corresponding parameters:
+
+```systemverilog
+McnfigOpCode = 7'b0001011;  // 0x0B
+MarithOpCode = 7'b0101011;  // 0x2B
+MopcntOpCode = 7'b0001011;  // 0x0B
+McnfigFunct3 = 3'b000;
+MarithFunct3 = 3'b000;
+MopcntFunct3 = 3'b010;
+```
+
+An XIF instance must use these parameters because the current `redmule_top`/`redmule_xif_wrap` defaults differ from this encoding.
 
 #### *mcnfig* Instruction
-The *mcnfig* instruction features the opcode reserved in the `custom 0` encoding of the [RISC-V International Specifications](https://riscv.org/technical/specifications/). Such instruction also uses the `rs1` and `rs2` fields to share two registers of the core Register-File with the accelerator. The `rs1` and `rs2` registers must contain the same information as the *Matrix Config Reg 0* and the *Matrix Config Reg 1* of the memory-mapped interface. So the *mcnfig* instruction should look as in the following:
+The *mcnfig* instruction features the opcode reserved in the `custom 0` encoding of the [RISC-V International Specifications](https://riscv.org/technical/specifications/). It uses the `rs1`, `rs2`, and `rs3` fields to share three registers of the core Register-File with the accelerator. The registers must contain the same information as the *Matrix Config Reg 0*, *Matrix Config Reg 1*, and the `y_offs` field of the memory-mapped interface. The *mcnfig* instruction encoding is:
 
-| Bit[31:25] | Bit[24:20] | Bit[19:15] | Bit[14: 7] | Bit[ 6: 0]        |
-|------------|------------|------------|------------|-------------------|
-| Free Field | `rs2` idx  | `rs1` idx  | Free Field | OpCode (**0x0B**) |
+| Bit[31:27] | Bit[26:25] | Bit[24:20] | Bit[19:15] | Bit[14:12] | Bit[11:7] | Bit[ 6: 0]        |
+|------------|------------|------------|------------|------------|-----------|-------------------|
+| `rs3` idx  | `00` (`funct2`) | `rs2` idx  | `rs1` idx  | `000` (`funct3`) | Free Field | OpCode (**0x0B**) |
 
-Regarding the content of the `rs1`, `rs2` retgisters, they must be such that:
+Regarding the contents of the `rs1`, `rs2`, and `rs3` registers:
 * `rs1[31:16] <- K Size`
 * `rs1[15: 0] <- M Size`
 * `rs2[31: 0] <- N Size`
+* `rs3[31: 0] <- y_offs` (set to `0` when no Y bias is needed; for GEMM use `y_addr - z_addr`)
 
 An example of execution of the *mcnfig* instruction and of the configuration of the `rs1` and `rs2` registers is shown below:
 ```clike=
@@ -157,24 +179,21 @@ uint16_t k_size = K_SIZE;
 
 uint32_t cfg_reg0 = ((k_size << 16) | (m_size << 0));
 uint32_t cfg_reg1 = (n_size << 0);
+uint32_t y_offs   = 0;  // use (y_addr - z_addr) for a GEMM bias
 
 asm volatile ("addi t3, %0, 0" :: "r"(cfg_reg0));
 asm volatile ("addi t4, %0, 0" :: "r"(cfg_reg1));
+asm volatile ("addi t5, %0, 0" :: "r"(y_offs));
 
-/* mcnfig instruction */
-// asm volatile(
-//      ".word (0x0       << 25) | \     /* Empty         */
-//             (0b11101   << 20) | \     /* Rs2 (t4 here) */
-//             (0b11100   << 15) | \     /* Rs1 (t3 here) */
-//             (0x00      <<  7) | \     /* Empty         */
-//             (0b0001011 <<  0)   \n"); /* OpCode        */
-  
+/* mcnfig instruction; encoding: funct2=00, funct3=000, opcode=0x0B */
 asm volatile(
-     ".word (0x0       << 25) | \
-            (0b11101   << 20) | \
-            (0b11100   << 15) | \
-            (0x00      <<  7) | \
-            (0b0001011 <<  0)   \n");
+     ".word (0b11111   << 27) | \     /* rs3 (t5 here, y_offs) */
+            (0b00      << 25) | \     /* funct2 = 00 */
+            (0b11101   << 20) | \     /* rs2 (t4 here) */
+            (0b11100   << 15) | \     /* rs1 (t3 here) */
+            (0b000     << 12) | \     /* funct3 = 000 */
+            (0x00      <<  7) | \     /* free field */
+            (0b0001011 <<  0)   \n"); /* opcode 0x0B */
 ```
 
 #### *marith* Instruction
@@ -183,6 +202,8 @@ The *marith* instruction features the opcode reserved in the `custom 1` encoding
 | Bit[31:27] | Bit[26:25]   | Bit[24:20] | Bit[19:15] | Bit[14]     | Bit[13]    | Bit[12:10]   | Bit[ 9: 7] | Bit[ 6: 0]        |
 |------------|--------------|------------|------------|-------------|------------|--------------|------------|-------------------|
 | `rs3` idx  | Free Field   | `rs2` idx  | `rs1` idx  | CFMT Enable | Free Field | Op selection | FMT        | OpCode (**0x2B**) |
+
+The decoder match for `marith` is `funct2 = 00` (bits `[26:25]`), `funct3 = 000` (bits `[14:12]`), and opcode `0101011` (`0x2B`). Note that `funct3` is bits `[14:12]`; in the layout above those bits coincide with CFMT (bit 14), a free bit (bit 13), and the MSB of the op-selection field (bit 12). Therefore, with `MarithFunct3 = 000`, CFMT must be disabled and only op-selection values `0`–`3` can match. Using op-selection values `4`–`7`, or enabling CFMT, requires changing the decoder's `MarithFunct3` accordingly.
 
 An example of execution of the *marith* instruction to offload a GEMM using FP16 tensors and of the configuration of the required `rs1`, `rs2`, and `rs3` registers is shown below:
 ```clike=
@@ -221,7 +242,15 @@ asm volatile(
             (0b001     <<  7) | \
             (0b0101011 <<  0)   \n");
 ```
-The `sw/redmule_complex.c` provides an example of code for programming RedMulE through a dedicate ISA extension.
+#### *mopcnt* Instruction
+
+The *mopcnt* instruction reports the number of completed RedMulE operations. It uses the `custom 0` opcode `0x0B` with `funct3 = 010` and `funct2 = 00`, reads no source registers, and writes the completion counter to `rd` when `rd != x0`.
+
+| Bit[31:25] | Bit[24:20] | Bit[19:15] | Bit[14:12] | Bit[11:7] | Bit[6:0] |
+|------------|------------|------------|------------|-----------|----------|
+| Free Field | Free Field | Free Field | `010` (`funct3`) | `rd` idx | `0x0B` |
+
+The `sw/redmule_complex.c` provides an example of code for programming RedMulE through a dedicated ISA extension.
 
 ### Getting Started
 The RedMulE repository offers support for different simulation targets. At the moment, the support is for Questasim (`vsim`) and Verilator (`verilator`).
