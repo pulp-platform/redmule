@@ -681,11 +681,15 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  // The Y bias tile has the same M-dimension geometry as Z: the final M block
+  // loads only x_rows_lftovr real rows, not a full W width.
+  assign y_width  = y_rows_iter_q == y_config_fast.x_rows_iter-1 && y_config_fast.x_rows_lftovr != '0 ? y_config_fast.x_rows_lftovr : W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q)
-  assign z_width  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q).
+  // The final M block stores only the real leftover rows; this removes the
+  // padding rows from the Z stream entirely.
+  assign z_width  = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_config_fast.x_rows_lftovr != '0 ? z_config_fast.x_rows_lftovr : W;
   assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;

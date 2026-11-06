@@ -55,7 +55,13 @@ module redmule_streamer
 
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
-  output flgs_streamer_t         flags_o
+  output flgs_streamer_t         flags_o,
+  // One pulse per Z store packet consumed by the store sink. Used by the
+  // memory scheduler to advance the Z address-generator block geometry.
+  output logic                   z_store_packet_o,
+  // One pulse per Y-load request granted by the Y source. Used by the memory
+  // scheduler to advance the Y address-generator block geometry.
+  output logic                   y_source_packet_o
 );
 
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
@@ -335,8 +341,16 @@ redmule_castout #(
 );
 
 // Left TCDM buses assignment.
-assign z_fifo_d.req          = zstream2cast.req;
-assign zstream2cast.gnt      = z_fifo_d.gnt;
+// A store packet whose byte strobe is entirely zero is a padding row of an
+// M tile (the real M rows have already been written). Consume the packet in
+// the sink and advance its address generator, but do not launch a TCDM
+// transaction: padding rows must not waste interconnect bandwidth.
+logic z_store_has_bytes;
+assign z_store_has_bytes = |zstream2cast.be;
+assign z_fifo_d.req          = zstream2cast.req && z_store_has_bytes;
+assign zstream2cast.gnt      = z_store_has_bytes ? z_fifo_d.gnt : 1'b1;
+assign z_store_packet_o      = zstream2cast.req && zstream2cast.gnt;
+assign y_source_packet_o     = tcdm_cast[YsourceStreamId].req && tcdm_cast[YsourceStreamId].gnt;
 assign z_fifo_d.add          = zstream2cast.add;
 assign z_fifo_d.wen          = zstream2cast.wen;
 // do not assign z_fifo_d.data <-> zstream2cast.data

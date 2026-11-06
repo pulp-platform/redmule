@@ -20,6 +20,8 @@ module redmule_memory_scheduler
   input  logic                   rst_ni           ,
   input  logic                   clear_i          ,
   input  logic                   z_priority_i     ,
+  input  logic                   z_store_packet_i ,
+  input  logic                   y_source_packet_i,
   input  redmule_config_t        config_i         ,
   input  logic                   config_valid_i   ,
   input  flgs_streamer_t         flgs_streamer_i  ,
@@ -54,6 +56,17 @@ module redmule_memory_scheduler
 
   logic            store_empty_rise;
   logic            store_empty_rise_cnt;
+
+  // Z store packet counter and dynamic block geometry. The store FIFO can run
+  // ahead of the sink, so this counter must follow the packets actually
+  // consumed by the Z address generator, not the scheduler's tile iterators.
+  logic [31:0]              z_packet_cnt_q;
+  logic [31:0]              z_full_block_packets;
+  logic [$clog2(W):0]       z_rows_current;
+
+  logic [31:0]              y_packet_cnt_q;
+  logic [31:0]              y_full_block_packets;
+  logic [$clog2(W):0]       y_rows_current;
 
   logic            y_fifo_pop, y_fifo_pop_matmul;
 
@@ -163,6 +176,43 @@ module redmule_memory_scheduler
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_packet_counter
+    if (~rst_ni) begin
+      z_packet_cnt_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst || config_valid_i) begin
+        z_packet_cnt_q <= '0;
+      end else if (z_store_packet_i) begin
+        z_packet_cnt_q <= z_packet_cnt_q + 1;
+      end
+    end
+  end
+
+  // All M blocks except the final one are full Width rows. After the full
+  // blocks are consumed, the final block is x_rows_lftovr rows (or Width when
+  // M is an exact multiple of Width).
+  assign z_full_block_packets = (z_config.x_rows_iter - 1) * W * z_config.w_cols_iter;
+  assign z_rows_current = (z_packet_cnt_q < z_full_block_packets)
+                        ? W
+                        : (z_config.x_rows_lftovr != '0 ? z_config.x_rows_lftovr : W);
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : y_packet_counter
+    if (~rst_ni) begin
+      y_packet_cnt_q <= '0;
+    end else begin
+      if (clear_i || cntrl_scheduler_i.rst || config_valid_i) begin
+        y_packet_cnt_q <= '0;
+      end else if (y_source_packet_i) begin
+        y_packet_cnt_q <= y_packet_cnt_q + 1;
+      end
+    end
+  end
+
+  assign y_full_block_packets = (y_config.x_rows_iter - 1) * W * y_config.w_cols_iter;
+  assign y_rows_current = (y_packet_cnt_q < y_full_block_packets)
+                        ? W
+                        : (y_config.x_rows_lftovr != '0 ? y_config.x_rows_lftovr : W);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_iters_register
     if (~rst_ni) begin
@@ -281,8 +331,10 @@ module redmule_memory_scheduler
     // Here we initialize the streamer source signals
     // for the Y stream source
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = y_config.y_addr;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = y_config.yz_tot_len;
-    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
+    // Y loads only the real M rows: total M*w_cols_iter requests, with the
+    // current M-block width driving d0_len dynamically.
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = y_config.m_size * y_config.w_cols_iter;
+    cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = y_rows_current;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_stride = y_config.yz_d0_stride;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_len = y_config.w_cols_iter;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d1_stride = JMP;
@@ -294,8 +346,10 @@ module redmule_memory_scheduler
     // Here we initialize the streamer sink signals for
     // the Z stream sink
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = z_config.z_addr;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = z_config.yz_tot_len;
-    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = W;
+    // Z stores only the real M rows: total M*w_cols_iter transactions, with
+    // the current M-block width driving d0_len dynamically.
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = z_config.m_size * z_config.w_cols_iter;
+    cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = z_rows_current;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_stride = z_config.yz_d0_stride;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_len = z_config.w_cols_iter;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d1_stride = JMP;
