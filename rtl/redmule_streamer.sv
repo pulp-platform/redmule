@@ -343,13 +343,20 @@ redmule_castout #(
 // the sink and advance its address generator, but do not launch a TCDM
 // transaction: padding rows must not waste interconnect bandwidth.
 logic [5:0] z_store_bytes;
+logic [5:0] z_store_last_byte;
 logic       z_store_has_bytes;
-// Suppress zero-strobe padding packets and any store that starts past, or
-// extends past, the real M*K output region.
-assign z_store_bytes     = $countones(zstream2cast.be);
+// Suppress zero-strobe padding packets and any store whose highest enabled
+// byte lands past the real M*K output region. The strobe may be misaligned,
+// so counting the enabled bytes alone is not sufficient.
+assign z_store_bytes = $countones(zstream2cast.be);
+always_comb begin
+  z_store_last_byte = '0;
+  for (int unsigned i = 0; i < $bits(zstream2cast.be); i++) begin
+    if (zstream2cast.be[i]) z_store_last_byte = i;
+  end
+end
 assign z_store_has_bytes = (z_store_bytes != 0)
-                        && (zstream2cast.add < z_store_end_addr_i)
-                        && (zstream2cast.add + z_store_bytes <= z_store_end_addr_i);
+                        && (zstream2cast.add + z_store_last_byte < z_store_end_addr_i);
 assign z_fifo_d.req          = zstream2cast.req && z_store_has_bytes;
 assign zstream2cast.gnt      = z_store_has_bytes ? z_fifo_d.gnt : 1'b1;
 
