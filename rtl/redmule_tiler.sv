@@ -31,12 +31,11 @@ module redmule_tiler
   output redmule_config_t   config_o
 );
 
-// Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
-// N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
-// redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
-// are gated to zero so the result is unaffected. This is necessary to enable the controller to
-// work properly in these corner cases.
-// The minimum size is defined as MinimumSizeN = MinimumSizeNFactor * Height (e.g., 2*Height)
+// Small-N control. Any job with n_size <= Height has its internal N loop padded to
+// max(MinimumSizeN, K-tile depth) for the W-load / scheduler / Z-buffer pacing, while
+// the input operands for the padded N rows are gated to zero so the result is unaffected.
+// With MinimumSizeNFactor = 1 this is one Height-deep tile, avoiding an unconditional
+// second zero-filled pass.
 localparam int unsigned MinimumSizeN = MinimumSizeNFactor * Height;
 
 logic clk_en;
@@ -101,15 +100,22 @@ assign config_d.k_size          = input_config_d.k_size;
 assign config_d.n_size          = input_config_d.n_size;
 
 // Effective N size used ONLY for the W-row loop length / streamer length: any job with
-// N <= Height is promoted to MinimumSizeN so the W-load takes as long as a full N-tile, restoring
-// the large-N scheduler/z_buffer pacing that fixes the small-N multi-block hang. The X-column
-// tiling and the store geometry deliberately keep the real config_d.n_size here (X rows are only
-// n_size wide, so over-reading X would misalign the addresses); the X buffer is instead promoted to
-// a full D-deep tile in redmule_scheduler.sv (cntrl_x_buffer_o.slots) so it advances M-block rows in
-// step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
-// W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
+// N <= Height is padded to max(MinimumSizeN, K-tile depth), so the W-load provides enough
+// pacing to fill the Z buffer for the current K tile without an unconditional second pass.
+// The X-column tiling and the store geometry deliberately keep the real config_d.n_size here
+// (X rows are only n_size wide, so over-reading X would misalign the addresses); the X buffer
+// uses the same max(Height, K-tile depth) slot count in redmule_scheduler.sv, and both padded
+// operands are zeroed (X via x_cols_lftovr, W via the cntrl_w_buffer_o.height gating).
 logic [15:0] n_size_eff;
-assign n_size_eff = (input_config_d.n_size <= Height) ? MinimumSizeN[15:0] : input_config_d.n_size;
+logic [15:0] k_tile_eff;
+// A small-N M block still needs one W-load step per K-tile row to fill the Z buffer,
+// so the internal N loop is padded to max(real N, K-tile depth). For N > Height the
+// original N-based loop is kept.
+assign k_tile_eff = (config_d.k_size < (Height*(PipeRegs + 1))) ? config_d.k_size
+                                                               : (Height*(PipeRegs + 1));
+assign n_size_eff = (input_config_d.n_size <= Height)
+                    ? ((k_tile_eff > MinimumSizeN) ? k_tile_eff : MinimumSizeN)
+                    : input_config_d.n_size;
 // Sourced from input_config_d (not config_i directly) so the loopback pass keeps
 // the job's original operation/format even after dec_config_q's read pointer has
 // advanced past its single valid entry (config_i can no longer be trusted once
@@ -146,7 +152,9 @@ assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*Width);
 assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculating the residuals along the weight dimensions
-assign config_d.w_rows_lftovr = n_size_eff - (Height*(n_size_eff/Height)); // promoted N (0 when N <= Height -> full W-row loop)
+assign config_d.w_rows_lftovr = (input_config_d.n_size <= Height)
+                               ? '0
+                               : n_size_eff - (Height*(n_size_eff/Height));
 assign config_d.w_cols_lftovr = loopback_active ? input_config_d.w_cols_offset - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1))) :
                                 (config_d.k_size - input_config_d.w_cols_offset) - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
