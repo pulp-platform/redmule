@@ -185,10 +185,10 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) y_buffer_fifo      ( .clk( cl
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_q         ( .clk( clk_acc ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( clk_acc ) );
 
-// One pulse per Z store packet consumed by the store sink.
-logic z_store_packet;
-// One pulse per Y-load request granted by the Y source.
-logic y_source_packet;
+// One past the last real Z output element.
+logic [31:0] z_store_end_addr;
+assign z_store_end_addr = redmule_config.z_addr
+                        + redmule_config.m_size * redmule_config.yz_d0_stride;
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -216,11 +216,10 @@ redmule_streamer #(
   // Sink interface for the outgoing stream
   .z_stream_i      ( z_buffer_fifo   ),
   // Master TCDM interface ports for the memory side
-  .tcdm            ( tcdm            ),
-  .ctrl_i          ( cntrl_streamer  ),
-  .flags_o         ( flgs_streamer   ),
-  .z_store_packet_o( z_store_packet  ),
-  .y_source_packet_o( y_source_packet )
+  .tcdm              ( tcdm              ),
+  .z_store_end_addr_i( z_store_end_addr  ),
+  .ctrl_i            ( cntrl_streamer    ),
+  .flags_o           ( flgs_streamer     )
 );
 
 
@@ -529,8 +528,6 @@ redmule_memory_scheduler #(
   .rst_ni            ( rst_ni          ),
   .clear_i           ( target_clear    ),
   .z_priority_i      ( z_priority      ),
-  .z_store_packet_i  ( z_store_packet  ),
-  .y_source_packet_i ( y_source_packet ),
   .config_i          ( redmule_config  ),
   .config_valid_i    ( cfg_complete    ),
   .flgs_streamer_i   ( flgs_streamer   ),

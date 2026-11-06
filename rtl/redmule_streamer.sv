@@ -53,15 +53,12 @@ module redmule_streamer
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
 
+  // One past the last valid real Z output address
+  input  logic [31:0]             z_store_end_addr_i,
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
-  output flgs_streamer_t         flags_o,
-  // One pulse per Z store packet consumed by the store sink. Used by the
-  // memory scheduler to advance the Z address-generator block geometry.
-  output logic                   z_store_packet_o,
-  // One pulse per Y-load request granted by the Y source. Used by the memory
-  // scheduler to advance the Y address-generator block geometry.
-  output logic                   y_source_packet_o
+  output flgs_streamer_t         flags_o
 );
 
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
@@ -345,12 +342,17 @@ redmule_castout #(
 // M tile (the real M rows have already been written). Consume the packet in
 // the sink and advance its address generator, but do not launch a TCDM
 // transaction: padding rows must not waste interconnect bandwidth.
-logic z_store_has_bytes;
-assign z_store_has_bytes = |zstream2cast.be;
+logic [5:0] z_store_bytes;
+logic       z_store_has_bytes;
+// Suppress zero-strobe padding packets and any store that starts past, or
+// extends past, the real M*K output region.
+assign z_store_bytes     = $countones(zstream2cast.be);
+assign z_store_has_bytes = (z_store_bytes != 0)
+                        && (zstream2cast.add < z_store_end_addr_i)
+                        && (zstream2cast.add + z_store_bytes <= z_store_end_addr_i);
 assign z_fifo_d.req          = zstream2cast.req && z_store_has_bytes;
 assign zstream2cast.gnt      = z_store_has_bytes ? z_fifo_d.gnt : 1'b1;
-assign z_store_packet_o      = zstream2cast.req && zstream2cast.gnt;
-assign y_source_packet_o     = tcdm_cast[YsourceStreamId].req && tcdm_cast[YsourceStreamId].gnt;
+
 assign z_fifo_d.add          = zstream2cast.add;
 assign z_fifo_d.wen          = zstream2cast.wen;
 // do not assign z_fifo_d.data <-> zstream2cast.data
