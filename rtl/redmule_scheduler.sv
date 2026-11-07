@@ -437,6 +437,10 @@ module redmule_scheduler
   logic [$clog2(D):0]             y_height, z_height;
   logic [$clog2(D):0]             y_push_height;
 
+  // Latched pipelined-session flag: once a successor config is queued, all
+  // jobs in this busy period keep the padded final-block geometry.
+  logic                           z_pipelined_q;
+
   logic y_config_pop;
   assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
   redmule_config_fifo #(
@@ -499,6 +503,16 @@ module redmule_scheduler
     .data_o     ( z_config_fast       ),
     .pop_i      ( z_config_fast_pop   )
   );
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
+    if (~rst_ni) begin
+      z_pipelined_q <= 1'b0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      z_pipelined_q <= 1'b0;
+    end else if (z_config_fast_full) begin
+      z_pipelined_q <= 1'b1;
+    end
+  end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
     if(~rst_ni) begin
@@ -688,10 +702,16 @@ module redmule_scheduler
   // which is the geometry validated by the devel branch. Padding M columns are
   // still stored by the Z buffer, but the streamer suppresses any store that
   // starts/extend past the real M*K output region.
-  assign y_width  = W;
+  // If a successor job is already queued, the streams overlap and must use
+  // the padded geometry to stay in lockstep with the previous job; padding
+  // stores are suppressed in the streamer. Otherwise use the true leftover
+  // block width, which is the cycle-minimal case.
+  assign y_width  = (z_pipelined_q || y_config_fast.x_rows_lftovr == '0
+                     || y_rows_iter_q != y_config_fast.x_rows_iter-1) ? W : y_config_fast.x_rows_lftovr;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width  = W;
+  assign z_width  = (z_pipelined_q || z_config_fast.x_rows_lftovr == '0
+                     || z_rows_iter_q != z_config_fast.x_rows_iter-1) ? W : z_config_fast.x_rows_lftovr;
   assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;

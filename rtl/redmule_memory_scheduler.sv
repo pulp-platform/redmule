@@ -29,6 +29,10 @@ module redmule_memory_scheduler
   output logic                   z_fifo_full_o    ,
   output logic                   x_done_o         ,
   output logic [31:0]            z_store_end_addr_o,
+  output redmule_config_t        z_config_o       ,
+  output redmule_config_t        y_config_o       ,
+  output logic                   z_pad_final_o    ,
+  output logic                   y_pad_final_o    ,
   output cntrl_streamer_t        cntrl_streamer_o
 );
   localparam int unsigned JMP = DW/8;
@@ -50,6 +54,11 @@ module redmule_memory_scheduler
   redmule_config_t x_config, w_config, y_config, z_config;
   logic            x_config_empty, w_config_empty, y_config_empty, z_config_empty;
   logic            x_config_full, w_config_full, y_config_full, z_config_full;
+
+  // Once a successor job is queued, the streams overlap and all jobs in this
+  // busy period must keep the padded final-block geometry. The flag persists
+  // until the controller clears the accelerator.
+  logic            z_pipelined_q;
 
   logic            start_x_streamer;
 
@@ -132,6 +141,16 @@ module redmule_memory_scheduler
     .pop_i      ( flgs_streamer_i.z_stream_sink_flags.done )
   );
 
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
+    if (~rst_ni) begin
+      z_pipelined_q <= 1'b0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      z_pipelined_q <= 1'b0;
+    end else if (z_config_full) begin
+      z_pipelined_q <= 1'b1;
+    end
+  end
+
   edge_detect i_store_fifo_empty_edge_detector (
     .clk_i  ( clk_i                            ),
     .rst_ni ( rst_ni                           ),
@@ -161,6 +180,11 @@ module redmule_memory_scheduler
   //   it, and the later store-FIFO empty rises of the job must not pop again.
   assign y_fifo_pop_matmul = ~y_config_empty && ~y_config.gemm_selection && store_empty_rise_cnt && store_empty_rise;
   assign y_fifo_pop        = ~y_config_empty && (y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : y_fifo_pop_matmul);
+
+  assign z_config_o = z_config;
+  assign y_config_o = y_config;
+  assign z_pad_final_o = z_pipelined_q;
+  assign y_pad_final_o = z_pipelined_q;
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;

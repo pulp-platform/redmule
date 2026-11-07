@@ -187,10 +187,15 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( cl
 
 // One past the last real Z output element, from the active store config.
 logic [31:0] z_store_end_addr;
+// Active store-side (Z) and bias-side (Y) tiling configuration.
+redmule_config_t z_config_store;
+redmule_config_t y_config_store;
+logic z_pad_final, y_pad_final;
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
   .DataW                   ( DataW                   ),
+  .Width                   ( Width                   ),
   .MisalignedAccessSupport ( MisalignedAccessSupport ),
   .EnableReordering        ( EnableReordering       ),
   .Height                  ( Height                  ),
@@ -216,6 +221,10 @@ redmule_streamer #(
   // Master TCDM interface ports for the memory side
   .tcdm              ( tcdm              ),
   .z_store_end_addr_i( z_store_end_addr  ),
+  .z_config_i        ( z_config_store    ),
+  .y_config_i        ( y_config_store    ),
+  .z_pad_final_i     ( z_pad_final       ),
+  .y_pad_final_i     ( y_pad_final       ),
   .ctrl_i            ( cntrl_streamer    ),
   .flags_o           ( flgs_streamer     )
 );
@@ -535,6 +544,10 @@ redmule_memory_scheduler #(
   .z_fifo_full_o     ( z_fifo_full     ),
   .x_done_o          ( x_done          ),
   .z_store_end_addr_o( z_store_end_addr),
+  .z_config_o        ( z_config_store  ),
+  .y_config_o        ( y_config_store  ),
+  .z_pad_final_o     ( z_pad_final     ),
+  .y_pad_final_o     ( y_pad_final     ),
   .cntrl_streamer_o  ( cntrl_streamer  )
 );
 
