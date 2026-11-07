@@ -91,6 +91,10 @@ module redmule_scheduler
   redmule_config_t x_config;
   logic            x_config_empty, x_config_full;
 
+  // Latched configuration for the current job. Engine operation/rnd fields
+  // must remain stable for the whole job even after the X config FIFO pops.
+  redmule_config_t job_config_q;
+
   logic [15:0] x_cols_iter_d, x_cols_iter_q,
                x_w_iters_d, x_w_iters_q,
                x_rows_iter_d, x_rows_iter_q;
@@ -747,10 +751,10 @@ module redmule_scheduler
 
   assign cntrl_engine_o.fma_is_boxed     = 3'b111;
   assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
-  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(x_config.stage_1_rnd_mode);
-  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(x_config.stage_2_rnd_mode);
-  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(x_config.stage_1_op);
-  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(x_config.stage_2_op);
+  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(job_config_q.stage_1_rnd_mode);
+  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(job_config_q.stage_2_rnd_mode);
+  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(job_config_q.stage_1_op);
+  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(job_config_q.stage_2_op);
   assign cntrl_engine_o.op_mod           = 1'b0;
   assign cntrl_engine_o.in_valid         = 1'b1;
   assign cntrl_engine_o.flush            = engine_flush_i;
@@ -869,6 +873,16 @@ module redmule_scheduler
   end
 
   assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : job_config_register
+    if (~rst_ni) begin
+      job_config_q <= '0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      job_config_q <= '0;
+    end else if (start) begin
+      job_config_q <= x_config;
+    end
+  end
 
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
   // True when the X/W config FIFOs still hold the active job's config, so a
