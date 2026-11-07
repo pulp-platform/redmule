@@ -28,6 +28,7 @@ module redmule_memory_scheduler
   output logic                   z_fifo_empty_o   ,
   output logic                   z_fifo_full_o    ,
   output logic                   x_done_o         ,
+  output logic [31:0]            z_store_end_addr_o,
   output cntrl_streamer_t        cntrl_streamer_o
 );
   localparam int unsigned JMP = DW/8;
@@ -163,6 +164,10 @@ module redmule_memory_scheduler
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;
+
+  // End of the real M*K output region for the currently active store config.
+  assign z_store_end_addr_o = z_config.z_addr
+                            + z_config.m_size * z_config.yz_d0_stride;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_iters_register
     if (~rst_ni) begin

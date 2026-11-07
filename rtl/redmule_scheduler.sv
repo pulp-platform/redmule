@@ -58,6 +58,7 @@ module redmule_scheduler
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
   output flgs_scheduler_t                 flgs_scheduler_o   ,
+  output logic                            next_config_ready_o,
 
   /*********************************************************/
   /*                   Synchronization                     */
@@ -746,10 +747,10 @@ module redmule_scheduler
 
   assign cntrl_engine_o.fma_is_boxed     = 3'b111;
   assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
-  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(config_i.stage_1_rnd_mode);
-  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(config_i.stage_2_rnd_mode);
-  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(config_i.stage_1_op);
-  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(config_i.stage_2_op);
+  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(x_config.stage_1_rnd_mode);
+  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(x_config.stage_2_rnd_mode);
+  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(x_config.stage_1_op);
+  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(x_config.stage_2_op);
   assign cntrl_engine_o.op_mod           = 1'b0;
   assign cntrl_engine_o.in_valid         = 1'b1;
   assign cntrl_engine_o.flush            = engine_flush_i;
@@ -870,6 +871,9 @@ module redmule_scheduler
   assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
 
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
+  // True when the X/W config FIFOs still hold the active job's config, so a
+  // newly arriving job config is queued behind it rather than becoming active.
+  assign next_config_ready_o = ~x_config_empty && ~w_config_empty;
   assign start_computation = first_load && next_state == LOAD_W && ~stall_engine;
 
   /*********************************

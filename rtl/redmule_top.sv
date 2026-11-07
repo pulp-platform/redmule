@@ -185,10 +185,8 @@ hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) y_buffer_fifo      ( .clk( cl
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_q         ( .clk( clk_acc ) );
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) z_buffer_fifo      ( .clk( clk_acc ) );
 
-// One past the last real Z output element.
+// One past the last real Z output element, from the active store config.
 logic [31:0] z_store_end_addr;
-assign z_store_end_addr = redmule_config.z_addr
-                        + redmule_config.m_size * redmule_config.yz_d0_stride;
 
 // The streamer will present a single master TCDM port used to stream data to and from the memeory.
 redmule_streamer #(
@@ -536,6 +534,7 @@ redmule_memory_scheduler #(
   .z_fifo_empty_o    ( z_fifo_empty    ),
   .z_fifo_full_o     ( z_fifo_full     ),
   .x_done_o          ( x_done          ),
+  .z_store_end_addr_o( z_store_end_addr),
   .cntrl_streamer_o  ( cntrl_streamer  )
 );
 
@@ -629,12 +628,15 @@ redmule_config_fifo #(
   .data_i     ( dec_config        ),
   .push_i     ( dec_config_valid  ),
   .data_o     ( dec_config_q      ),
-  .pop_i      ( cfg_complete && !redmule_config.loopback_w )
+  .pop_i      ( (cfg_complete || pending_accept) && !redmule_config.loopback_w )
 );
 
 /*---------------------------------------------------------------*/
 /* |                        Controller                         | */
 /*---------------------------------------------------------------*/
+
+logic next_config_ready;
+logic pending_accept;
 
 redmule_ctrl #(
   .DataW    ( DataW       ),
@@ -657,8 +659,10 @@ redmule_ctrl #(
   .reg_enable_i      ( reg_enable                        ),
   .fifo_empty_i      ( z_fifo_empty                      ),
   .fifo_ready_i      ( ~z_fifo_full                      ),
+  .next_config_ready_i ( next_config_ready               ),
   .start_cfg_i       ( ~config_fifo_empty                ),
   .cfg_complete_o    ( cfg_complete                      ),
+  .pending_accept_o  ( pending_accept                    ),
   .w_loaded_i        ( flgs_scheduler.w_loaded           ),
   .flush_o           ( engine_flush                      ),
   .cntrl_scheduler_o ( cntrl_scheduler                   ),
@@ -699,6 +703,7 @@ redmule_scheduler #(
   .cntrl_w_buffer_o    ( w_buffer_ctrl       ),
   .cntrl_z_buffer_o    ( z_buffer_ctrl       ),
   .flgs_scheduler_o    ( flgs_scheduler      ),
+  .next_config_ready_o ( next_config_ready   ),
   .sync_i,
   .sync_o
 );

@@ -24,8 +24,13 @@ module redmule_tiler
   input  logic              setback_i  ,
   input  logic              loopback_i ,
   input  logic              start_cfg_i,
+  input  logic              next_config_ready_i,
+  input  logic              job_active_i,
+  input  logic              job_done_i,
   output logic              valid_o    ,
   output logic              busy_o     ,
+  output logic              pending_config_o,
+  output logic              pending_accept_o,
   input  logic              ready_i    ,
   input  redmule_config_t   config_i   ,
   output redmule_config_t   config_o
@@ -43,6 +48,12 @@ logic clk_int;
 
 redmule_config_t input_config_d, input_config_q;
 redmule_config_t config_d, config_q;
+redmule_config_t pending_config_q;
+logic pending_config_q_valid;
+logic pending_accept_q;
+logic pending_activated_q;
+logic config_waiting_q;
+logic accept_active_config;
 logic loopback_active_q, loopback_active;
 
 always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
@@ -51,7 +62,8 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   end else begin
     if (clear_i || setback_i) begin
       clk_en <= 1'b0;
-    end else if ((start_cfg_i && ready_i) || loopback_i) begin
+    end else if ((start_cfg_i && ready_i) || loopback_i ||
+                 (job_done_i && pending_config_q_valid)) begin
       clk_en <= 1'b1;
     end
   end
@@ -77,17 +89,65 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: loopback_ff
   end
 end
 
+// An early next config can be accepted directly; a late one is put in the
+// pending slot instead.
+assign accept_active_config = start_cfg_i && ready_i && !config_waiting_q &&
+                              (!job_active_i || next_config_ready_i);
+
 always_ff @(posedge clk_i or negedge rst_ni) begin : input_config_ff
   if (~rst_ni) begin
     input_config_q <= '0;
+    pending_config_q <= '0;
+    pending_config_q_valid <= 1'b0;
+    pending_accept_q <= 1'b0;
+    pending_activated_q <= 1'b0;
+    config_waiting_q <= 1'b0;
   end else if (clear_i) begin
     input_config_q <= '0;
-  end else if (start_cfg_i && ready_i) begin
-    input_config_q <= config_i;
+    pending_config_q <= '0;
+    pending_config_q_valid <= 1'b0;
+    pending_accept_q <= 1'b0;
+    pending_activated_q <= 1'b0;
+    config_waiting_q <= 1'b0;
+  end else begin
+    pending_accept_q <= 1'b0;
+
+    // Once the accepted active config has produced valid_o, a new top-FIFO
+    // entry can be consumed.
+    if (valid_o) begin
+      config_waiting_q <= 1'b0;
+      pending_activated_q <= 1'b0;
+    end
+
+    if (job_done_i && pending_config_q_valid) begin
+      // Activate the queued job only after the current job has finished.
+      input_config_q <= pending_config_q;
+      pending_config_q_valid <= 1'b0;
+      pending_activated_q <= 1'b1;
+      config_waiting_q <= 1'b1;
+    end else if (start_cfg_i && ready_i && !config_waiting_q) begin
+      if (!job_active_i || next_config_ready_i) begin
+        // No active job, or the scheduler FIFOs can accept an early next config
+        // without making it active immediately.
+        input_config_q <= config_i;
+        pending_config_q_valid <= 1'b0;
+        config_waiting_q <= 1'b1;
+      end else if (!pending_config_q_valid) begin
+        // Too late for pipelining: consume it from the top FIFO but hold it
+        // until the current job ends.
+        pending_config_q <= config_i;
+        pending_config_q_valid <= 1'b1;
+        pending_accept_q <= 1'b1;
+      end
+    end
   end
 end
 
-assign input_config_d           = loopback_active ? input_config_q : config_i;
+assign pending_config_o   = pending_config_q_valid;
+assign pending_accept_o   = pending_accept_q;
+
+assign input_config_d           = pending_activated_q ? pending_config_q :
+                                  (loopback_active ? input_config_q : config_i);
 assign config_d.x_addr          = input_config_d.x_addr;
 assign config_d.w_addr          = loopback_active ? input_config_d.w_addr :
                                   input_config_d.w_addr + input_config_d.w_cols_offset * (FpWidth/8);
@@ -170,7 +230,7 @@ assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftov
 logic [31:0] x_rows_by_w_cols_iter_d, x_rows_by_w_cols_iter_q;
 logic        x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
 
-assign x_rows_by_w_cols_iter_d = (start_cfg_i || loopback_i) ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
+assign x_rows_by_w_cols_iter_d = (accept_active_config || loopback_i || pending_activated_q) ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
@@ -184,7 +244,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
-assign x_rows_by_w_cols_iter_valid_d = (start_cfg_i || loopback_i);
+assign x_rows_by_w_cols_iter_valid_d = (accept_active_config || loopback_i || pending_activated_q);
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin

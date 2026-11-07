@@ -32,8 +32,10 @@ module redmule_ctrl
   output logic                    tiler_busy_o      ,
   input  logic                    fifo_empty_i      ,
   input  logic                    fifo_ready_i      ,
+  input  logic                    next_config_ready_i,
   input  flgs_streamer_t          flgs_streamer_i   ,
   output logic                    cfg_complete_o    ,
+  output logic                    pending_accept_o  ,
   // Flags coming from the state machine
   input  logic                    w_loaded_i        ,
   // Control signals for the engine
@@ -45,6 +47,7 @@ module redmule_ctrl
 
   logic        latch_clear;
   logic        tiler_setback, tiler_valid;
+  logic        tiler_pending, tiler_pending_accept;
   logic        fifo_z_empty;
   logic        set_offset_q, set_offset_d, loopback_reset;
 
@@ -74,14 +77,21 @@ module redmule_ctrl
     .setback_i   ( tiler_setback  ),
     .loopback_i  ( loopback_reset ),
     .start_cfg_i ( start_cfg_i    ),
+    .next_config_ready_i ( next_config_ready_i ),
+    .job_active_i ( current == REDMULE_STARTING || current == REDMULE_COMPUTING ||
+                    current == REDMULE_LOOPBACK || current == REDMULE_FINISHED ),
+    .job_done_i  ( current == REDMULE_IDLE ),
     .valid_o     ( tiler_valid    ),
     .busy_o      ( tiler_busy_o   ),
+    .pending_config_o ( tiler_pending ),
+    .pending_accept_o ( tiler_pending_accept ),
     .ready_i     ( fifo_ready_i   ),
     .config_i    ( config_i       ),
     .config_o    ( redmule_config )
   );
 
-  assign cfg_complete_o = tiler_valid;
+  assign cfg_complete_o    = tiler_valid;
+  assign pending_accept_o  = tiler_pending_accept;
   /*---------------------------------------------------------------------------------------------*/
   /*                                       Register island                                       */
   /*---------------------------------------------------------------------------------------------*/
@@ -116,7 +126,9 @@ module redmule_ctrl
     end else if(target_clear_i) begin
       slave_start <= 1'b0;
     end else begin
-      if (tiler_setback)
+      if (tiler_pending)
+        slave_start <= 1'b1;
+      else if (tiler_setback)
         slave_start <= 1'b0;
       else if (start_cfg_i)
         slave_start <= 1'b1;
