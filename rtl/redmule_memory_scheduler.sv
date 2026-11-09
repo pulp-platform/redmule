@@ -183,8 +183,14 @@ module redmule_memory_scheduler
 
   assign z_config_o = z_config;
   assign y_config_o = y_config;
-  assign z_pad_final_o = z_pipelined_q;
-  assign y_pad_final_o = z_pipelined_q;
+  assign z_pad_final_o = z_pipelined_q
+                       || (z_config.w_cols_iter > 16'd1
+                           && z_config.w_cols_lftovr != '0
+                           && z_config.x_rows_lftovr > 1);
+  assign y_pad_final_o = z_pipelined_q
+                       || (y_config.w_cols_iter > 16'd1
+                           && y_config.w_cols_lftovr != '0
+                           && y_config.x_rows_lftovr > 1);
 
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;

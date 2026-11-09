@@ -706,11 +706,20 @@ module redmule_scheduler
   // the padded geometry to stay in lockstep with the previous job; padding
   // stores are suppressed in the streamer. Otherwise use the true leftover
   // block width, which is the cycle-minimal case.
-  assign y_width  = (z_pipelined_q || y_config_fast.x_rows_lftovr == '0
+  // Multiple K tiles with a partial final K tile are sensitive to the GEMM
+  // bias timing under TCDM stalls. Use the proven padded final-block geometry
+  // for that combination; single-K-tile shapes keep the cycle-minimal geometry.
+  logic z_padded_final;
+  assign z_padded_final = z_pipelined_q
+                        || (z_config_fast.w_cols_iter > 16'd1
+                            && z_config_fast.w_cols_lftovr != '0
+                            && z_config_fast.x_rows_lftovr > 1);
+
+  assign y_width  = (z_padded_final || y_config_fast.x_rows_lftovr == '0
                      || y_rows_iter_q != y_config_fast.x_rows_iter-1) ? W : y_config_fast.x_rows_lftovr;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  assign z_width  = (z_pipelined_q || z_config_fast.x_rows_lftovr == '0
+  assign z_width  = (z_padded_final || z_config_fast.x_rows_lftovr == '0
                      || z_rows_iter_q != z_config_fast.x_rows_iter-1) ? W : z_config_fast.x_rows_lftovr;
   assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
