@@ -127,9 +127,9 @@ module redmule_z_stream_sink
                    + next_k_tile * JMP
                    + next_row * config_i.yz_d0_stride;
 
-  assign addr_push.data  = addr_q;
+  assign addr_push.data  = (ctrl_i.req_start && total_len != 0) ? config_i.z_addr : addr_q;
   assign addr_push.strb  = '1;
-  assign addr_push.valid = addr_valid_q;
+  assign addr_push.valid = addr_valid_q || (ctrl_i.req_start && total_len != 0);
   assign flags_o.addressgen_flags.done = (overall_counter_q >= total_len);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : addrgen_counters
@@ -148,14 +148,22 @@ module redmule_z_stream_sink
       addr_q            <= '0;
       addr_valid_q      <= '0;
     end else if (ctrl_i.req_start) begin
-      // Sampled at the beginning of the run. Hold the first address until
-      // the next cycle so that it is pushed exactly once.
-      overall_counter_q <= '0;
-      block_q           <= '0;
-      k_tile_q          <= '0;
-      row_q             <= '0;
-      addr_q            <= config_i.z_addr;
-      addr_valid_q      <= '0;
+      // Emit the first address in the start cycle, then preload the second one.
+      if (total_len == 0) begin
+        overall_counter_q <= '0;
+        block_q           <= '0;
+        k_tile_q          <= '0;
+        row_q             <= '0;
+        addr_q            <= config_i.z_addr;
+        addr_valid_q      <= '0;
+      end else begin
+        overall_counter_q <= 1;
+        block_q           <= next_block;
+        k_tile_q          <= next_k_tile;
+        row_q             <= next_row;
+        addr_q            <= next_addr;
+        addr_valid_q      <= (1 < total_len);
+      end
     end else if (address_gen_en && overall_counter_q < total_len) begin
       if (~addr_valid_q) begin
         addr_q       <= current_addr;
@@ -304,10 +312,7 @@ module redmule_z_stream_sink
       end
       STREAMER_DONE : begin
         address_gen_en = 1'b1;
-        // Wait until the final address packet has actually been consumed. The
-        // extra cycle is needed because the last real packet (unlike the old
-        // padded stream) is the final packet of the run.
-        if(address_cnt_q == total_len) begin
+        if((address_cnt_q == total_len) | (address_cnt_q == total_len-1 && address_cnt_en)) begin
           ns = STREAMER_IDLE;
           done = 1'b1;
           address_gen_en  = 1'b0;

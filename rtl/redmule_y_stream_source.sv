@@ -120,9 +120,9 @@ module redmule_y_stream_source
                    + next_k_tile * JMP
                    + next_row * config_i.yz_d0_stride;
 
-  assign addr_push.data  = addr_q;
+  assign addr_push.data  = (ctrl_i.req_start && total_len != 0) ? config_i.y_addr : addr_q;
   assign addr_push.strb  = '1;
-  assign addr_push.valid = addr_valid_q;
+  assign addr_push.valid = addr_valid_q || (ctrl_i.req_start && total_len != 0);
   assign flags_o.addressgen_flags.done = (overall_counter_q >= total_len);
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : addrgen_counters
@@ -141,12 +141,21 @@ module redmule_y_stream_source
       addr_q            <= '0;
       addr_valid_q      <= '0;
     end else if (ctrl_i.req_start) begin
-      overall_counter_q <= '0;
-      block_q           <= '0;
-      k_tile_q          <= '0;
-      row_q             <= '0;
-      addr_q            <= config_i.y_addr;
-      addr_valid_q      <= '0;
+      if (total_len == 0) begin
+        overall_counter_q <= '0;
+        block_q           <= '0;
+        k_tile_q          <= '0;
+        row_q             <= '0;
+        addr_q            <= config_i.y_addr;
+        addr_valid_q      <= '0;
+      end else begin
+        overall_counter_q <= 1;
+        block_q           <= next_block;
+        k_tile_q          <= next_k_tile;
+        row_q             <= next_row;
+        addr_q            <= next_addr;
+        addr_valid_q      <= (1 < total_len);
+      end
     end else if (address_gen_en && overall_counter_q < total_len) begin
       if (~addr_valid_q) begin
         addr_q       <= current_addr;
