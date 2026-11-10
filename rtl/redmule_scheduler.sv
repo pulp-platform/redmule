@@ -401,7 +401,7 @@ module redmule_scheduler
    * Y & Z Iteration counters *
    ****************************/
   redmule_config_t y_config;
-  logic            y_config_empty, y_config_full;
+  logic            y_config_empty;
 
   redmule_config_t y_config_fast;
   logic            y_config_fast_empty, y_config_fast_full;
@@ -452,7 +452,7 @@ module redmule_scheduler
     .rst_ni     ( rst_ni         ),
     .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
-    .full_o     ( y_config_full  ),
+    .full_o     (                ),
     .empty_o    ( y_config_empty ),
     .usage_o    (                ),
     .data_i     ( config_i       ),
@@ -698,17 +698,12 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  // Keep the full padded W-row tile geometry for the stream/address generator,
-  // which is the geometry validated by the devel branch. Padding M columns are
-  // still stored by the Z buffer, but the streamer suppresses any store that
-  // starts/extend past the real M*K output region.
-  // If a successor job is already queued, the streams overlap and must use
-  // the padded geometry to stay in lockstep with the previous job; padding
-  // stores are suppressed in the streamer. Otherwise use the true leftover
-  // block width, which is the cycle-minimal case.
-  // Multiple K tiles with a partial final K tile are sensitive to the GEMM
-  // bias timing under TCDM stalls. Use the proven padded final-block geometry
-  // for that combination; single-K-tile shapes keep the cycle-minimal geometry.
+  // Final M-block geometry selection:
+  // - padded geometry when a successor job is queued (overlapping streams), or
+  //   when multiple K tiles have a partial final K tile together with a partial
+  //   final M block (the GEMM bias-timing case that is sensitive to TCDM stalls);
+  // - true leftover width otherwise (cycle-minimal).
+  // Padding stores are suppressed in the streamer.
   logic z_padded_final;
   assign z_padded_final = z_pipelined_q
                         || (z_config_fast.w_cols_iter > 16'd1

@@ -86,32 +86,16 @@ module redmule_top
 );
 
 localparam int unsigned FpWidth = fp_width(FpFormat);
-localparam int unsigned Depth   = DataW/FpWidth;
 
 logic                       clk_acc;
 
-logic                       fsm_z_clk_en, ctrl_z_clk_en;
-logic                       enable, clear;
+logic                       clear;
 logic                       target_clear;
-logic                       y_buffer_depth_count,
-                            y_buffer_load,
-                            z_buffer_fill,
-                            z_buffer_store;
-logic                       w_shift;
-logic                       w_load;
-logic                       reg_enable,
-                            gate_en;
+logic                       reg_enable;
 logic                       cfg_complete;
-logic [31:0]                x_cols_offs,
-                            x_rows_offs;
-logic [$clog2(Width):0]     x_rows_lftover;
-logic [$clog2(Depth):0]     w_cols_lftovr,
-                            y_cols_lftovr;
-logic [$clog2(Height):0]    w_rows_lftovr;
-logic [$clog2(Width):0]     y_rows_lftovr;
 
 // Streamer control signals and flags
-cntrl_streamer_t cntrl_streamer_int, cntrl_streamer;
+cntrl_streamer_t cntrl_streamer;
 flgs_streamer_t  flgs_streamer;
 
 cntrl_engine_t   cntrl_engine;
@@ -135,7 +119,7 @@ flgs_scheduler_t  flgs_scheduler;
 
 // Configuration of the current operation
 redmule_config_t redmule_config;
-flags_fifo_t   w_fifo_flgs, z_fifo_flgs;
+flags_fifo_t   z_fifo_flgs;
 cntrl_flags_t  cntrl_flags;
 
 redmule_config_t dec_config;
@@ -320,7 +304,7 @@ hwpe_stream_fifo #(
   .clk_i          ( clk_acc       ),
   .rst_ni         ( rst_ni        ),
   .clear_i        ( clear         ),
-  .flags_o        ( w_fifo_flgs   ),
+  .flags_o        (               ),
   .push_i         ( w_buffer_d    ),
   .pop_o          ( w_buffer_fifo )
 );
@@ -527,9 +511,8 @@ assign z_priority = z_buffer_flgs.z_priority & !z_fifo_flgs.empty;
 logic z_fifo_empty, z_fifo_full;
 
 redmule_memory_scheduler #(
-  .DW ( DataW  ),
-  .W  ( Width  ),
-  .H  ( Height )
+  .DW ( DataW ),
+  .W  ( Width )
 ) i_memory_scheduler (
   .clk_i             ( clk_acc         ),
   .rst_ni            ( rst_ni          ),
@@ -555,7 +538,6 @@ redmule_memory_scheduler #(
 /* | Instruction Decoder (XIF) or Target Decoder (HWPE_TARGET) | */
 /*---------------------------------------------------------------*/
 
-logic tiler_busy;
 redmule_config_t dec_config_q;
 
 if(CtrlIntfConfig == XIF) begin : xif_ctrl_intf_gen
@@ -626,6 +608,9 @@ else begin : mm_ctrl_intf_gen
   assign x_result_valid_o   = '0;
 end
 
+logic next_config_ready;
+logic pending_accept;
+
 redmule_config_fifo #(
   .FALL_THROUGH ( 0                ),
   .DEPTH        ( 2                ),
@@ -648,9 +633,6 @@ redmule_config_fifo #(
 /* |                        Controller                         | */
 /*---------------------------------------------------------------*/
 
-logic next_config_ready;
-logic pending_accept;
-
 redmule_ctrl #(
   .DataW    ( DataW       ),
   .Height   ( Height      ),
@@ -663,7 +645,7 @@ redmule_ctrl #(
   .test_mode_i       ( test_mode_i                       ),
   .flgs_streamer_i   ( flgs_streamer                     ),
   .busy_o            ( busy_o                            ),
-  .tiler_busy_o      ( tiler_busy                        ),
+  .tiler_busy_o      (                                   ),
   .target_clear_i    ( target_clear                      ),
   .clear_o           ( clear                             ),
   .evt_o             ( evt_o                             ),

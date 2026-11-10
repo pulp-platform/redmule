@@ -56,7 +56,6 @@ module redmule_z_stream_sink
   localparam int unsigned EHW        = `HCI_SIZE_GET_EHW(tcdm);
 
   hci_streamer_state_t cs, ns;
-  flags_fifo_t addr_fifo_flags;
 
   logic address_gen_en;
   logic address_gen_clr;
@@ -186,7 +185,7 @@ module redmule_z_stream_sink
     .clk_i   ( clk_i           ),
     .rst_ni  ( rst_ni          ),
     .clear_i ( clear_i         ),
-    .flags_o ( addr_fifo_flags ),
+    .flags_o (                   ),
     .push_i  ( addr_push       ),
     .pop_o   ( addr_pop        )
   );

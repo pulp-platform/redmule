@@ -71,7 +71,9 @@ module redmule_streamer
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
 // Cast in/out modules operate on misaligned DataW
-localparam int unsigned CastDataW = DataW + (MisalignedAccessSupport ? 32 : 0);
+localparam int unsigned CastDataW = DataW + ((MisalignedAccessSupport != 0) ? 32 : 0);
+localparam int unsigned BE_BYTES  = CastDataW / 8;
+localparam int unsigned BE_CNT    = $clog2(BE_BYTES + 1);
 
 // Non-ECC variant of tcdm size params, used for all internal (non-ECC) interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
@@ -353,9 +355,9 @@ redmule_castout #(
 // M tile (the real M rows have already been written). Consume the packet in
 // the sink and advance its address generator, but do not launch a TCDM
 // transaction: padding rows must not waste interconnect bandwidth.
-logic [5:0] z_store_bytes;
-logic [5:0] z_store_last_byte;
-logic       z_store_has_bytes;
+logic [BE_CNT-1:0] z_store_bytes;
+logic [BE_CNT-1:0] z_store_last_byte;
+logic               z_store_has_bytes;
 // Suppress zero-strobe padding packets and any store whose highest enabled
 // byte lands past the real M*K output region. The strobe may be misaligned,
 // so counting the enabled bytes alone is not sufficient.

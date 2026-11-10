@@ -17,7 +17,6 @@ module redmule_y_stream_source
   import hci_package::*;
   import redmule_pkg::*;
 #(
-  parameter int unsigned LATCH_FIFO           = 0,
   parameter int unsigned TRANS_CNT            = 16,
   parameter int unsigned ADDR_MIS_DEPTH       = 8,
   parameter int unsigned MISALIGNED_ACCESSES  = 1,
@@ -171,7 +170,7 @@ module redmule_y_stream_source
     end
   end
 
-  if (PASSTHROUGH_FIFO) begin : passthrough_gen
+  if (PASSTHROUGH_FIFO != 0) begin : passthrough_gen
     hwpe_stream_fifo_passthrough #(
       .DATA_WIDTH ( 36 ),
       .FIFO_DEPTH ( 2  )
@@ -210,6 +209,18 @@ module redmule_y_stream_source
   assign stream_data_misaligned = tcdm.r_valid ? tcdm.r_data : stream_data_q;
 
   localparam int unsigned ADDR_OFFSET_BYTE = 8*((ADDR_OFFSET + 8 - 1) / 8);
+
+  // Response FIFO interfaces are used by the misaligned-access block below.
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( DATA_WIDTH )
+  ) resp_push (
+    .clk ( clk_i )
+  );
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( DATA_WIDTH )
+  ) resp_pop (
+    .clk ( clk_i )
+  );
 
   if (MISALIGNED_ACCESSES==1) begin : misaligned_access_gen
     always_comb begin
@@ -255,17 +266,6 @@ module redmule_y_stream_source
   else begin
     assign stream_data_aligned[DATA_WIDTH-1:0] = stream_data_misaligned[DATA_WIDTH-1:0];
   end
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( DATA_WIDTH )
-  ) resp_push (
-    .clk ( clk_i )
-  );
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( DATA_WIDTH )
-  ) resp_pop (
-    .clk ( clk_i )
-  );
 
   assign tcdm.req        = (cs != STREAMER_IDLE) ? addr_pop.valid : '0;
   if(ADDR_OFFSET == 1)

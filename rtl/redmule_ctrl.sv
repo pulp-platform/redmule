@@ -15,8 +15,7 @@ module redmule_ctrl
   parameter int unsigned Height = MaxDim,
   parameter int unsigned Width = MaxDim,
   parameter int unsigned PipeRegs = MaxPipeRegs-1,
-  parameter int unsigned FpWidth = 16,
-  parameter bit          EnableReordering = 1'b0
+  parameter int unsigned FpWidth = 16
 )(
   input  logic                    clk_i             ,
   input  logic                    rst_ni            ,
@@ -48,7 +47,6 @@ module redmule_ctrl
   logic        latch_clear;
   logic        tiler_setback, tiler_valid;
   logic        tiler_pending, tiler_pending_accept;
-  logic        fifo_z_empty;
   logic        set_offset_q, set_offset_d, loopback_reset;
 
   typedef enum logic [2:0] {
@@ -154,7 +152,6 @@ module redmule_ctrl
   assign cntrl_scheduler_o.rst        = current == REDMULE_FINISHED || loopback_reset;
   assign cntrl_scheduler_o.finished   = current == REDMULE_FINISHED;
   assign latch_clear                  = current == REDMULE_LATCH_RST;
-  assign fifo_z_empty                 = EnableReordering ? flgs_streamer_i.store_fifo_empty : 1'b1;
 
   always_comb begin : controller_fsm
     cntrl_flags_o.idle = 1'b0;
