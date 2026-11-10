@@ -156,7 +156,7 @@ MarithFunct3 = 3'b000;
 MopcntFunct3 = 3'b010;
 ```
 
-An XIF instance must use these parameters because the current `redmule_top`/`redmule_xif_wrap` defaults differ from this encoding.
+The RTL defaults now match these values. The parameters can still be overridden when instantiating the wrapper.
 
 #### *mcnfig* Instruction
 The *mcnfig* instruction features the opcode reserved in the `custom 0` encoding of the [RISC-V International Specifications](https://riscv.org/technical/specifications/). It uses the `rs1`, `rs2`, and `rs3` fields to share three registers of the core Register-File with the accelerator. The registers must contain the same information as the *Matrix Config Reg 0*, *Matrix Config Reg 1*, and the `y_offs` field of the memory-mapped interface. The *mcnfig* instruction encoding is:
