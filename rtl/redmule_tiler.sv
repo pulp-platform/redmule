@@ -24,19 +24,23 @@ module redmule_tiler
   input  logic              setback_i  ,
   input  logic              loopback_i ,
   input  logic              start_cfg_i,
+  input  logic              next_config_ready_i,
+  input  logic              job_active_i,
+  input  logic              job_done_i,
   output logic              valid_o    ,
   output logic              busy_o     ,
+  output logic              pending_config_o,
+  output logic              pending_accept_o,
   input  logic              ready_i    ,
   input  redmule_config_t   config_i   ,
   output redmule_config_t   config_o
 );
 
-// Minimum size N handled by the internal control. Any job with n_size <= Height is run "as if"
-// N = MinimumSizeN for the purpose of the W-load loop / scheduler / z_buffer timing (see
-// redmule_tiler.sv), while the input operands for the padded N rows [n_size .. MinimumSizeN-1]
-// are gated to zero so the result is unaffected. This is necessary to enable the controller to
-// work properly in these corner cases.
-// The minimum size is defined as MinimumSizeN = MinimumSizeNFactor * Height (e.g., 2*Height)
+// Small-N control. Any job with n_size <= Height has its internal N loop padded to
+// max(MinimumSizeN, K-tile depth) for the W-load / scheduler / Z-buffer pacing, while
+// the input operands for the padded N rows are gated to zero so the result is unaffected.
+// With MinimumSizeNFactor = 1 this is one Height-deep tile, avoiding an unconditional
+// second zero-filled pass.
 localparam int unsigned MinimumSizeN = MinimumSizeNFactor * Height;
 
 logic clk_en;
@@ -44,6 +48,12 @@ logic clk_int;
 
 redmule_config_t input_config_d, input_config_q;
 redmule_config_t config_d, config_q;
+redmule_config_t pending_config_q;
+logic pending_config_q_valid;
+logic pending_accept_q;
+logic pending_activated_q;
+logic config_waiting_q;
+logic accept_active_config;
 logic loopback_active_q, loopback_active;
 
 always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
@@ -52,7 +62,8 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: clock_gate_enabler
   end else begin
     if (clear_i || setback_i) begin
       clk_en <= 1'b0;
-    end else if ((start_cfg_i && ready_i) || loopback_i) begin
+    end else if ((start_cfg_i && ready_i) || loopback_i ||
+                 (job_done_i && pending_config_q_valid)) begin
       clk_en <= 1'b1;
     end
   end
@@ -78,17 +89,65 @@ always_ff @(posedge clk_i, negedge rst_ni) begin: loopback_ff
   end
 end
 
+// An early next config can be accepted directly; a late one is put in the
+// pending slot instead.
+assign accept_active_config = start_cfg_i && ready_i && !config_waiting_q &&
+                              (!job_active_i || next_config_ready_i);
+
 always_ff @(posedge clk_i or negedge rst_ni) begin : input_config_ff
   if (~rst_ni) begin
     input_config_q <= '0;
+    pending_config_q <= '0;
+    pending_config_q_valid <= 1'b0;
+    pending_accept_q <= 1'b0;
+    pending_activated_q <= 1'b0;
+    config_waiting_q <= 1'b0;
   end else if (clear_i) begin
     input_config_q <= '0;
-  end else if (start_cfg_i && ready_i) begin
-    input_config_q <= config_i;
+    pending_config_q <= '0;
+    pending_config_q_valid <= 1'b0;
+    pending_accept_q <= 1'b0;
+    pending_activated_q <= 1'b0;
+    config_waiting_q <= 1'b0;
+  end else begin
+    pending_accept_q <= 1'b0;
+
+    // Once the accepted active config has produced valid_o, a new top-FIFO
+    // entry can be consumed.
+    if (valid_o) begin
+      config_waiting_q <= 1'b0;
+      pending_activated_q <= 1'b0;
+    end
+
+    if (job_done_i && pending_config_q_valid) begin
+      // Activate the queued job only after the current job has finished.
+      input_config_q <= pending_config_q;
+      pending_config_q_valid <= 1'b0;
+      pending_activated_q <= 1'b1;
+      config_waiting_q <= 1'b1;
+    end else if (start_cfg_i && ready_i && !config_waiting_q) begin
+      if (!job_active_i || next_config_ready_i) begin
+        // No active job, or the scheduler FIFOs can accept an early next config
+        // without making it active immediately.
+        input_config_q <= config_i;
+        pending_config_q_valid <= 1'b0;
+        config_waiting_q <= 1'b1;
+      end else if (!pending_config_q_valid) begin
+        // Too late for pipelining: consume it from the top FIFO but hold it
+        // until the current job ends.
+        pending_config_q <= config_i;
+        pending_config_q_valid <= 1'b1;
+        pending_accept_q <= 1'b1;
+      end
+    end
   end
 end
 
-assign input_config_d           = loopback_active ? input_config_q : config_i;
+assign pending_config_o   = pending_config_q_valid;
+assign pending_accept_o   = pending_accept_q;
+
+assign input_config_d           = pending_activated_q ? pending_config_q :
+                                  (loopback_active ? input_config_q : config_i);
 assign config_d.x_addr          = input_config_d.x_addr;
 assign config_d.w_addr          = loopback_active ? input_config_d.w_addr :
                                   input_config_d.w_addr + input_config_d.w_cols_offset * (FpWidth/8);
@@ -101,15 +160,22 @@ assign config_d.k_size          = input_config_d.k_size;
 assign config_d.n_size          = input_config_d.n_size;
 
 // Effective N size used ONLY for the W-row loop length / streamer length: any job with
-// N <= Height is promoted to MinimumSizeN so the W-load takes as long as a full N-tile, restoring
-// the large-N scheduler/z_buffer pacing that fixes the small-N multi-block hang. The X-column
-// tiling and the store geometry deliberately keep the real config_d.n_size here (X rows are only
-// n_size wide, so over-reading X would misalign the addresses); the X buffer is instead promoted to
-// a full D-deep tile in redmule_scheduler.sv (cntrl_x_buffer_o.slots) so it advances M-block rows in
-// step with the promoted N, and both padded operands are zeroed (X via x_cols_lftovr,
-// W via the cntrl_w_buffer_o.height gating in redmule_scheduler.sv).
+// N <= Height is padded to max(MinimumSizeN, K-tile depth), so the W-load provides enough
+// pacing to fill the Z buffer for the current K tile without an unconditional second pass.
+// The X-column tiling and the store geometry deliberately keep the real config_d.n_size here
+// (X rows are only n_size wide, so over-reading X would misalign the addresses); the X buffer
+// uses the same max(Height, K-tile depth) slot count in redmule_scheduler.sv, and both padded
+// operands are zeroed (X via x_cols_lftovr, W via the cntrl_w_buffer_o.height gating).
 logic [15:0] n_size_eff;
-assign n_size_eff = (input_config_d.n_size <= Height) ? MinimumSizeN[15:0] : input_config_d.n_size;
+logic [15:0] k_tile_eff;
+// A small-N M block still needs one W-load step per K-tile row to fill the Z buffer,
+// so the internal N loop is padded to max(real N, K-tile depth). For N > Height the
+// original N-based loop is kept.
+assign k_tile_eff = (config_d.k_size < (Height*(PipeRegs + 1))) ? config_d.k_size
+                                                               : (Height*(PipeRegs + 1));
+assign n_size_eff = (input_config_d.n_size <= Height)
+                    ? ((k_tile_eff > MinimumSizeN) ? k_tile_eff : MinimumSizeN)
+                    : input_config_d.n_size;
 // Sourced from input_config_d (not config_i directly) so the loopback pass keeps
 // the job's original operation/format even after dec_config_q's read pointer has
 // advanced past its single valid entry (config_i can no longer be trusted once
@@ -146,7 +212,9 @@ assign config_d.x_rows_lftovr = config_d.m_size - (x_rows_iter_nolftovr*Width);
 assign config_d.x_cols_lftovr = config_d.n_size - (x_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
 // Calculating the residuals along the weight dimensions
-assign config_d.w_rows_lftovr = n_size_eff - (Height*(n_size_eff/Height)); // promoted N (0 when N <= Height -> full W-row loop)
+assign config_d.w_rows_lftovr = (input_config_d.n_size <= Height)
+                               ? '0
+                               : n_size_eff - (Height*(n_size_eff/Height));
 assign config_d.w_cols_lftovr = loopback_active ? input_config_d.w_cols_offset - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1))) :
                                 (config_d.k_size - input_config_d.w_cols_offset) - (w_cols_iter_nolftovr*(Height*(PipeRegs + 1)));
 
@@ -162,7 +230,7 @@ assign config_d.x_rows_iter = config_d.x_rows_lftovr != '0 ? x_rows_iter_nolftov
 logic [31:0] x_rows_by_w_cols_iter_d, x_rows_by_w_cols_iter_q;
 logic        x_rows_by_w_cols_iter_valid_d, x_rows_by_w_cols_iter_valid_q;
 
-assign x_rows_by_w_cols_iter_d = (start_cfg_i || loopback_i) ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
+assign x_rows_by_w_cols_iter_d = (accept_active_config || loopback_i || pending_activated_q) ? config_d.x_rows_iter * config_d.w_cols_iter : x_rows_by_w_cols_iter_q;
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
@@ -176,7 +244,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
-assign x_rows_by_w_cols_iter_valid_d = (start_cfg_i || loopback_i);
+assign x_rows_by_w_cols_iter_valid_d = (accept_active_config || loopback_i || pending_activated_q);
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin

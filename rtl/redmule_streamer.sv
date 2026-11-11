@@ -17,6 +17,7 @@ module redmule_streamer
   import hwpe_stream_package::*;
 #(
   parameter  int unsigned           DataW        = MaxDataW,
+  parameter  int unsigned           Width        = MaxDim,
   parameter  int unsigned           MisalignedAccessSupport = MisalignedAccessSupportDefault,
   // Set to 1 to reorder responses of outstanding transactions on the X, W, and Y
   // load channels (hci_core_rob) and arbitrate the shared TCDM port out-of-order
@@ -53,6 +54,15 @@ module redmule_streamer
   // TCDM interface between the streamer and the memory
   hci_core_intf.initiator        tcdm      ,
 
+  // One past the last valid real Z output address
+  input  logic [31:0]             z_store_end_addr_i,
+
+  // Active store-side (Z) and bias-side (Y) tiling configuration
+  input  redmule_config_t         z_config_i,
+  input  redmule_config_t         y_config_i,
+  input  logic                    z_pad_final_i,
+  input  logic                    y_pad_final_i,
+
   // Control signals
   input  cntrl_streamer_t        ctrl_i,
   output flgs_streamer_t         flags_o
@@ -61,7 +71,9 @@ module redmule_streamer
 localparam int unsigned EW  = `HCI_SIZE_GET_EW(tcdm);
 
 // Cast in/out modules operate on misaligned DataW
-localparam int unsigned CastDataW = DataW + (MisalignedAccessSupport ? 32 : 0);
+localparam int unsigned CastDataW = DataW + ((MisalignedAccessSupport != 0) ? 32 : 0);
+localparam int unsigned BE_BYTES  = CastDataW / 8;
+localparam int unsigned BE_CNT    = $clog2(BE_BYTES + 1);
 
 // Non-ECC variant of tcdm size params, used for all internal (non-ECC) interfaces
 localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
@@ -282,8 +294,10 @@ end
 
 // Sink module that turns the incoming Z stream into TCDM.
 `HCI_INTF_EXPLICIT_PARAM(zstream2cast, clk_i, `HCI_SIZE_PARAM(ldst_tcdm));
-hci_core_sink         #(
+redmule_z_stream_sink #(
   .MISALIGNED_ACCESSES ( MisalignedAccessSupport ),
+  .WIDTH               ( Width                   ),
+  .JMP                 ( DataW/8                 ),
   .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) )
 ) i_stream_sink        (
   .clk_i               ( clk_i                       ),
@@ -293,6 +307,8 @@ hci_core_sink         #(
   .enable_i            ( enable_i                    ),
   .tcdm                ( zstream2cast                ),
   .stream              ( z_stream_i                  ),
+  .config_i            ( z_config_i                  ),
+  .pad_final_i         ( z_pad_final_i               ),
   .ctrl_i              ( ctrl_i.z_stream_sink_ctrl   ),
   .flags_o             ( flags_o.z_stream_sink_flags )
 );
@@ -335,8 +351,28 @@ redmule_castout #(
 );
 
 // Left TCDM buses assignment.
-assign z_fifo_d.req          = zstream2cast.req;
-assign zstream2cast.gnt      = z_fifo_d.gnt;
+// A store packet whose byte strobe is entirely zero is a padding row of an
+// M tile (the real M rows have already been written). Consume the packet in
+// the sink and advance its address generator, but do not launch a TCDM
+// transaction: padding rows must not waste interconnect bandwidth.
+logic [BE_CNT-1:0] z_store_bytes;
+logic [BE_CNT-1:0] z_store_last_byte;
+logic               z_store_has_bytes;
+// Suppress zero-strobe padding packets and any store whose highest enabled
+// byte lands past the real M*K output region. The strobe may be misaligned,
+// so counting the enabled bytes alone is not sufficient.
+assign z_store_bytes = $countones(zstream2cast.be);
+always_comb begin
+  z_store_last_byte = '0;
+  for (int unsigned i = 0; i < $bits(zstream2cast.be); i++) begin
+    if (zstream2cast.be[i]) z_store_last_byte = i;
+  end
+end
+assign z_store_has_bytes = (z_store_bytes != 0)
+                        && (zstream2cast.add + z_store_last_byte < z_store_end_addr_i);
+assign z_fifo_d.req          = zstream2cast.req && z_store_has_bytes;
+assign zstream2cast.gnt      = z_store_has_bytes ? z_fifo_d.gnt : 1'b1;
+
 assign z_fifo_d.add          = zstream2cast.add;
 assign z_fifo_d.wen          = zstream2cast.wen;
 // do not assign z_fifo_d.data <-> zstream2cast.data
@@ -525,21 +561,43 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
     assign source_enable = enable_i;
   end
 
-  hci_core_source       #(
-    .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
-    .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) ),
-    .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 0 )
-  ) i_stream_source      (
-    .clk_i               ( clk_i           ),
-    .rst_ni              ( rst_ni          ),
-    .test_mode_i         ( test_mode_i     ),
-    .clear_i             ( clear_i         ),
-    .enable_i            ( source_enable   ),
-    .tcdm                ( tcdm_cast[i]    ),
-    .stream              ( out_stream[i]   ),
-    .ctrl_i              ( source_ctrl[i]  ),
-    .flags_o             ( source_flags[i] )
-  );
+  if (i == YsourceStreamId) begin : gen_y_source
+    redmule_y_stream_source #(
+      .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
+      .WIDTH                 ( Width                   ),
+      .JMP                   ( DataW/8                 ),
+      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) ),
+      .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 0 )
+    ) i_stream_source      (
+      .clk_i               ( clk_i           ),
+      .rst_ni              ( rst_ni          ),
+      .test_mode_i         ( test_mode_i     ),
+      .clear_i             ( clear_i         ),
+      .enable_i            ( source_enable   ),
+      .tcdm                ( tcdm_cast[i]    ),
+      .stream              ( out_stream[i]   ),
+      .config_i            ( y_config_i      ),
+      .pad_final_i         ( y_pad_final_i   ),
+      .ctrl_i              ( source_ctrl[i]  ),
+      .flags_o             ( source_flags[i] )
+    );
+  end else begin : gen_other_source
+    hci_core_source       #(
+      .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
+      .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) ),
+      .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 0 )
+    ) i_stream_source      (
+      .clk_i               ( clk_i           ),
+      .rst_ni              ( rst_ni          ),
+      .test_mode_i         ( test_mode_i     ),
+      .clear_i             ( clear_i         ),
+      .enable_i            ( source_enable   ),
+      .tcdm                ( tcdm_cast[i]    ),
+      .stream              ( out_stream[i]   ),
+      .ctrl_i              ( source_ctrl[i]  ),
+      .flags_o             ( source_flags[i] )
+    );
+  end
 end
 
 // Assign flags in the vector to the relative output buses.

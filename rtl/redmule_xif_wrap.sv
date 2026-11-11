@@ -20,6 +20,7 @@ module redmule_xif_wrap
 #(
   parameter int unsigned  DataW                   = MaxDataW,
   parameter int unsigned  MisalignedAccessSupport = MisalignedAccessSupportDefault,
+  parameter bit           EnableReordering        = 1'b0,
   parameter fp_format_e   FpFormat                = FP16,
   parameter int unsigned  Height                  = MaxDim,
   parameter int unsigned  Width                   = MaxDim,
@@ -31,10 +32,10 @@ module redmule_xif_wrap
   parameter fpnew_pkg::ifmt_logic_t IntFmtConfig  = 4'b1000,
   // Custom instructions
   parameter logic [6:0]   McnfigOpCode            = 7'b0001011,
-  parameter logic [6:0]   MarithOpCode            = 7'b0001011,
+  parameter logic [6:0]   MarithOpCode            = 7'b0101011,
   parameter logic [6:0]   MopcntOpCode            = 7'b0001011,
   parameter logic [2:0]   McnfigFunct3            = 3'b000,
-  parameter logic [2:0]   MarithFunct3            = 3'b001,
+  parameter logic [2:0]   MarithFunct3            = 3'b000,
   parameter logic [2:0]   MopcntFunct3            = 3'b010,
   parameter logic [1:0]   McnfigFunct2            = 2'b00,
   parameter logic [1:0]   MarithFunct2            = 2'b00,
@@ -98,6 +99,7 @@ module redmule_xif_wrap
   redmule_top #(
     .DataW                   ( DataW                   ),
     .MisalignedAccessSupport ( MisalignedAccessSupport ),
+    .EnableReordering        ( EnableReordering        ),
     .FpFormat                ( FpFormat                ),
     .Height                  ( Height                  ),
     .Width                   ( Width                   ),

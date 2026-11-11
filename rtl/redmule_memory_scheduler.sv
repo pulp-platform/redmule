@@ -11,10 +11,7 @@ module redmule_memory_scheduler
   import hwpe_ctrl_package::*;
 #(
   parameter int unsigned   DW   = MaxDataW,
-  parameter int unsigned   W    = MaxDim,
-  parameter int unsigned   H    = MaxDim,
-  parameter int unsigned   ELW  = 16,
-  localparam int unsigned  D    = DW/ELW
+  parameter int unsigned   W    = MaxDim
 ) (
   input  logic                   clk_i            ,
   input  logic                   rst_ni           ,
@@ -28,6 +25,11 @@ module redmule_memory_scheduler
   output logic                   z_fifo_empty_o   ,
   output logic                   z_fifo_full_o    ,
   output logic                   x_done_o         ,
+  output logic [31:0]            z_store_end_addr_o,
+  output redmule_config_t        z_config_o       ,
+  output redmule_config_t        y_config_o       ,
+  output logic                   z_pad_final_o    ,
+  output logic                   y_pad_final_o    ,
   output cntrl_streamer_t        cntrl_streamer_o
 );
   localparam int unsigned JMP = DW/8;
@@ -42,13 +44,16 @@ module redmule_memory_scheduler
 
   logic [15:0]        tot_x_read_d, tot_x_read_q;
 
-  logic [$clog2(W):0] x_rows_lftover_d, x_rows_lftover_q;
-
   logic [$clog2(W):0] num_x_reads;
 
   redmule_config_t x_config, w_config, y_config, z_config;
   logic            x_config_empty, w_config_empty, y_config_empty, z_config_empty;
-  logic            x_config_full, w_config_full, y_config_full, z_config_full;
+  logic            x_config_full, z_config_full;
+
+  // Once a successor job is queued, the streams overlap and all jobs in this
+  // busy period must keep the padded final-block geometry. The flag persists
+  // until the controller clears the accelerator.
+  logic            z_pipelined_q, z_pipelined_d;
 
   logic            start_x_streamer;
 
@@ -86,7 +91,7 @@ module redmule_memory_scheduler
     .rst_ni     ( rst_ni                                     ),
     .flush_i    ( clear_i | cntrl_scheduler_i.rst            ),
     .testmode_i ( '0                                         ),
-    .full_o     ( w_config_full                              ),
+    .full_o     (                                            ),
     .empty_o    ( w_config_empty                             ),
     .usage_o    (                                            ),
     .data_i     ( config_i                                   ),
@@ -104,7 +109,7 @@ module redmule_memory_scheduler
     .rst_ni     ( rst_ni                                                                                                          ),
     .flush_i    ( clear_i | cntrl_scheduler_i.rst                                                                                 ),
     .testmode_i ( '0                                                                                                              ),
-    .full_o     ( y_config_full                                                                                                   ),
+    .full_o     (                                                                                                                 ),
     .empty_o    ( y_config_empty                                                                                                  ),
     .usage_o    (                                                                                                                 ),
     .data_i     ( config_i                                                                                                        ),
@@ -130,6 +135,23 @@ module redmule_memory_scheduler
     .data_o     ( z_config                                 ),
     .pop_i      ( flgs_streamer_i.z_stream_sink_flags.done )
   );
+
+  always_comb begin : z_pipelined_next
+    z_pipelined_d = z_pipelined_q;
+    if (z_config_full) begin
+      z_pipelined_d = 1'b1;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
+    if (~rst_ni) begin
+      z_pipelined_q <= 1'b0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      z_pipelined_q <= 1'b0;
+    end else begin
+      z_pipelined_q <= z_pipelined_d;
+    end
+  end
 
   edge_detect i_store_fifo_empty_edge_detector (
     .clk_i  ( clk_i                            ),
@@ -161,8 +183,23 @@ module redmule_memory_scheduler
   assign y_fifo_pop_matmul = ~y_config_empty && ~y_config.gemm_selection && store_empty_rise_cnt && store_empty_rise;
   assign y_fifo_pop        = ~y_config_empty && (y_config.gemm_selection ? flgs_streamer_i.y_stream_source_flags.done : y_fifo_pop_matmul);
 
+  assign z_config_o = z_config;
+  assign y_config_o = y_config;
+  assign z_pad_final_o = z_pipelined_q
+                       || (z_config.w_cols_iter > 16'd1
+                           && z_config.w_cols_lftovr != '0
+                           && z_config.x_rows_lftovr > 1);
+  assign y_pad_final_o = z_pipelined_q
+                       || (y_config.w_cols_iter > 16'd1
+                           && y_config.w_cols_lftovr != '0
+                           && y_config.x_rows_lftovr > 1);
+
   assign z_fifo_empty_o = z_config_empty;
   assign z_fifo_full_o = z_config_full;
+
+  // End of the real M*K output region for the currently active store config.
+  assign z_store_end_addr_o = z_config.z_addr
+                            + z_config.m_size * z_config.yz_d0_stride;
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : x_cols_iters_register
     if (~rst_ni) begin
@@ -279,7 +316,9 @@ module redmule_memory_scheduler
     cntrl_streamer_o.w_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 
     // Here we initialize the streamer source signals
-    // for the Y stream source
+    // for the Y stream source. The custom redmule_y_stream_source uses
+    // config_i for its per-M-block linear generator; these legacy addressgen
+    // fields remain defined for compatibility with the shared control bus.
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.base_addr = y_config.y_addr;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.tot_len = y_config.yz_tot_len;
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.d0_len = W;
@@ -292,7 +331,9 @@ module redmule_memory_scheduler
     cntrl_streamer_o.y_stream_source_ctrl.addressgen_ctrl.dim_enable_1h = 3'b011;
 
     // Here we initialize the streamer sink signals for
-    // the Z stream sink
+    // the Z stream sink. The custom redmule_z_stream_sink uses config_i for its
+    // per-M-block linear generator; these legacy addressgen fields remain
+    // defined for compatibility with the shared control bus.
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.base_addr = z_config.z_addr;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.tot_len = z_config.yz_tot_len;
     cntrl_streamer_o.z_stream_sink_ctrl.addressgen_ctrl.d0_len = W;

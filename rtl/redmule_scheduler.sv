@@ -58,6 +58,7 @@ module redmule_scheduler
   output w_buffer_ctrl_t                  cntrl_w_buffer_o   ,
   output z_buffer_ctrl_t                  cntrl_z_buffer_o   ,
   output flgs_scheduler_t                 flgs_scheduler_o   ,
+  output logic                            next_config_ready_o,
 
   /*********************************************************/
   /*                   Synchronization                     */
@@ -89,6 +90,10 @@ module redmule_scheduler
    ************************/
   redmule_config_t x_config;
   logic            x_config_empty, x_config_full;
+
+  // Latched configuration for the current job. Engine operation/rnd fields
+  // must remain stable for the whole job even after the X config FIFO pops.
+  redmule_config_t job_config_q, job_config_d;
 
   logic [15:0] x_cols_iter_d, x_cols_iter_q,
                x_w_iters_d, x_w_iters_q,
@@ -175,15 +180,14 @@ module redmule_scheduler
 
   assign x_done_en = /*flgs_streamer_i.x_stream_source_flags.ready_start &&*/ x_rows_iter_en && x_rows_iter_q == x_config.x_rows_iter-1 && x_w_iters_q == x_config.w_cols_iter-1 && x_cols_iter_q == x_config.x_cols_iter-1;
 
-  // For N <= Height, the "internal N" is promoted to a full N-tile (MinimumSizeN steps) by the tiler
-  // (see redmule_tiler.sv). The X buffer must then iterate a full D-deep tile so its refill / M-block
-  // row-advance stays in step with the promoted N; otherwise it would serve only
-  // x_buffer_slots (= n_size rounded up to Height, = Height for N <= Height) columns and never advance
-  // to the next M-block's X rows (the trailing output tile would reuse the first block's X).
-  logic small_n_promoted_x;
-  assign small_n_promoted_x = (x_config.n_size <= H);
+  // For N <= Height the tiler pads the internal N loop to max(Height, K-tile depth).
+  // The X buffer must hold the same number of shifts for one M block's W-load/Z-fill
+  // pacing. For N > Height keep the original per-N-leftover behavior.
   assign cntrl_x_buffer_o.height = x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_cols_lftovr : D;
-  assign cntrl_x_buffer_o.slots  = small_n_promoted_x ? D
+  logic [15:0] x_k_tile;
+  assign x_k_tile = (x_config.k_size < D) ? x_config.k_size : D;
+  assign cntrl_x_buffer_o.slots  = (x_config.n_size <= H)
+                                 ? ((x_k_tile > H) ? x_k_tile : H)
                                  : (x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_buffer_slots : D);
   assign cntrl_x_buffer_o.width  = x_rows_iter_q == x_config.x_rows_iter-1 && x_config.x_rows_lftovr != '0 ? x_config.x_rows_lftovr : W;
 
@@ -368,12 +372,11 @@ module redmule_scheduler
 
   assign w_done_en = w_mat_iters_en && w_mat_iters_q == w_config.x_rows_iter-1;
 
-  // When N <= Height the tiler promotes the W-row loop to MinimumSizeN (a full N-tile) so the
-  // W-load pacing is not too fast, causing races and hangs. The extra padded N rows
-  // [n_size .. MinimumSizeN-1] must be zeroed at the W-buffer input: rows with a global
-  // N index >= real n_size are gated to zero. Since real N <= H, all valid rows fall in
-  // the first Height-deep buffer pass (w_rows_iter_q < H, valid depth = n_size); the second pass
-  // (w_rows_iter_q >= H) is fully invalid (valid depth = 0).
+  // When N <= Height the tiler pads the W-row loop to max(Height, K-tile depth) so the
+  // W-load pacing is slow enough not to race/hang. The padded N rows must be zeroed at
+  // the W-buffer input: rows with a global N index >= real n_size are gated to zero.
+  // Since real N <= H, all valid rows fall in the first Height-deep buffer pass
+  // (valid depth = n_size); anything beyond is fully invalid.
   logic small_n_promoted;
   assign small_n_promoted = (w_config.n_size <= H);
   assign cntrl_w_buffer_o.height = small_n_promoted
@@ -398,7 +401,7 @@ module redmule_scheduler
    * Y & Z Iteration counters *
    ****************************/
   redmule_config_t y_config;
-  logic            y_config_empty, y_config_full;
+  logic            y_config_empty;
 
   redmule_config_t y_config_fast;
   logic            y_config_fast_empty, y_config_fast_full;
@@ -434,6 +437,10 @@ module redmule_scheduler
   logic [$clog2(D):0]             y_height, z_height;
   logic [$clog2(D):0]             y_push_height;
 
+  // Latched pipelined-session flag: once a successor config is queued, all
+  // jobs in this busy period keep the padded final-block geometry.
+  logic                           z_pipelined_q, z_pipelined_d;
+
   logic y_config_pop;
   assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
   redmule_config_fifo #(
@@ -445,7 +452,7 @@ module redmule_scheduler
     .rst_ni     ( rst_ni         ),
     .flush_i    ( clear_i        ),
     .testmode_i ( '0             ),
-    .full_o     ( y_config_full  ),
+    .full_o     (                ),
     .empty_o    ( y_config_empty ),
     .usage_o    (                ),
     .data_i     ( config_i       ),
@@ -496,6 +503,23 @@ module redmule_scheduler
     .data_o     ( z_config_fast       ),
     .pop_i      ( z_config_fast_pop   )
   );
+
+  always_comb begin : z_pipelined_next
+    z_pipelined_d = z_pipelined_q;
+    if (z_config_fast_full) begin
+      z_pipelined_d = 1'b1;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
+    if (~rst_ni) begin
+      z_pipelined_q <= 1'b0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      z_pipelined_q <= 1'b0;
+    end else begin
+      z_pipelined_q <= z_pipelined_d;
+    end
+  end
 
   always_ff @(posedge clk_i or negedge rst_ni) begin : y_pushed_register
     if(~rst_ni) begin
@@ -681,11 +705,24 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  // Final M-block geometry selection:
+  // - padded geometry when a successor job is queued (overlapping streams), or
+  //   when multiple K tiles have a partial final K tile together with a partial
+  //   final M block (the GEMM bias-timing case that is sensitive to TCDM stalls);
+  // - true leftover width otherwise (cycle-minimal).
+  // Padding stores are suppressed in the streamer.
+  logic z_padded_final;
+  assign z_padded_final = z_pipelined_q
+                        || (z_config_fast.w_cols_iter > 16'd1
+                            && z_config_fast.w_cols_lftovr != '0
+                            && z_config_fast.x_rows_lftovr > 1);
+
+  assign y_width  = (z_padded_final || y_config_fast.x_rows_lftovr == '0
+                     || y_rows_iter_q != y_config_fast.x_rows_iter-1) ? W : y_config_fast.x_rows_lftovr;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q)
-  assign z_width  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  assign z_width  = (z_padded_final || z_config_fast.x_rows_lftovr == '0
+                     || z_rows_iter_q != z_config_fast.x_rows_iter-1) ? W : z_config_fast.x_rows_lftovr;
   assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
@@ -745,10 +782,10 @@ module redmule_scheduler
 
   assign cntrl_engine_o.fma_is_boxed     = 3'b111;
   assign cntrl_engine_o.noncomp_is_boxed = 2'b11;
-  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(config_i.stage_1_rnd_mode);
-  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(config_i.stage_2_rnd_mode);
-  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(config_i.stage_1_op);
-  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(config_i.stage_2_op);
+  assign cntrl_engine_o.stage1_rnd       = fpnew_pkg::roundmode_e'(job_config_q.stage_1_rnd_mode);
+  assign cntrl_engine_o.stage2_rnd       = fpnew_pkg::roundmode_e'(job_config_q.stage_2_rnd_mode);
+  assign cntrl_engine_o.op1              = fpnew_pkg::operation_e'(job_config_q.stage_1_op);
+  assign cntrl_engine_o.op2              = fpnew_pkg::operation_e'(job_config_q.stage_2_op);
   assign cntrl_engine_o.op_mod           = 1'b0;
   assign cntrl_engine_o.in_valid         = 1'b1;
   assign cntrl_engine_o.flush            = engine_flush_i;
@@ -868,7 +905,27 @@ module redmule_scheduler
 
   assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
 
+  always_comb begin : job_config_next
+    job_config_d = job_config_q;
+    if (start) begin
+      job_config_d = x_config;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin : job_config_register
+    if (~rst_ni) begin
+      job_config_q <= '0;
+    end else if (clear_i || cntrl_scheduler_i.rst) begin
+      job_config_q <= '0;
+    end else begin
+      job_config_q <= job_config_d;
+    end
+  end
+
   assign flgs_scheduler_o.w_loaded = current_state == LOAD_W && ~stall_engine;
+  // True when the X/W config FIFOs still hold the active job's config, so a
+  // newly arriving job config is queued behind it rather than becoming active.
+  assign next_config_ready_o = ~x_config_empty && ~w_config_empty;
   assign start_computation = first_load && next_state == LOAD_W && ~stall_engine;
 
   /*********************************

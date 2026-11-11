@@ -5,6 +5,8 @@
 // Yvan Tortorella <yvan.tortorella@unibo.it>
 //
 
+#include <stdint.h>
+
 #include "archi_redmule.h"
 #include "golden.h"
 #include "redmule_utils.h"
@@ -13,7 +15,6 @@
 #include "x_input.h"
 #include "y_input.h"
 #include "z_output.h"
-#include <stdint.h>
 
 int main() {
 
