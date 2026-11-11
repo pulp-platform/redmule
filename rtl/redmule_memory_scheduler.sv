@@ -53,7 +53,7 @@ module redmule_memory_scheduler
   // Once a successor job is queued, the streams overlap and all jobs in this
   // busy period must keep the padded final-block geometry. The flag persists
   // until the controller clears the accelerator.
-  logic            z_pipelined_q;
+  logic            z_pipelined_q, z_pipelined_d;
 
   logic            start_x_streamer;
 
@@ -136,13 +136,20 @@ module redmule_memory_scheduler
     .pop_i      ( flgs_streamer_i.z_stream_sink_flags.done )
   );
 
+  always_comb begin : z_pipelined_next
+    z_pipelined_d = z_pipelined_q;
+    if (z_config_full) begin
+      z_pipelined_d = 1'b1;
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
     if (~rst_ni) begin
       z_pipelined_q <= 1'b0;
     end else if (clear_i || cntrl_scheduler_i.rst) begin
       z_pipelined_q <= 1'b0;
-    end else if (z_config_full) begin
-      z_pipelined_q <= 1'b1;
+    end else begin
+      z_pipelined_q <= z_pipelined_d;
     end
   end
 

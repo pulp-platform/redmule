@@ -84,11 +84,12 @@ module redmule_z_stream_sink
   // ----------------------------------------------------------------
   logic [31:0] total_len;
   logic [15:0] rows_current;
-  logic [31:0] overall_counter_q;
+  logic [31:0] overall_counter_q, overall_counter_d;
   logic [15:0] block_q, k_tile_q, row_q;
+  logic [15:0] block_d, k_tile_d, row_d;
   logic [15:0] next_block, next_k_tile, next_row;
-  logic [31:0] current_addr, next_addr, addr_q;
-  logic        addr_valid_q;
+  logic [31:0] current_addr, next_addr, addr_q, addr_d;
+  logic        addr_valid_q, addr_valid_d;
 
   assign total_len = pad_final_i
                    ? WIDTH * config_i.x_rows_iter * config_i.w_cols_iter
@@ -131,6 +132,46 @@ module redmule_z_stream_sink
   assign addr_push.valid = addr_valid_q || (ctrl_i.req_start && total_len != 0);
   assign flags_o.addressgen_flags.done = (overall_counter_q >= total_len);
 
+  always_comb begin : addrgen_next_values
+    overall_counter_d = overall_counter_q;
+    block_d           = block_q;
+    k_tile_d          = k_tile_q;
+    row_d             = row_q;
+    addr_d            = addr_q;
+    addr_valid_d      = addr_valid_q;
+
+    if (ctrl_i.req_start) begin
+      // Emit the first address in the start cycle, then preload the second one.
+      if (total_len == 0) begin
+        overall_counter_d = '0;
+        block_d           = '0;
+        k_tile_d          = '0;
+        row_d             = '0;
+        addr_d            = config_i.z_addr;
+        addr_valid_d      = '0;
+      end else begin
+        overall_counter_d = 1;
+        block_d           = next_block;
+        k_tile_d          = next_k_tile;
+        row_d             = next_row;
+        addr_d            = next_addr;
+        addr_valid_d      = (1 < total_len);
+      end
+    end else if (address_gen_en && overall_counter_q < total_len) begin
+      if (~addr_valid_q) begin
+        addr_d       = current_addr;
+        addr_valid_d = 1'b1;
+      end else if (addr_push.ready) begin
+        overall_counter_d = overall_counter_q + 1;
+        block_d           = next_block;
+        k_tile_d          = next_k_tile;
+        row_d             = next_row;
+        addr_d            = next_addr;
+        addr_valid_d      = (overall_counter_q + 1 < total_len);
+      end
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : addrgen_counters
     if (~rst_ni) begin
       overall_counter_q <= '0;
@@ -146,35 +187,13 @@ module redmule_z_stream_sink
       row_q             <= '0;
       addr_q            <= '0;
       addr_valid_q      <= '0;
-    end else if (ctrl_i.req_start) begin
-      // Emit the first address in the start cycle, then preload the second one.
-      if (total_len == 0) begin
-        overall_counter_q <= '0;
-        block_q           <= '0;
-        k_tile_q          <= '0;
-        row_q             <= '0;
-        addr_q            <= config_i.z_addr;
-        addr_valid_q      <= '0;
-      end else begin
-        overall_counter_q <= 1;
-        block_q           <= next_block;
-        k_tile_q          <= next_k_tile;
-        row_q             <= next_row;
-        addr_q            <= next_addr;
-        addr_valid_q      <= (1 < total_len);
-      end
-    end else if (address_gen_en && overall_counter_q < total_len) begin
-      if (~addr_valid_q) begin
-        addr_q       <= current_addr;
-        addr_valid_q <= 1'b1;
-      end else if (addr_push.ready) begin
-        overall_counter_q <= overall_counter_q + 1;
-        block_q           <= next_block;
-        k_tile_q          <= next_k_tile;
-        row_q             <= next_row;
-        addr_q            <= next_addr;
-        addr_valid_q      <= (overall_counter_q + 1 < total_len);
-      end
+    end else if (ctrl_i.req_start || address_gen_en) begin
+      overall_counter_q <= overall_counter_d;
+      block_q           <= block_d;
+      k_tile_q          <= k_tile_d;
+      row_q             <= row_d;
+      addr_q            <= addr_d;
+      addr_valid_q      <= addr_valid_d;
     end
   end
 

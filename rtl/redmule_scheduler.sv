@@ -93,7 +93,7 @@ module redmule_scheduler
 
   // Latched configuration for the current job. Engine operation/rnd fields
   // must remain stable for the whole job even after the X config FIFO pops.
-  redmule_config_t job_config_q;
+  redmule_config_t job_config_q, job_config_d;
 
   logic [15:0] x_cols_iter_d, x_cols_iter_q,
                x_w_iters_d, x_w_iters_q,
@@ -439,7 +439,7 @@ module redmule_scheduler
 
   // Latched pipelined-session flag: once a successor config is queued, all
   // jobs in this busy period keep the padded final-block geometry.
-  logic                           z_pipelined_q;
+  logic                           z_pipelined_q, z_pipelined_d;
 
   logic y_config_pop;
   assign y_config_pop = y_rows_iter_q == y_config.x_rows_iter-1 && y_rows_iter_en && ~y_config_empty;
@@ -504,13 +504,20 @@ module redmule_scheduler
     .pop_i      ( z_config_fast_pop   )
   );
 
+  always_comb begin : z_pipelined_next
+    z_pipelined_d = z_pipelined_q;
+    if (z_config_fast_full) begin
+      z_pipelined_d = 1'b1;
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : z_pipelined_register
     if (~rst_ni) begin
       z_pipelined_q <= 1'b0;
     end else if (clear_i || cntrl_scheduler_i.rst) begin
       z_pipelined_q <= 1'b0;
-    end else if (z_config_fast_full) begin
-      z_pipelined_q <= 1'b1;
+    end else begin
+      z_pipelined_q <= z_pipelined_d;
     end
   end
 
@@ -898,13 +905,20 @@ module redmule_scheduler
 
   assign start = current_state == IDLE && cntrl_scheduler_i.first_load;
 
+  always_comb begin : job_config_next
+    job_config_d = job_config_q;
+    if (start) begin
+      job_config_d = x_config;
+    end
+  end
+
   always_ff @(posedge clk_i or negedge rst_ni) begin : job_config_register
     if (~rst_ni) begin
       job_config_q <= '0;
     end else if (clear_i || cntrl_scheduler_i.rst) begin
       job_config_q <= '0;
-    end else if (start) begin
-      job_config_q <= x_config;
+    end else begin
+      job_config_q <= job_config_d;
     end
   end
 
