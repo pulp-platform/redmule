@@ -528,7 +528,7 @@ for (genvar i = 0; i < NumStreamSources; i++) begin: gen_tcdm2stream
   hci_core_source       #(
     .MISALIGNED_ACCESSES   ( MisalignedAccessSupport ),
     .`HCI_SIZE_PARAM(tcdm) ( `HCI_SIZE_PARAM(ldst_tcdm) ),
-    .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 0 )
+    .RESP_FIFO_DEPTH       ( EnableReordering ? Height*(NumPipeRegs+1) : 2 )
   ) i_stream_source      (
     .clk_i               ( clk_i           ),
     .rst_ni              ( rst_ni          ),

@@ -175,15 +175,19 @@ module redmule_scheduler
 
   assign x_done_en = /*flgs_streamer_i.x_stream_source_flags.ready_start &&*/ x_rows_iter_en && x_rows_iter_q == x_config.x_rows_iter-1 && x_w_iters_q == x_config.w_cols_iter-1 && x_cols_iter_q == x_config.x_cols_iter-1;
 
-  // For N <= Height, the "internal N" is promoted to a full N-tile (MinimumSizeN steps) by the tiler
-  // (see redmule_tiler.sv). The X buffer must then iterate a full D-deep tile so its refill / M-block
-  // row-advance stays in step with the promoted N; otherwise it would serve only
-  // x_buffer_slots (= n_size rounded up to Height, = Height for N <= Height) columns and never advance
-  // to the next M-block's X rows (the trailing output tile would reuse the first block's X).
+  // For N <= Height, the "internal N" is promoted to MinimumSizeN = MinimumSizeNFactor*Height W-row
+  // steps by the tiler (see redmule_tiler.sv). The X buffer must then iterate the same number of
+  // slots so its refill / M-block row-advance stays in step with the promoted N; otherwise it would
+  // serve only x_buffer_slots (= n_size rounded up to Height, = Height for N <= Height) columns and
+  // never advance to the next M-block's X rows (the trailing output tile would reuse the first
+  // block's X). The X tile cannot be deeper than D, so the promotion is capped there: for
+  // NumPipeRegs <= 1 this is exactly D, for NumPipeRegs > 1 it is MinimumSizeN (< D).
+  localparam int unsigned MinimumSizeN  = MinimumSizeNFactor * H;
+  localparam int unsigned SmallNXSlots  = (MinimumSizeN < D) ? MinimumSizeN : D;
   logic small_n_promoted_x;
   assign small_n_promoted_x = (x_config.n_size <= H);
   assign cntrl_x_buffer_o.height = x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_cols_lftovr : D;
-  assign cntrl_x_buffer_o.slots  = small_n_promoted_x ? D
+  assign cntrl_x_buffer_o.slots  = small_n_promoted_x ? SmallNXSlots
                                  : (x_cols_iter_q == x_config.x_cols_iter-1 && x_config.x_cols_lftovr != '0 ? x_config.x_buffer_slots : D);
   assign cntrl_x_buffer_o.width  = x_rows_iter_q == x_config.x_rows_iter-1 && x_config.x_rows_lftovr != '0 ? x_config.x_rows_lftovr : W;
 
@@ -430,7 +434,7 @@ module redmule_scheduler
                                   z_avail_en, z_avail_clr,
                                   y_push_en, y_push_clr;
 
-  logic [$clog2(W):0]             y_width, z_width;
+  logic [$clog2(W):0]             y_width, z_width, z_rows;
   logic [$clog2(D):0]             y_height, z_height;
   logic [$clog2(D):0]             y_push_height;
 
@@ -681,12 +685,18 @@ module redmule_scheduler
   assign y_push_counter_d = y_push_counter_q == y_push_height-1 ? '0 : y_push_counter_q + 1;
   assign y_push_clr       = y_push_en && ~stall_engine && y_push_counter_q == y_push_height-1;
 
-  assign y_width  = y_rows_iter_q == y_config_fast.w_rows_iter-1 && y_config_fast.w_rows_lftovr != '0 ? y_config_fast.w_rows_lftovr : W;
+  // The Y load and Z store row counts are always W (d0_len = W in redmule_memory_scheduler.sv).
+  // The rows of the last z_rows_iter that fall outside Z are masked on the store side via
+  // z_rows (byte enables cleared in redmule_z_buffer.sv), so they never write past the end of Z.
+  assign y_width  = W;
   assign y_height = y_cols_iter_q == y_config_fast.w_cols_iter-1 && y_config_fast.w_cols_lftovr != '0 ? y_config_fast.w_cols_lftovr : D;
 
-  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q)
-  assign z_width  = z_rows_iter_q == z_config_fast.w_rows_iter-1 && z_config_fast.w_rows_lftovr != '0 ? z_config_fast.w_rows_lftovr : W;
+  // Size of the tile in the Z buffer, tile (z_rows_iter_q, z_cols_iter_q). Z is always stored
+  // W rows at a time; z_rows is the number of those rows that are inside Z (byte enables of
+  // the others are cleared in redmule_z_buffer.sv).
+  assign z_width  = W;
   assign z_height = z_cols_iter_q == z_config_fast.w_cols_iter-1 && z_config_fast.w_cols_lftovr != '0 ? z_config_fast.w_cols_lftovr : D;
+  assign z_rows   = z_rows_iter_q == z_config_fast.x_rows_iter-1 && z_config_fast.x_rows_lftovr != '0 ? z_config_fast.x_rows_lftovr : W;
 
   assign cntrl_z_buffer_o.ready         = z_ready_i;
   assign cntrl_z_buffer_o.y_valid       = y_valid_i && y_config_fast.gemm_selection;
@@ -700,6 +710,7 @@ module redmule_scheduler
   assign cntrl_z_buffer_o.y_height      = y_push_height;
   assign cntrl_z_buffer_o.z_width       = z_width;
   assign cntrl_z_buffer_o.z_height      = z_height;
+  assign cntrl_z_buffer_o.z_rows        = z_rows;
 
   /**********************************
    *           Counters             *

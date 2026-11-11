@@ -237,8 +237,12 @@ assign z_height = z_height_tmp[$clog2(D)-1:0];
 
 always_comb begin : z_strb_assignment
   z_strb_o = '0;
-  for (int i = 0; i <= z_height; i++) begin
-    z_strb_o[i*BITW/8+:BITW/8] = '1;
+  // Z stream stores whole-Width tiles.
+  // Writes on partial output tiles (M % Width != 0) are masked by z_rows.
+  if (store_shift_q < ctrl_i.z_rows) begin
+    for (int i = 0; i <= z_height; i++) begin
+      z_strb_o[i*BITW/8+:BITW/8] = '1;
+    end
   end
 end
 

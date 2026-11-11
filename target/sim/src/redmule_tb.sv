@@ -22,6 +22,7 @@ module redmule_tb
   parameter TT  = 0.8ns,  // test time
   parameter int unsigned Height = 8,
   parameter int unsigned Width  = 8,
+  parameter int unsigned NumPipeRegs = 1,
   parameter bit EnableReordering = 1'b0,
   parameter int unsigned RobSlots = 16,
   parameter real  PROB_STALL    = 0.0
@@ -36,7 +37,6 @@ module redmule_tb
   localparam int unsigned ID = 4; // matches the OpIdWidth used inside redmule_top's target decoder
   // The datapath/TCDM width is constrained by the array Height by the tiler invariant
   // DataW == Height*(NumPipeRegs+1)*16 (rtl/redmule_tiler.sv).
-  localparam int unsigned NumPipeRegs  = 1; // drives both the derivation and the wrapper port
   localparam int unsigned RedmuleDataW = Height*(NumPipeRegs+1)*16; // = D*16
   localparam int unsigned DW = RedmuleDataW + 32; // TCDM data width including MisalignedAccessSupport=1 (+32b word)
   localparam int unsigned MP = DW/32;
