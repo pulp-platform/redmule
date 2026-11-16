@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793911833927,
+  "lastUpdate": 1794866588226,
   "repoUrl": "https://github.com/pulp-platform/redmule",
   "entries": {
     "Execution cycles": [
@@ -4380,6 +4380,545 @@ window.BENCHMARK_DATA = {
           {
             "name": "redmule_regression:M24_N16_K17",
             "value": 263,
+            "unit": "cycles"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "FrancescoConti@users.noreply.github.com",
+            "name": "Francesco Conti",
+            "username": "FrancescoConti"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8011693483722b4f0ac4da7066c37510eb19c86d",
+          "message": "Fix the Y / Z tile width when N is not a multiple of H (#98)\n\nThe scheduler sized the Y and Z tiles as w_rows_lftovr rows (the N\nleftover) on the row block numbered w_rows_iter-1, comparing the row-block\niterators (which count the x_rows_iter row blocks of the M dimension)\nagainst the W-row count of the N dimension. With N > H, N not a multiple\nof H and at least w_rows_iter row blocks (e.g. M=128, N=9 on an 8x8\narray: w_rows_iter = 16, w_rows_lftovr = 1), row block 15 was stored\n1 row wide instead of W: the Z stream (yz_tot_len = Width * tiles) never\ncompleted, the controller stayed in COMPUTING and busy never went down.",
+          "timestamp": "2026-11-16T22:55:44+01:00",
+          "tree_id": "ae30ed6ac876e3ce3f744df0e64b893894680cc8",
+          "url": "https://github.com/pulp-platform/redmule/commit/8011693483722b4f0ac4da7066c37510eb19c86d"
+        },
+        "date": 1794866587369,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "redmule_regression:M2_N24_K2",
+            "value": 92,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K4",
+            "value": 108,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K17",
+            "value": 113,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N2_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K8_REORD",
+            "value": 112,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K24",
+            "value": 190,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N32_K18",
+            "value": 308,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N48_K25",
+            "value": 831,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N32_K2",
+            "value": 242,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M12_N16_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K2",
+            "value": 96,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K1",
+            "value": 97,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M17_N17_K17",
+            "value": 354,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K8",
+            "value": 98,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K2",
+            "value": 106,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N64_K24_MATMUL",
+            "value": 1066,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K1",
+            "value": 75,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K4",
+            "value": 110,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N4_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K8",
+            "value": 82,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K4",
+            "value": 114,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N32_K17",
+            "value": 444,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32_W_OFFSET7",
+            "value": 1277,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K8",
+            "value": 102,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N18_K32",
+            "value": 388,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K1",
+            "value": 79,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32_W_OFFSET16",
+            "value": 907,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K2",
+            "value": 90,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K8",
+            "value": 112,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M128_N9_K8_MATMUL",
+            "value": 554,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K8",
+            "value": 114,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K1",
+            "value": 111,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K2",
+            "value": 76,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M6_N32_K4",
+            "value": 116,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K2",
+            "value": 112,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K1",
+            "value": 91,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M128_N9_K8",
+            "value": 674,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M36_N32_K32",
+            "value": 716,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K2",
+            "value": 98,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M33_N33_K33",
+            "value": 1296,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K8",
+            "value": 79,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M320_N9_K8_MATMUL",
+            "value": 1322,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M320_N9_K8",
+            "value": 1634,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N8_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K2",
+            "value": 80,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N8_K16",
+            "value": 160,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N16_K4",
+            "value": 78,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N8_K16",
+            "value": 196,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N32_K18_REORD",
+            "value": 308,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N1_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M30_N32_K17",
+            "value": 575,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K16",
+            "value": 160,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M30_N32_K18",
+            "value": 578,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M128_N128_K128",
+            "value": 33082,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N24_K4",
+            "value": 94,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N1_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K2",
+            "value": 73,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K8",
+            "value": 96,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K8",
+            "value": 80,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K17",
+            "value": 183,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N32_K17",
+            "value": 578,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M32_N32_K24",
+            "value": 578,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K4",
+            "value": 98,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K19",
+            "value": 853,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M18_N32_K16",
+            "value": 256,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K13",
+            "value": 125,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N24_K1",
+            "value": 95,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N2_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K4",
+            "value": 100,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N32_K33",
+            "value": 441,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N8_K24",
+            "value": 190,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N20_K32",
+            "value": 388,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K1",
+            "value": 73,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K1",
+            "value": 107,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N16_K15",
+            "value": 127,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M96_N96_K96",
+            "value": 14026,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K17",
+            "value": 263,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N16_K4",
+            "value": 75,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M24_N16_K18",
+            "value": 264,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N48_K48",
+            "value": 1822,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K4",
+            "value": 92,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M12_N30_K16",
+            "value": 192,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K4",
+            "value": 76,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M12_N30_K15",
+            "value": 191,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32_W_OFFSET17",
+            "value": 1292,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N24_K1",
+            "value": 89,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N4_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K4",
+            "value": 116,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N24_K8",
+            "value": 104,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32_REORD",
+            "value": 850,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N3_K1",
+            "value": 72,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K2",
+            "value": 114,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N32_K2",
+            "value": 108,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M16_N3_K16",
+            "value": 128,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K4",
+            "value": 82,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M4_N32_K8",
+            "value": 118,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K1",
+            "value": 113,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M2_N16_K2",
+            "value": 74,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N32_K8",
+            "value": 120,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M48_N32_K32",
+            "value": 850,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M8_N16_K8",
+            "value": 86,
+            "unit": "cycles"
+          },
+          {
+            "name": "redmule_regression:M1_N32_K1",
+            "value": 105,
             "unit": "cycles"
           }
         ]
