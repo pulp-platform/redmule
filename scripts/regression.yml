@@ -313,3 +313,15 @@ redmule_regression:
   M32_N64_K24_MATMUL: # MATMUL with K over D (16) and not a multiple of it: last K tile of a row block
     path: .
     command: make golden OP=matmul M=32 N=64 K=24 && make sw-clean sw-build OP=matmul M=32 N=64 K=24 REDMULE_COMPLEX=0 Gcc= && make hw-run OP=matmul M=32 N=64 K=24 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_matmul_32_64_24 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_matmul_32_64_24
+  M128_N9_K8: # N over H (8) and not a multiple of it, at least w_rows_iter (16) row blocks: Y / Z tile width
+    path: .
+    command: make golden M=128 N=9 K=8 && make sw-clean sw-build M=128 N=9 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=128 N=9 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_128_9_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_128_9_8
+  M128_N9_K8_MATMUL: # as M128_N9_K8, MATMUL
+    path: .
+    command: make golden OP=matmul M=128 N=9 K=8 && make sw-clean sw-build OP=matmul M=128 N=9 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run OP=matmul M=128 N=9 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_matmul_128_9_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_matmul_128_9_8
+  M320_N9_K8: # as M128_N9_K8, 40 row blocks (a 3x3 conv with 3 input channels as GEMM)
+    path: .
+    command: make golden M=320 N=9 K=8 && make sw-clean sw-build M=320 N=9 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run M=320 N=9 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_320_9_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_320_9_8
+  M320_N9_K8_MATMUL: # as M320_N9_K8, MATMUL
+    path: .
+    command: make golden OP=matmul M=320 N=9 K=8 && make sw-clean sw-build OP=matmul M=320 N=9 K=8 REDMULE_COMPLEX=0 Gcc= && make hw-run OP=matmul M=320 N=9 K=8 REDMULE_COMPLEX=0 target=$Target | tee target/sim/$Target/transcript_matmul_320_9_8 && grep -q '\[TB\] - Success!' target/sim/$Target/transcript_matmul_320_9_8
