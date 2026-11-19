@@ -50,7 +50,7 @@ jobs:
         extra_args: "--waiver_files .github/verible.waiver"
         github_token: ${{ secrets.GITHUB_TOKEN }}
         fail_on_error: true
-        reviewdog_reporter: github-check
+        reviewdog_reporter: ${{ github.event_name == 'pull_request' && 'github-pr-review' || 'github-check' }}
         log_file: verible-verilog-lint.log
     -
       name: Upload Verible Artifacts
