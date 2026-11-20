@@ -55,7 +55,8 @@ module redmule_tb
     UW:  UW,
     IW:  hci_package::DEFAULT_IW,
     EW:  hci_package::DEFAULT_EW,
-    EHW: hci_package::DEFAULT_EHW
+    EHW: hci_package::DEFAULT_EHW,
+    FD:  hci_package::DEFAULT_FD
   };
   localparam int unsigned MEMORY_SIZE = 192*1024;
   localparam int unsigned STACK_MEMORY_SIZE = 192*1024;
