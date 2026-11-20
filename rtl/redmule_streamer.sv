@@ -71,7 +71,8 @@ localparam hci_size_parameter_t `HCI_SIZE_PARAM(ldst_tcdm) = '{
   UW:  `HCI_SIZE_GET_UW(tcdm),
   IW:  `HCI_SIZE_GET_IW(tcdm),
   EW:  DEFAULT_EW,
-  EHW: `HCI_SIZE_GET_EHW(tcdm)
+  EHW: `HCI_SIZE_GET_EHW(tcdm),
+  FD:  `HCI_SIZE_GET_FD(tcdm)
 };
 
 // Here the dynamic mux for virtual_tcdm interfaces
@@ -87,7 +88,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) ldst_tcdm ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -101,7 +103,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) ldst_tcdm_pre_r_valid ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -115,7 +118,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) ldst_tcdm_pre_r_id ( .clk ( clk_i ) );
 
 if (EW > 1) begin : gen_ecc_encoder
@@ -152,7 +156,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) virt_tcdm [0:NumStreamSources] ( .clk ( clk_i ) );
 
 // LD/ST arbitration onto the shared TCDM port.
@@ -181,7 +186,8 @@ if (EnableReordering) begin : gen_outstanding_ldst_mux
     .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
     .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
     .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-    .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+    .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+    .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
   ) virt_tcdm_rob [0:NumStreamSources] ( .clk ( clk_i ) );
 
   for (genvar i = 0; i < NumStreamSources; i++) begin : gen_channel_rob
@@ -309,7 +315,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) z_fifo_d ( .clk ( clk_i ) );
 `HCI_INTF_EXPLICIT_PARAM(z_fifo_q, clk_i, `HCI_SIZE_PARAM(ldst_tcdm));
 
@@ -404,7 +411,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) load_fifo_d [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -419,7 +427,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) load_fifo_q [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hci_core_intf #(
@@ -434,7 +443,8 @@ hci_core_intf #(
   .UW  ( `HCI_SIZE_GET_UW(ldst_tcdm)  ),
   .IW  ( `HCI_SIZE_GET_IW(ldst_tcdm)  ),
   .EW  ( `HCI_SIZE_GET_EW(ldst_tcdm)  ),
-  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) )
+  .EHW ( `HCI_SIZE_GET_EHW(ldst_tcdm) ),
+  .FD  ( `HCI_SIZE_GET_FD(ldst_tcdm)  )
 ) tcdm_cast [0:NumStreamSources-1] ( .clk ( clk_i ) );
 
 hwpe_stream_intf_stream #( .DATA_WIDTH ( DataW ) ) out_stream [0:NumStreamSources-1] ( .clk( clk_i ) );
