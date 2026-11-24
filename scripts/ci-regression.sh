@@ -74,4 +74,21 @@ EOF
         --perf "$ScriptDir/perf_${cfg_name}.json" "$REGR_FILE" || status=$?
 done
 
+# Merge the per-configuration perf results into a single perf.json for
+# github-action-benchmark, prefixing each test name with its configuration.
+python3 - "$ScriptDir" $REDMULE_PARAM_SETS <<'PY'
+import json, os, sys
+script_dir, out = sys.argv[1], []
+for param_set in sys.argv[2:]:
+    h, w, *p = param_set.split('x')
+    p = p[0] if p else '1'
+    cfg = f"{h}x{w}" if p == '1' else f"{h}x{w}_p{p}"
+    path = os.path.join(script_dir, f"perf_{cfg}.json")
+    if os.path.isfile(path):
+        with open(path) as f:
+            out += [{**e, 'name': f"{cfg}/{e['name']}"} for e in json.load(f)]
+with open(os.path.join(script_dir, 'perf.json'), 'w', encoding='utf-8') as f:
+    json.dump(out, f, ensure_ascii=False, indent=4)
+PY
+
 exit $status
