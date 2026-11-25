@@ -34,6 +34,7 @@ module redmule_target_decoder
   redmule_regif__hwpe_ctrl_job_indep__out_t job_indep_regs;
   logic                                     job_dep_regs_valid;
   redmule_regif__hwpe_ctrl_job_dep__out_t   job_dep_regs;
+  redmule_regif__hwpe_ctrl_job_dep__out_t   job_cfg_regs;
 
   // cpuif plug target <-> regif (PeakRDL "passthrough")
   logic        target_cpuif_req;
@@ -128,22 +129,27 @@ module redmule_target_decoder
     end
   end
 
+  // Assign `config_o` depending on the queue state.
+  //   - first job at head of a queue: directly from hwif_out
+  //   - else: from hardware job queue
+  assign job_cfg_regs = job_dep_regs_valid ? job_dep_regs : hwif_out.hwpe_job_dep;
+
   // Decode instruction and extract configuration parameters from register file values
-  assign config_o.m_size          = hwif_out.hwpe_job_dep.mcnfig0.m_size.value;
-  assign config_o.n_size          = hwif_out.hwpe_job_dep.mcnfig1.n_size.value;
-  assign config_o.k_size          = hwif_out.hwpe_job_dep.mcnfig0.k_size.value;
-  assign config_o.receive_x       = hwif_out.hwpe_job_dep.mcnfig1.receive_x.value;
-  assign config_o.send_x          = hwif_out.hwpe_job_dep.mcnfig1.send_x.value;
-  assign config_o.receive_w       = hwif_out.hwpe_job_dep.mcnfig1.receive_w.value;
-  assign config_o.send_w          = hwif_out.hwpe_job_dep.mcnfig1.send_w.value;
-  assign config_o.y_offs          = hwif_out.hwpe_job_dep.mcnfig2.y_offs.value;
-  assign config_o.w_cols_offset   = hwif_out.hwpe_job_dep.mcnfig3.w_cols_offset.value[15:0];
-  assign config_o.x_addr          = hwif_out.hwpe_job_dep.marith0.x_addr.value;
-  assign config_o.w_addr          = hwif_out.hwpe_job_dep.marith1.w_addr.value;
-  assign config_o.z_addr          = hwif_out.hwpe_job_dep.marith2.z_addr.value;
-  assign config_o.gemm_ops        = gemm_op_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_ops.value);
-  assign config_o.gemm_input_fmt  = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_input_fmt.value);
-  assign config_o.gemm_output_fmt = gemm_fmt_e'(hwif_out.hwpe_job_dep.mcnfig1.gemm_output_fmt.value);
+  assign config_o.m_size          = job_cfg_regs.mcnfig0.m_size.value;
+  assign config_o.n_size          = job_cfg_regs.mcnfig1.n_size.value;
+  assign config_o.k_size          = job_cfg_regs.mcnfig0.k_size.value;
+  assign config_o.receive_x       = job_cfg_regs.mcnfig1.receive_x.value;
+  assign config_o.send_x          = job_cfg_regs.mcnfig1.send_x.value;
+  assign config_o.receive_w       = job_cfg_regs.mcnfig1.receive_w.value;
+  assign config_o.send_w          = job_cfg_regs.mcnfig1.send_w.value;
+  assign config_o.y_offs          = job_cfg_regs.mcnfig2.y_offs.value;
+  assign config_o.w_cols_offset   = job_cfg_regs.mcnfig3.w_cols_offset.value[15:0];
+  assign config_o.x_addr          = job_cfg_regs.marith0.x_addr.value;
+  assign config_o.w_addr          = job_cfg_regs.marith1.w_addr.value;
+  assign config_o.z_addr          = job_cfg_regs.marith2.z_addr.value;
+  assign config_o.gemm_ops        = gemm_op_e'(job_cfg_regs.mcnfig1.gemm_ops.value);
+  assign config_o.gemm_input_fmt  = gemm_fmt_e'(job_cfg_regs.mcnfig1.gemm_input_fmt.value);
+  assign config_o.gemm_output_fmt = gemm_fmt_e'(job_cfg_regs.mcnfig1.gemm_output_fmt.value);
   assign config_o.loopback_w      = 1'b0;
 
   // Operation ID counter:
